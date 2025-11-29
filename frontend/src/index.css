@@ -1,6 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-fpl-purple: #1a0b2e;
+  --color-fpl-card: #2d1b4e;
+  --color-fpl-green: #00ff87;
+  --color-fpl-cyan: #02efff;
+  --color-fpl-red: #ef4444;
+  --color-fpl-yellow: #eab308;
+
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+}
 
 :root {
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;

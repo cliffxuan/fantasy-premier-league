@@ -4,7 +4,7 @@ import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
 
 function App() {
-  const [teamId, setTeamId] = useState('9026267');
+  const [teamId, setTeamId] = useState('');
   const [moneyInBank, setMoneyInBank] = useState('0.5');
   const [freeTransfers, setFreeTransfers] = useState('1');
   const [transfersRolled, setTransfersRolled] = useState(false);
