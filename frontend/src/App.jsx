@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
 
-function App() {
-  const [teamId, setTeamId] = useState('');
+function Dashboard() {
+  const { teamId: paramTeamId } = useParams();
+  const navigate = useNavigate();
+
+  const [teamId, setTeamId] = useState(paramTeamId || '');
   const [moneyInBank, setMoneyInBank] = useState('0.5');
   const [freeTransfers, setFreeTransfers] = useState('1');
   const [transfersRolled, setTransfersRolled] = useState(false);
@@ -12,19 +16,36 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [squad, setSquad] = useState(null);
+  const [chips, setChips] = useState([]);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
-  const handleGoClick = async () => {
+  // Fetch squad when URL param changes
+  useEffect(() => {
+    if (paramTeamId) {
+      setTeamId(paramTeamId);
+      fetchSquad(paramTeamId);
+    } else {
+      setTeamId('');
+      setSquad(null);
+      setChips([]);
+      setIsTeamLoaded(false);
+      setResult(null);
+    }
+  }, [paramTeamId]);
+
+  const fetchSquad = async (id) => {
     setLoading(true);
     setError(null);
     setSquad(null);
+    setChips([]);
     setIsTeamLoaded(false);
     setResult(null);
 
     try {
-      const squadData = await getSquad(teamId);
+      const squadData = await getSquad(id);
       if (squadData && squadData.squad) {
         setSquad(squadData.squad);
+        setChips(squadData.chips || []);
         setIsTeamLoaded(true);
       } else {
         setError('Failed to fetch team. Please try again.');
@@ -33,6 +54,12 @@ function App() {
       setError(err.message || 'Failed to fetch team. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoClick = () => {
+    if (teamId) {
+      navigate(`/${teamId}`);
     }
   };
 
@@ -92,7 +119,7 @@ function App() {
         {isTeamLoaded && (
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
             <div className="flex flex-col gap-8">
-              {squad && <SquadDisplay squad={squad} />}
+              {squad && <SquadDisplay squad={squad} chips={chips} />}
             </div>
 
             <div className="flex flex-col gap-6">
@@ -157,4 +184,14 @@ function App() {
     </div>
   );
 }
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/:teamId" element={<Dashboard />} />
+    </Routes>
+  );
+}
+
 export default App;

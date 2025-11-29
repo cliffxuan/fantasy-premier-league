@@ -32,8 +32,8 @@ async def get_squad(team_id: int):
 
     service = FPLService()
     try:
-        squad = await service.get_enriched_squad(team_id)
-        return {"squad": squad}
+        data = await service.get_enriched_squad(team_id)
+        return data
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")
 
