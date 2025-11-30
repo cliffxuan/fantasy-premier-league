@@ -1,5 +1,6 @@
+from typing import Any, Dict
+
 import httpx
-from typing import Dict, Any
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -21,6 +22,28 @@ class FPLService:
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{FPL_BASE_URL}/entry/{team_id}/event/{gw}/picks/"
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def get_my_team(self, team_id: int, auth_token: str) -> Dict[str, Any]:
+        headers = {
+            "x-api-authorization": auth_token,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        }
+        # The token provided in fetch.sh is a Bearer token, but the header key is 'x-api-authorization'.
+        # The curl command uses: -H 'x-api-authorization: Bearer ...'
+        # So we should pass the full string "Bearer <token>" as the auth_token argument, or prepend it here.
+        # Let's assume the user passes the full header value or we prepend it if missing.
+
+        if not auth_token.startswith("Bearer "):
+            auth_token = f"Bearer {auth_token}"
+
+        headers["x-api-authorization"] = auth_token
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{FPL_BASE_URL}/my-team/{team_id}/", headers=headers
             )
             response.raise_for_status()
             return response.json()
