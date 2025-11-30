@@ -1,4 +1,7 @@
+import os
 from fastapi import FastAPI, HTTPException, Header
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .models import AnalysisRequest, AnalysisResponse
 from .analysis_service import AnalysisService
@@ -58,3 +61,32 @@ async def get_my_team(team_id: int, authorization: str = Header(None)):
 @app.get("/health")
 async def health_check():
     return {"status": "ok"}
+
+
+# Serve static files
+
+
+# Mount static files if the directory exists (it will in production)
+frontend_dist = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "frontend", "dist"
+)
+if os.path.exists(frontend_dist):
+    app.mount(
+        "/assets",
+        StaticFiles(directory=os.path.join(frontend_dist, "assets")),
+        name="assets",
+    )
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # API routes are already handled above.
+        # If it's a file that exists in dist, serve it.
+        # Otherwise, serve index.html for client-side routing.
+
+        # Check if file exists in dist
+        file_path = os.path.join(frontend_dist, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+
+        # Fallback to index.html
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
