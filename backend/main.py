@@ -1,11 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException, Header
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-from .models import AnalysisRequest, AnalysisResponse
-from .analysis_service import AnalysisService
 
+from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+from .analysis_service import AnalysisService
+from .models import AnalysisRequest, AnalysisResponse
 
 app = FastAPI(title="FPL Assistant API")
 
