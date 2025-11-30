@@ -83,7 +83,7 @@ function Dashboard() {
     <div className="min-h-screen flex flex-col bg-fpl-purple text-white font-sans">
       <div className="bg-gradient-to-b from-fpl-card to-fpl-purple py-16 px-8 flex flex-col items-center text-center border-b border-white/10">
         <h1 className="text-6xl font-extrabold mb-4 bg-gradient-to-br from-fpl-green to-fpl-cyan bg-clip-text text-transparent tracking-tighter">
-          FPL Assistant
+          Fantacy Premier League Assistant
         </h1>
         <p className="text-xl font-normal mb-10 text-gray-300">
           Enter your Team ID to get started.
