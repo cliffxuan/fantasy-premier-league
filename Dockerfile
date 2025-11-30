@@ -29,8 +29,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 # Copy project definition files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies into the system environment
-RUN uv sync --frozen --no-dev --system
+# Install dependencies
+# --frozen ensures we use the exact versions in uv.lock
+# --no-dev to skip dev dependencies
+RUN uv sync --frozen --no-dev
+
+# Add the virtual environment to the PATH
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy backend code
 COPY backend ./backend
@@ -43,4 +48,4 @@ ENV PORT=8000
 EXPOSE $PORT
 
 # Run the application
-CMD sh -c "python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+CMD ["sh", "-c", "python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT"]
