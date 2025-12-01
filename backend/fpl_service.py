@@ -6,11 +6,29 @@ FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
 
 class FPLService:
+    # Class-level cache to persist across request instances
+    _cache: Dict[str, Any] = {}
+    _last_updated: Dict[str, float] = {}
+    CACHE_TTL = 300  # 5 minutes
+
     async def get_bootstrap_static(self) -> Dict[str, Any]:
+        import time
+
+        now = time.time()
+        if (
+            "bootstrap" in self._cache
+            and (now - self._last_updated.get("bootstrap", 0)) < self.CACHE_TTL
+        ):
+            return self._cache["bootstrap"]
+
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/bootstrap-static/")
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+
+            self._cache["bootstrap"] = data
+            self._last_updated["bootstrap"] = now
+            return data
 
     async def get_entry_history(self, team_id: int) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
@@ -163,10 +181,23 @@ class FPLService:
         return {"squad": squad, "chips": chips_status}
 
     async def get_fixtures(self) -> list:
+        import time
+
+        now = time.time()
+        if (
+            "fixtures" in self._cache
+            and (now - self._last_updated.get("fixtures", 0)) < self.CACHE_TTL
+        ):
+            return self._cache["fixtures"]
+
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/fixtures/")
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+
+            self._cache["fixtures"] = data
+            self._last_updated["fixtures"] = now
+            return data
 
     async def get_current_gameweek(self) -> int:
         data = await self.get_bootstrap_static()

@@ -32,16 +32,27 @@ class AnalysisService:
             player = elements.get(pick["element"])
             if player:
                 team = teams.get(player["team"])
+
+                # Feature Engineering: Value and Form
+                cost = player["now_cost"] / 10
+                total_points = player["total_points"]
+                value_season = round(total_points / cost, 2) if cost > 0 else 0.0
+                form = float(player["form"])
+
                 current_squad.append(
                     {
                         "name": player["web_name"],
                         "position": player["element_type"],
                         "team": team["name"] if team else "Unknown",
-                        "cost": player["now_cost"] / 10,
+                        "cost": cost,
                         "status": player["status"],
                         "news": player["news"],
                         "is_captain": pick["is_captain"],
                         "is_vice_captain": pick["is_vice_captain"],
+                        "points": total_points,
+                        "form": form,
+                        "value": value_season,  # Points per million
+                        "selected_by_percent": player["selected_by_percent"],
                     }
                 )
 
@@ -61,6 +72,35 @@ class AnalysisService:
             "chips_used": history.get("chips", []),
             "upcoming_fixtures_sample": upcoming_fixtures[:10],  # Limit size
         }
+
+        # Data Science Best Practice: Structured Logging
+        # Log the input context to build a dataset for future fine-tuning
+        import logging
+        import datetime
+
+        # Ensure logs directory exists
+        os.makedirs("logs", exist_ok=True)
+
+        # Configure logger (if not already configured)
+        logger = logging.getLogger("fpl_analysis")
+        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            fh = logging.FileHandler("logs/analysis_history.jsonl")
+            fh.setFormatter(logging.Formatter("%(message)s"))
+            logger.addHandler(fh)
+
+        log_entry = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "team_id": request.team_id,
+            "gameweek": gw,
+            "context_summary": {
+                "squad_size": len(current_squad),
+                "total_value": sum(p["cost"] for p in current_squad),
+            },
+            # We don't log the full context here to keep the log file manageable for now,
+            # but in a real ML pipeline, we would log the full feature set.
+        }
+        logger.info(json.dumps(log_entry))
 
         # 3. Prompt OpenAI
         api_key = os.getenv("OPENAI_API_KEY")
