@@ -242,10 +242,27 @@ class FPLService:
                 {"name": name, "label": label, "status": status, "event": event}
             )
 
+        # Update history with live points from picks for the current gameweek
+        current_history = history.get("current", [])
+        if picks and "entry_history" in picks:
+            live_history = picks["entry_history"]
+            # Check if we have an entry for this GW in history
+            found = False
+            for i, h in enumerate(current_history):
+                if h["event"] == gw:
+                    # Update with live data
+                    current_history[i] = live_history
+                    found = True
+                    break
+
+            if not found:
+                # Append live data if not present (e.g. very start of GW)
+                current_history.append(live_history)
+
         return {
             "squad": squad,
             "chips": chips_status,
-            "history": history.get("current", []),
+            "history": current_history,
         }
 
     async def get_fixtures(self) -> list:
@@ -312,7 +329,7 @@ class FPLService:
         fixtures.sort(key=lambda x: x["kickoff_time"] if x["kickoff_time"] else "")
 
         for f in fixtures:
-            if not f["finished"]:
+            if not f["finished"] and not f["finished_provisional"]:
                 continue
 
             h_id = f["team_h"]
