@@ -157,6 +157,14 @@ const SquadDisplay = ({ squad, chips }) => {
 						onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
 					/>
 
+					{/* Form Badge */}
+					<div className={`absolute -top-1 -left-2 text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white
+						${parseFloat(player.form) >= 6.0 ? 'bg-ds-accent text-black' :
+							parseFloat(player.form) >= 3.0 ? 'bg-gray-600 text-white' :
+								'bg-ds-card text-ds-text-muted'}`}>
+						{player.form}
+					</div>
+
 					{/* Captain/Vice-Captain Badges */}
 					{player.is_captain && (
 						<div className="absolute -top-1 -right-2 bg-black text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
