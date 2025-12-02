@@ -308,7 +308,30 @@ class FPLService:
         return table
 
     async def get_player_summary(self, player_id: int) -> Dict[str, Any]:
+        bootstrap = await self.get_bootstrap_static()
+        teams = {t["id"]: t for t in bootstrap["teams"]}
+
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/element-summary/{player_id}/")
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+
+            # Enrich history
+            for fixture in data.get("history", []):
+                opp_id = fixture["opponent_team"]
+                fixture["opponent_short_name"] = (
+                    teams[opp_id]["short_name"] if opp_id in teams else "UNK"
+                )
+
+            # Enrich fixtures
+            for fixture in data.get("fixtures", []):
+                h_id = fixture["team_h"]
+                a_id = fixture["team_a"]
+                fixture["team_h_short"] = (
+                    teams[h_id]["short_name"] if h_id in teams else "UNK"
+                )
+                fixture["team_a_short"] = (
+                    teams[a_id]["short_name"] if a_id in teams else "UNK"
+                )
+
+            return data

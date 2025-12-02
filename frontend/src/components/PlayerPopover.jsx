@@ -116,8 +116,7 @@ const PlayerPopover = ({ player, children }) => {
 											<span className={`text-sm font-bold ${fixture.total_points >= 6 ? 'text-ds-accent' : fixture.total_points >= 3 ? 'text-ds-text' : 'text-ds-text-muted'}`}>
 												{fixture.total_points}
 											</span>
-											<span className="text-[9px] text-ds-text-muted/70">{fixture.opponent_team} (H)</span>
-											{/* Note: opponent_team is an ID here, would need mapping, simplified for now */}
+											<span className="text-[9px] text-ds-text-muted/70">{fixture.opponent_short_name} ({fixture.was_home ? 'H' : 'A'})</span>
 										</div>
 									))}
 								</div>
@@ -131,8 +130,7 @@ const PlayerPopover = ({ player, children }) => {
 										<div key={fixture.id} className="flex justify-between items-center text-xs bg-ds-bg/30 p-1.5 rounded border border-ds-border/50">
 											<span className="font-mono text-ds-text-muted">GW{fixture.event}</span>
 											<span className="font-bold">
-												{fixture.is_home ? '(H)' : '(A)'} vs Team {fixture.team_h === player.team_code ? fixture.team_a : fixture.team_h}
-												{/* Again, team IDs need mapping. Ideally backend does this enrichment. */}
+												{fixture.is_home ? '(H)' : '(A)'} vs {fixture.is_home ? fixture.team_a_short : fixture.team_h_short}
 											</span>
 											<span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${fixture.difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
 												fixture.difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
