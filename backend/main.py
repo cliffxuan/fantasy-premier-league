@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .analysis_service import AnalysisService
+from .fpl_service import FPLService
 from .models import AnalysisRequest, AnalysisResponse
 
 app = FastAPI(title="FPL Assistant API")
@@ -22,7 +23,7 @@ app.add_middleware(
 analysis_service = AnalysisService()
 
 
-@app.post("/analyze", response_model=AnalysisResponse)
+@app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze_team(request: AnalysisRequest):
     try:
         return await analysis_service.analyze_team(request)
@@ -30,10 +31,8 @@ async def analyze_team(request: AnalysisRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/team/{team_id}/squad")
+@app.get("/api/team/{team_id}/squad")
 async def get_squad(team_id: int):
-    from .fpl_service import FPLService
-
     service = FPLService()
     try:
         data = await service.get_enriched_squad(team_id)
@@ -42,10 +41,8 @@ async def get_squad(team_id: int):
         raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")
 
 
-@app.get("/team/{team_id}/my-team")
+@app.get("/api/team/{team_id}/my-team")
 async def get_my_team(team_id: int, authorization: str = Header(None)):
-    from .fpl_service import FPLService
-
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
 
@@ -59,7 +56,19 @@ async def get_my_team(team_id: int, authorization: str = Header(None)):
         )
 
 
-@app.get("/health")
+@app.get("/api/league-table")
+async def get_league_table():
+    service = FPLService()
+    try:
+        data = await service.get_league_table()
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch league table: {str(e)}"
+        )
+
+
+@app.get("/api/health")
 async def health_check():
     return {"status": "ok"}
 

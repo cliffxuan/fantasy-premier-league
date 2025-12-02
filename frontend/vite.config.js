@@ -10,15 +10,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/analyze': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/team': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/health': {
+      '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
       },

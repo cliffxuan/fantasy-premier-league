@@ -215,3 +215,94 @@ class FPLService:
             if event["is_next"]:
                 return event["id"]
         return 38
+
+    async def get_league_table(self) -> list:
+        bootstrap = await self.get_bootstrap_static()
+        fixtures = await self.get_fixtures()
+
+        # Initialize table with team details
+        teams = {}
+        for team in bootstrap["teams"]:
+            teams[team["id"]] = {
+                "id": team["id"],
+                "name": team["name"],
+                "short_name": team["short_name"],
+                "code": team["code"],
+                "played": 0,
+                "won": 0,
+                "drawn": 0,
+                "lost": 0,
+                "points": 0,
+                "goals_for": 0,
+                "goals_against": 0,
+                "goal_difference": 0,
+                "form": [],  # List to store last 5 results
+            }
+
+        # Process fixtures
+        # Sort fixtures by kickoff time to help with form calculation later if needed
+        fixtures.sort(key=lambda x: x["kickoff_time"] if x["kickoff_time"] else "")
+
+        for f in fixtures:
+            if not f["finished"]:
+                continue
+
+            h_id = f["team_h"]
+            a_id = f["team_a"]
+            h_score = f["team_h_score"]
+            a_score = f["team_a_score"]
+
+            if h_id not in teams or a_id not in teams:
+                continue
+
+            # Update Played
+            teams[h_id]["played"] += 1
+            teams[a_id]["played"] += 1
+
+            # Update Goals
+            teams[h_id]["goals_for"] += h_score
+            teams[h_id]["goals_against"] += a_score
+            teams[a_id]["goals_for"] += a_score
+            teams[a_id]["goals_against"] += h_score
+
+            # Update Result
+            if h_score > a_score:
+                teams[h_id]["won"] += 1
+                teams[h_id]["points"] += 3
+                teams[a_id]["lost"] += 1
+                teams[h_id]["form"].append("W")
+                teams[a_id]["form"].append("L")
+            elif a_score > h_score:
+                teams[a_id]["won"] += 1
+                teams[a_id]["points"] += 3
+                teams[h_id]["lost"] += 1
+                teams[a_id]["form"].append("W")
+                teams[h_id]["form"].append("L")
+            else:
+                teams[h_id]["drawn"] += 1
+                teams[h_id]["points"] += 1
+                teams[a_id]["drawn"] += 1
+                teams[a_id]["points"] += 1
+                teams[h_id]["form"].append("D")
+                teams[a_id]["form"].append("D")
+
+        # Convert to list and calculate derived stats
+        table = []
+        for team_id, stats in teams.items():
+            stats["goal_difference"] = stats["goals_for"] - stats["goals_against"]
+            # Format form (last 5)
+            recent_form = stats["form"][-5:]
+            stats["form"] = "".join(recent_form)
+            table.append(stats)
+
+        # Sort: Points DESC, GD DESC, GF DESC
+        table.sort(
+            key=lambda x: (x["points"], x["goal_difference"], x["goals_for"]),
+            reverse=True,
+        )
+
+        # Assign positions
+        for i, team in enumerate(table):
+            team["position"] = i + 1
+
+        return table

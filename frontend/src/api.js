@@ -1,4 +1,4 @@
-const API_BASE_URL = '';
+const API_BASE_URL = '/api';
 
 export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersRolled) => {
 	const response = await fetch(`${API_BASE_URL}/analyze`, {

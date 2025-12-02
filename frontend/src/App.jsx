@@ -4,6 +4,8 @@ import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
 
+import LeagueTable from './components/LeagueTable';
+
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
   const navigate = useNavigate();
@@ -121,6 +123,7 @@ function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
             <div className="flex flex-col gap-8">
               {squad && <SquadDisplay squad={squad} chips={chips} />}
+              <LeagueTable />
             </div>
 
             <div className="flex flex-col gap-6">
