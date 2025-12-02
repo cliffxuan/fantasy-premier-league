@@ -1,3 +1,4 @@
+import time
 from typing import Any, Dict
 
 import httpx
@@ -12,8 +13,6 @@ class FPLService:
     CACHE_TTL = 300  # 5 minutes
 
     async def get_bootstrap_static(self) -> Dict[str, Any]:
-        import time
-
         now = time.time()
         if (
             "bootstrap" in self._cache
@@ -121,7 +120,7 @@ class FPLService:
                 difficulty = 3
                 if fixture_info:
                     opponent = teams.get(fixture_info["opponent_id"])
-                    opp_name = opponent["short_name"] if opponent else "UNK"
+                    opp_name = opponent["name"] if opponent else "UNK"
                     home_away = "(H)" if fixture_info["is_home"] else "(A)"
                     fixture_str = f"{opp_name} {home_away}"
                     difficulty = fixture_info["difficulty"]
@@ -182,8 +181,6 @@ class FPLService:
         return {"squad": squad, "chips": chips_status}
 
     async def get_fixtures(self) -> list:
-        import time
-
         now = time.time()
         if (
             "fixtures" in self._cache

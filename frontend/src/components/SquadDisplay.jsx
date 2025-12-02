@@ -181,8 +181,14 @@ const SquadDisplay = ({ squad, chips }) => {
 
 			<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
 				<div className="text-xs font-bold truncate px-1 font-sans">{player.name}</div>
-				<div className="text-[10px] text-ds-text-muted flex justify-center gap-1 font-mono">
-					<span>{player.team}</span>
+				<div className="flex justify-center items-center gap-1 mt-0.5">
+					<span className={`text-[9px] px-1 rounded font-bold ${player.fixture_difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
+							player.fixture_difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
+								player.fixture_difficulty === 4 ? 'bg-ds-warning/20 text-ds-warning' :
+									'bg-ds-danger/20 text-ds-danger'
+						}`}>
+						{player.fixture}
+					</span>
 				</div>
 			</div>
 		</div>
