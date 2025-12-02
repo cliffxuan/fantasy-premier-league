@@ -80,36 +80,37 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-fpl-purple text-white font-sans">
-      <div className="bg-gradient-to-b from-fpl-card to-fpl-purple py-16 px-8 flex flex-col items-center text-center border-b border-white/10">
-        <h1 className="text-6xl font-extrabold mb-4 bg-gradient-to-br from-fpl-green to-fpl-cyan bg-clip-text text-transparent tracking-tighter">
-          Fantasy Premier League Assistant
+    <div className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white">
+      <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm py-12 px-8 flex flex-col items-center text-center">
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-ds-text">
+          <span className="text-ds-primary">FPL</span> Assistant
         </h1>
-        <p className="text-xl font-normal mb-10 text-gray-300">
-          Enter your Team ID to get started.
+        <p className="text-lg font-mono text-ds-text-muted mb-8">
+          Data-driven insights for your Fantasy Premier League team.
         </p>
 
-        <div className="flex w-full max-w-[500px] bg-white/10 border border-white/20 rounded-2xl p-2 backdrop-blur-md focus-within:border-fpl-green transition-colors">
+        <div className="flex w-full max-w-[600px] bg-ds-bg border border-ds-border rounded-lg p-1 focus-within:border-ds-primary focus-within:ring-1 focus-within:ring-ds-primary transition-all shadow-lg">
+          <span className="flex items-center pl-4 text-ds-text-muted font-mono select-none">$</span>
           <input
             id="teamId"
             type="text"
             value={teamId}
             onChange={(e) => setTeamId(e.target.value)}
-            placeholder="Team ID (e.g. 9026267)"
-            className="flex-1 bg-transparent border-none p-4 text-xl outline-none text-white font-semibold placeholder-white/40"
+            placeholder="enter_team_id"
+            className="flex-1 bg-transparent border-none p-3 text-lg outline-none text-ds-text font-mono placeholder-ds-text-muted/50"
             onKeyDown={(e) => e.key === 'Enter' && handleGoClick()}
           />
           <button
             type="button"
-            className="bg-gradient-to-r from-fpl-green to-fpl-cyan text-fpl-purple font-extrabold px-10 py-0 rounded-xl text-xl hover:opacity-90 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-ds-primary text-white font-bold px-6 py-2 rounded-md hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm uppercase tracking-wider"
             onClick={handleGoClick}
             disabled={loading}
           >
-            {loading ? '...' : 'GO'}
+            {loading ? 'LOADING...' : 'ANALYZE'}
           </button>
         </div>
         {error && !isTeamLoaded && (
-          <div className="mt-6 bg-red-500/20 border border-red-500 text-red-300 p-4 rounded-lg">
+          <div className="mt-6 bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg font-mono text-sm">
             {error}
           </div>
         )}
@@ -123,8 +124,11 @@ function Dashboard() {
             </div>
 
             <div className="flex flex-col gap-6">
-              <div className="bg-fpl-card p-6 rounded-2xl border border-white/10">
-                <h3 className="mt-0 mb-6 text-fpl-green font-bold text-xl">Analysis Controls</h3>
+              <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
+                <h3 className="mt-0 mb-6 text-ds-text font-bold text-lg flex items-center gap-2">
+                  <span className="w-1 h-6 bg-ds-primary rounded-full"></span>
+                  Parameters
+                </h3>
                 <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                   <div className="flex flex-col gap-2">
                     <label htmlFor="moneyInBank" className="text-sm font-semibold text-gray-400">Money In Bank (£)</label>
@@ -135,12 +139,12 @@ function Dashboard() {
                       value={moneyInBank}
                       onChange={(e) => setMoneyInBank(e.target.value)}
                       required
-                      className="p-3 rounded-lg border border-slate-700 bg-slate-900 text-white text-base focus:outline-none focus:border-fpl-green transition-colors"
+                      className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
                     />
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label htmlFor="freeTransfers" className="text-sm font-semibold text-gray-400">Free Transfers</label>
+                    <label htmlFor="freeTransfers" className="text-sm font-semibold text-ds-text-muted">Free Transfers</label>
                     <input
                       id="freeTransfers"
                       type="number"
@@ -149,7 +153,7 @@ function Dashboard() {
                       value={freeTransfers}
                       onChange={(e) => setFreeTransfers(e.target.value)}
                       required
-                      className="p-3 rounded-lg border border-slate-700 bg-slate-900 text-white text-base focus:outline-none focus:border-fpl-green transition-colors"
+                      className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
                     />
                   </div>
 
@@ -159,20 +163,20 @@ function Dashboard() {
                         type="checkbox"
                         checked={transfersRolled}
                         onChange={(e) => setTransfersRolled(e.target.checked)}
-                        className="w-5 h-5 accent-fpl-green"
+                        className="w-5 h-5 accent-ds-primary rounded border-ds-border bg-ds-bg"
                       />
                       Transfers Rolled?
                     </label>
                   </div>
 
-                  <button type="submit" disabled={loading} className="w-full p-4 rounded-lg border-none bg-gradient-to-r from-fpl-green to-fpl-cyan text-white font-bold text-lg cursor-pointer hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                    {loading ? 'Analyzing...' : 'Analyze Team'}
+                  <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono">
+                    {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
                   </button>
                 </form>
               </div>
 
               {error && isTeamLoaded && (
-                <div className="bg-red-500/10 border border-fpl-red text-fpl-red p-4 rounded-lg text-center">
+                <div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
                   {error}
                 </div>
               )}

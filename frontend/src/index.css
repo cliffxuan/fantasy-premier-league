@@ -1,25 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  --color-fpl-purple: #1a0b2e;
-  --color-fpl-card: #2d1b4e;
-  --color-fpl-green: #00ff87;
-  --color-fpl-cyan: #02efff;
-  --color-fpl-red: #ef4444;
-  --color-fpl-yellow: #eab308;
+  --color-ds-bg: #0f172a;
+  --color-ds-card: #1e293b;
+  --color-ds-card-hover: #334155;
+  --color-ds-border: #334155;
+  --color-ds-primary: #3b82f6;
+  --color-ds-primary-hover: #2563eb;
+  --color-ds-accent: #10b981;
+  --color-ds-danger: #ef4444;
+  --color-ds-warning: #f59e0b;
+  --color-ds-text: #f8fafc;
+  --color-ds-text-muted: #94a3b8;
 
-  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  /* Keep legacy FPL colors mapped to new theme or specific uses if needed, 
+     but try to transition to ds-* variables */
+  --color-fpl-purple: #0f172a;
+  /* Map to bg */
+  --color-fpl-card: #1e293b;
+  /* Map to card */
+  --color-fpl-green: #10b981;
+  /* Map to accent */
+  --color-fpl-cyan: #3b82f6;
+  /* Map to primary */
+  --color-fpl-red: #ef4444;
+  --color-fpl-yellow: #f59e0b;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 :root {
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #1a0b2e;
-  color: #ffffff;
+  font-family: var(--font-sans);
+  background-color: var(--color-ds-bg);
+  color: var(--color-ds-text);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: red !important;
+  background-color: var(--color-ds-bg);
 }
