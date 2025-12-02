@@ -33,11 +33,31 @@ const PlayerPopover = ({ player, children }) => {
 	const updatePosition = () => {
 		if (triggerRef.current) {
 			const rect = triggerRef.current.getBoundingClientRect();
-			setPosition({
-				top: rect.top - 10, // 10px gap above
-				left: rect.left + (rect.width / 2),
-				transform: '-translate-x-1/2 -translate-y-full'
-			});
+			const isMobile = window.innerWidth < 768; // Mobile breakpoint
+
+			if (isMobile) {
+				setPosition({
+					top: rect.top - 10,
+					left: window.innerWidth / 2, // Center of screen
+					transform: '-translate-x-1/2 -translate-y-full'
+				});
+			} else {
+				setPosition({
+					top: rect.top - 10,
+					left: rect.left + (rect.width / 2),
+					transform: '-translate-x-1/2 -translate-y-full'
+				});
+			}
+		}
+	};
+
+	const handleClick = () => {
+		if (window.innerWidth < 768) {
+			if (isVisible) {
+				setIsVisible(false);
+			} else {
+				handleMouseEnter();
+			}
 		}
 	};
 
@@ -47,6 +67,7 @@ const PlayerPopover = ({ player, children }) => {
 			ref={triggerRef}
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
+			onClick={handleClick}
 		>
 			{children}
 			{isVisible && (
