@@ -80,7 +80,7 @@ class FPLService:
         try:
             history = await self.get_entry_history(team_id)
         except Exception:
-            history = {"chips": []}
+            history = {"chips": [], "current": []}
 
         try:
             picks = await self.get_entry_picks(team_id, gw)
@@ -178,7 +178,11 @@ class FPLService:
                 {"name": name, "label": label, "status": status, "event": event}
             )
 
-        return {"squad": squad, "chips": chips_status}
+        return {
+            "squad": squad,
+            "chips": chips_status,
+            "history": history.get("current", []),
+        }
 
     async def get_fixtures(self) -> list:
         now = time.time()

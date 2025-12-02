@@ -4,6 +4,7 @@ import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
 
+import PointsHistoryChart from './components/PointsHistoryChart';
 import LeagueTable from './components/LeagueTable';
 
 function Dashboard() {
@@ -19,6 +20,7 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const [squad, setSquad] = useState(null);
   const [chips, setChips] = useState([]);
+  const [history, setHistory] = useState([]);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
   // Fetch squad when URL param changes
@@ -30,6 +32,7 @@ function Dashboard() {
       setTeamId('');
       setSquad(null);
       setChips([]);
+      setHistory([]);
       setIsTeamLoaded(false);
       setResult(null);
     }
@@ -40,6 +43,7 @@ function Dashboard() {
     setError(null);
     setSquad(null);
     setChips([]);
+    setHistory([]);
     setIsTeamLoaded(false);
     setResult(null);
 
@@ -48,6 +52,7 @@ function Dashboard() {
       if (squadData && squadData.squad) {
         setSquad(squadData.squad);
         setChips(squadData.chips || []);
+        setHistory(squadData.history || []);
         setIsTeamLoaded(true);
       } else {
         setError('Failed to fetch team. Please try again.');
@@ -127,6 +132,7 @@ function Dashboard() {
             </div>
 
             <div className="flex flex-col gap-6">
+              <PointsHistoryChart history={history} />
               <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
                 <h3 className="mt-0 mb-6 text-ds-text font-bold text-lg flex items-center gap-2">
                   <span className="w-1 h-6 bg-ds-primary rounded-full"></span>
