@@ -55,10 +55,10 @@ const ListView = ({ squad }) => {
 			<div className="flex items-center gap-3">
 				<div className="relative w-8 h-10">
 					<img
-						src={`https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png`}
-						alt={player.team}
-						className="w-full h-full object-contain"
-						onError={(e) => { e.target.src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-66.png' }}
+						src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+						alt={player.name}
+						className="w-full h-full object-cover rounded-full"
+						onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
 					/>
 					{player.status !== 'a' && (
 						<div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center text-[8px] font-bold border border-white
@@ -90,9 +90,9 @@ const ListView = ({ squad }) => {
 			{/* Fixture */}
 			<div className="text-right text-sm pr-2">
 				<span className={`px-2 py-1 rounded text-xs font-semibold ${player.fixture_difficulty <= 2 ? 'bg-fpl-green text-fpl-purple' :
-						player.fixture_difficulty === 3 ? 'bg-gray-500 text-white' :
-							player.fixture_difficulty === 4 ? 'bg-orange-500 text-white' :
-								'bg-red-600 text-white'
+					player.fixture_difficulty === 3 ? 'bg-gray-500 text-white' :
+						player.fixture_difficulty === 4 ? 'bg-orange-500 text-white' :
+							'bg-red-600 text-white'
 					}`}>
 					{player.fixture}
 				</span>
@@ -147,12 +147,12 @@ const SquadDisplay = ({ squad, chips }) => {
 	const PlayerCard = ({ player, isBench = false }) => (
 		<div className={`relative flex flex-col items-center justify-center w-[90px] ${isBench ? 'opacity-90' : ''}`}>
 			<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
-				{/* Kit Image */}
+				{/* Player Photo */}
 				<img
-					src={`https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png`}
-					alt={player.team}
-					className="w-[50px] h-[66px] object-contain drop-shadow-lg"
-					onError={(e) => { e.target.src = 'https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-66.png' }}
+					src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+					alt={player.name}
+					className="w-[60px] h-[75px] object-cover drop-shadow-lg"
+					onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
 				/>
 
 				{/* Captain/Vice-Captain Badges */}

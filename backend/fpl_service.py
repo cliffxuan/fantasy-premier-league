@@ -146,6 +146,7 @@ class FPLService:
                         "fixture": fixture_str,
                         "fixture_difficulty": difficulty,
                         "chance_of_playing": player["chance_of_playing_next_round"],
+                        "code": player["code"],
                     }
                 )
 
