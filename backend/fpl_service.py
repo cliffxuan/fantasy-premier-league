@@ -43,6 +43,12 @@ class FPLService:
             response.raise_for_status()
             return response.json()
 
+    async def get_transfers(self, team_id: int) -> list:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/transfers/")
+            response.raise_for_status()
+            return response.json()
+
     async def get_my_team(self, team_id: int, auth_token: str) -> Dict[str, Any]:
         headers = {
             "x-api-authorization": auth_token,
@@ -87,6 +93,11 @@ class FPLService:
         except Exception:
             return {"squad": [], "chips": []}
 
+        try:
+            transfers = await self.get_transfers(team_id)
+        except Exception:
+            transfers = []
+
         elements = {p["id"]: p for p in bootstrap["elements"]}
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
@@ -125,6 +136,55 @@ class FPLService:
                     fixture_str = f"{opp_name} {home_away}"
                     difficulty = fixture_info["difficulty"]
 
+                # Calculate prices
+                current_price = player["now_cost"]
+                purchase_price = None
+                selling_price = None
+
+                # 1. Try to find purchase price from transfers (latest transfer in)
+                if transfers:
+                    player_transfers = [
+                        t for t in transfers if t["element_in"] == player["id"]
+                    ]
+                    if player_transfers:
+                        player_transfers.sort(key=lambda x: x["time"], reverse=True)
+                        purchase_price = player_transfers[0]["element_in_cost"]
+
+                # 2. If not found in transfers, check if they were in the initial squad (GW1)
+                # We can infer the purchase price from the player's cost at GW1 if they were in the team then.
+                # However, without fetching GW1 picks, we can't be 100% sure.
+                # But we can check the player's history to find their cost at GW1.
+                if not purchase_price:
+                    # We need to check if the player has been in the team since the start.
+                    # Since we don't have full history of every GW picks here easily without many requests,
+                    # we can try to fetch the player's summary and look at their history.
+                    # The history shows the price at each GW.
+                    # If we assume they have been in the team since GW1 (because no transfer in record found),
+                    # then their purchase price is their price at GW1.
+
+                    # NOTE: This is an optimization. Ideally we should check if they were actually in the team at GW1.
+                    # But if they are in the current squad and have NO transfer in record, they MUST be from GW1 (or a wildcard/freehit that wiped history? unlikely for 'transfers' endpoint).
+                    # Actually, 'transfers' endpoint covers all transfers.
+                    # So if no transfer IN, they are original squad.
+
+                    # We need to get the player's price at GW1.
+                    # We can get this from element-summary, but that requires an extra call per player which is slow.
+                    # Alternatively, we can use the 'history' from get_player_summary if we had it.
+                    # But we don't want to call get_player_summary for every player in the loop.
+
+                    # Optimization: Use the 'cost_change_start' from bootstrap-static to calculate original price.
+                    # current_price = original_price + cost_change_start
+                    # So original_price = current_price - cost_change_start
+
+                    purchase_price = current_price - player["cost_change_start"]
+
+                if purchase_price:
+                    if current_price > purchase_price:
+                        profit = (current_price - purchase_price) // 2
+                        selling_price = purchase_price + profit
+                    else:
+                        selling_price = current_price
+
                 squad.append(
                     {
                         "id": player["id"],
@@ -134,7 +194,11 @@ class FPLService:
                         "team": team["name"] if team else "Unknown",
                         "team_short": team["short_name"] if team else "UNK",
                         "team_code": team["code"] if team else 0,
-                        "cost": player["now_cost"] / 10,
+                        "cost": current_price / 10,
+                        "purchase_price": purchase_price / 10
+                        if purchase_price
+                        else None,
+                        "selling_price": selling_price / 10 if selling_price else None,
                         "status": player["status"],
                         "news": player["news"],
                         "is_captain": pick["is_captain"],

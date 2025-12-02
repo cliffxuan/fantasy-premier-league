@@ -147,6 +147,22 @@ const PlayerPopover = ({ player, children }) => {
 					) : (
 						<div className="text-center text-ds-text-muted text-xs">No data available</div>
 					)}
+
+					{/* Prices */}
+					<div className="mt-4 pt-3 border-t border-ds-border grid grid-cols-3 gap-2 text-center">
+						<div className="flex flex-col">
+							<span className="text-[9px] text-ds-text-muted uppercase font-bold">Purchase</span>
+							<span className="text-xs font-mono">{player.purchase_price ? `£${player.purchase_price}m` : 'N/A'}</span>
+						</div>
+						<div className="flex flex-col">
+							<span className="text-[9px] text-ds-text-muted uppercase font-bold">Current</span>
+							<span className="text-xs font-mono font-bold text-ds-primary">£{player.cost}m</span>
+						</div>
+						<div className="flex flex-col">
+							<span className="text-[9px] text-ds-text-muted uppercase font-bold">Sell</span>
+							<span className="text-xs font-mono">{player.selling_price ? `£${player.selling_price}m` : 'N/A'}</span>
+						</div>
+					</div>
 				</div>
 			)}
 		</div>
