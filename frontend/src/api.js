@@ -32,3 +32,11 @@ export const getSquad = async (teamId) => {
 	}
 	return response.json();
 };
+
+export const getPlayerSummary = async (playerId) => {
+	const response = await fetch(`${API_BASE_URL}/player/${playerId}/summary`);
+	if (!response.ok) {
+		return null;
+	}
+	return response.json();
+};

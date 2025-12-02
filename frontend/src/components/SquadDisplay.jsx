@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout } from 'lucide-react';
+import PlayerPopover from './PlayerPopover';
 
 const Chip = ({ name, label, status, event }) => {
 	const getIcon = (name) => {
@@ -145,53 +146,55 @@ const SquadDisplay = ({ squad, chips }) => {
 	const fwd = starters.filter(p => p.position === 4);
 
 	const PlayerCard = ({ player, isBench = false }) => (
-		<div className={`relative flex flex-col items-center justify-center w-[90px] ${isBench ? 'opacity-90' : ''}`}>
-			<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
-				{/* Player Photo */}
-				<img
-					src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
-					alt={player.name}
-					className="w-[60px] h-[75px] object-cover drop-shadow-lg"
-					onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
-				/>
+		<PlayerPopover player={player}>
+			<div className={`relative flex flex-col items-center justify-center w-[90px] ${isBench ? 'opacity-90' : ''}`}>
+				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
+					{/* Player Photo */}
+					<img
+						src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+						alt={player.name}
+						className="w-[60px] h-[75px] object-cover drop-shadow-lg"
+						onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
+					/>
 
-				{/* Captain/Vice-Captain Badges */}
-				{player.is_captain && (
-					<div className="absolute -top-1 -right-2 bg-black text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
-						C
-					</div>
-				)}
-				{player.is_vice_captain && (
-					<div className="absolute -top-1 -right-2 bg-gray-700 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
-						V
-					</div>
-				)}
+					{/* Captain/Vice-Captain Badges */}
+					{player.is_captain && (
+						<div className="absolute -top-1 -right-2 bg-black text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
+							C
+						</div>
+					)}
+					{player.is_vice_captain && (
+						<div className="absolute -top-1 -right-2 bg-gray-700 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
+							V
+						</div>
+					)}
 
-				{/* Status Indicator */}
-				{player.status !== 'a' && (
-					<div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
-                        ${player.status === 'd' ? 'bg-yellow-500 text-black' :
-							player.status === 'i' ? 'bg-red-500 text-white' :
-								player.status === 'u' ? 'bg-orange-500 text-white' : 'bg-gray-500 text-white'}`}
-					>
-						!
-					</div>
-				)}
-			</div>
+					{/* Status Indicator */}
+					{player.status !== 'a' && (
+						<div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
+							${player.status === 'd' ? 'bg-yellow-500 text-black' :
+								player.status === 'i' ? 'bg-red-500 text-white' :
+									player.status === 'u' ? 'bg-orange-500 text-white' : 'bg-gray-500 text-white'}`}
+						>
+							!
+						</div>
+					)}
+				</div>
 
-			<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
-				<div className="text-xs font-bold truncate px-1 font-sans">{player.name}</div>
-				<div className="flex justify-center items-center gap-1 mt-0.5">
-					<span className={`text-[9px] px-1 rounded font-bold ${player.fixture_difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
+				<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
+					<div className="text-xs font-bold truncate px-1 font-sans">{player.name}</div>
+					<div className="flex justify-center items-center gap-1 mt-0.5">
+						<span className={`text-[9px] px-1 rounded font-bold ${player.fixture_difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
 							player.fixture_difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
 								player.fixture_difficulty === 4 ? 'bg-ds-warning/20 text-ds-warning' :
 									'bg-ds-danger/20 text-ds-danger'
-						}`}>
-						{player.fixture}
-					</span>
+							}`}>
+							{player.fixture}
+						</span>
+					</div>
 				</div>
 			</div>
-		</div>
+		</PlayerPopover>
 	);
 
 	return (

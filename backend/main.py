@@ -68,6 +68,18 @@ async def get_league_table():
         )
 
 
+@app.get("/api/player/{player_id}/summary")
+async def get_player_summary(player_id: int):
+    service = FPLService()
+    try:
+        data = await service.get_player_summary(player_id)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch player summary: {str(e)}"
+        )
+
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok"}

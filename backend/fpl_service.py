@@ -306,3 +306,9 @@ class FPLService:
             team["position"] = i + 1
 
         return table
+
+    async def get_player_summary(self, player_id: int) -> Dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{FPL_BASE_URL}/element-summary/{player_id}/")
+            response.raise_for_status()
+            return response.json()
