@@ -5,6 +5,7 @@ import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
 
 import PointsHistoryChart from './components/PointsHistoryChart';
+import TeamHeader from './components/TeamHeader';
 import LeagueTable from './components/LeagueTable';
 
 function Dashboard() {
@@ -21,6 +22,7 @@ function Dashboard() {
   const [squad, setSquad] = useState(null);
   const [chips, setChips] = useState([]);
   const [history, setHistory] = useState([]);
+  const [entry, setEntry] = useState(null);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
   // Fetch squad when URL param changes
@@ -33,6 +35,7 @@ function Dashboard() {
       setSquad(null);
       setChips([]);
       setHistory([]);
+      setEntry(null);
       setIsTeamLoaded(false);
       setResult(null);
     }
@@ -44,6 +47,7 @@ function Dashboard() {
     setSquad(null);
     setChips([]);
     setHistory([]);
+    setEntry(null);
     setIsTeamLoaded(false);
     setResult(null);
 
@@ -53,6 +57,7 @@ function Dashboard() {
         setSquad(squadData.squad);
         setChips(squadData.chips || []);
         setHistory(squadData.history || []);
+        setEntry(squadData.entry || null);
         setIsTeamLoaded(true);
       } else {
         setError('Failed to fetch team. Please try again.');
@@ -125,73 +130,76 @@ function Dashboard() {
 
       <main className="w-full max-w-[1200px] mx-auto p-8 box-border">
         {isTeamLoaded && (
-          <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
-            <div className="flex flex-col gap-8">
-              {squad && <SquadDisplay squad={squad} chips={chips} />}
-              <LeagueTable />
-            </div>
-
-            <div className="flex flex-col gap-6">
-              <PointsHistoryChart history={history} />
-              <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
-                <h3 className="mt-0 mb-6 text-ds-text font-bold text-lg flex items-center gap-2">
-                  <span className="w-1 h-6 bg-ds-primary rounded-full"></span>
-                  Parameters
-                </h3>
-                <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="moneyInBank" className="text-sm font-semibold text-gray-400">Money In Bank (£)</label>
-                    <input
-                      id="moneyInBank"
-                      type="number"
-                      step="0.1"
-                      value={moneyInBank}
-                      onChange={(e) => setMoneyInBank(e.target.value)}
-                      required
-                      className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="freeTransfers" className="text-sm font-semibold text-ds-text-muted">Free Transfers</label>
-                    <input
-                      id="freeTransfers"
-                      type="number"
-                      min="1"
-                      max="5"
-                      value={freeTransfers}
-                      onChange={(e) => setFreeTransfers(e.target.value)}
-                      required
-                      className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 text-white cursor-pointer">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={transfersRolled}
-                        onChange={(e) => setTransfersRolled(e.target.checked)}
-                        className="w-5 h-5 accent-ds-primary rounded border-ds-border bg-ds-bg"
-                      />
-                      Transfers Rolled?
-                    </label>
-                  </div>
-
-                  <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono">
-                    {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
-                  </button>
-                </form>
+          <>
+            <TeamHeader entry={entry} />
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
+              <div className="flex flex-col gap-8">
+                {squad && <SquadDisplay squad={squad} chips={chips} />}
+                <LeagueTable />
               </div>
 
-              {error && isTeamLoaded && (
-                <div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
-                  {error}
+              <div className="flex flex-col gap-6">
+                <PointsHistoryChart history={history} />
+                <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
+                  <h3 className="mt-0 mb-6 text-ds-text font-bold text-lg flex items-center gap-2">
+                    <span className="w-1 h-6 bg-ds-primary rounded-full"></span>
+                    Parameters
+                  </h3>
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="moneyInBank" className="text-sm font-semibold text-gray-400">Money In Bank (£)</label>
+                      <input
+                        id="moneyInBank"
+                        type="number"
+                        step="0.1"
+                        value={moneyInBank}
+                        onChange={(e) => setMoneyInBank(e.target.value)}
+                        required
+                        className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="freeTransfers" className="text-sm font-semibold text-ds-text-muted">Free Transfers</label>
+                      <input
+                        id="freeTransfers"
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={freeTransfers}
+                        onChange={(e) => setFreeTransfers(e.target.value)}
+                        required
+                        className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 text-white cursor-pointer">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={transfersRolled}
+                          onChange={(e) => setTransfersRolled(e.target.checked)}
+                          className="w-5 h-5 accent-ds-primary rounded border-ds-border bg-ds-bg"
+                        />
+                        Transfers Rolled?
+                      </label>
+                    </div>
+
+                    <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono">
+                      {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
+                    </button>
+                  </form>
                 </div>
-              )}
-              <AnalysisResult data={result} />
+
+                {error && isTeamLoaded && (
+                  <div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
+                    {error}
+                  </div>
+                )}
+                <AnalysisResult data={result} />
+              </div>
             </div>
-          </div>
+          </>
         )}
       </main>
     </div>

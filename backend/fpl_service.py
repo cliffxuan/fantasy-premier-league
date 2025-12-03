@@ -71,6 +71,12 @@ class FPLService:
             response.raise_for_status()
             return response.json()
 
+    async def get_entry(self, team_id: int) -> Dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/")
+            response.raise_for_status()
+            return response.json()
+
     async def get_enriched_squad(self, team_id: int) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         # We want the squad for the 'current' active view, but for 'Fix' we want the NEXT fixture.
@@ -84,6 +90,19 @@ class FPLService:
         next_gw = await self.get_next_gameweek_id()
 
         try:
+            entry = await self.get_entry(team_id)
+            # Enrich entry with favourite team details for badge
+            if "favourite_team" in entry and entry["favourite_team"]:
+                fav_team_id = entry["favourite_team"]
+                bootstrap = await self.get_bootstrap_static()
+                teams = {t["id"]: t for t in bootstrap["teams"]}
+                if fav_team_id in teams:
+                    entry["favourite_team_code"] = teams[fav_team_id]["code"]
+                    entry["favourite_team_name"] = teams[fav_team_id]["name"]
+        except Exception:
+            entry = {}
+
+        try:
             history = await self.get_entry_history(team_id)
         except Exception:
             history = {"chips": [], "current": []}
@@ -91,7 +110,7 @@ class FPLService:
         try:
             picks = await self.get_entry_picks(team_id, gw)
         except Exception:
-            return {"squad": [], "chips": []}
+            return {"squad": [], "chips": [], "entry": entry}
 
         try:
             transfers = await self.get_transfers(team_id)
@@ -263,6 +282,7 @@ class FPLService:
             "squad": squad,
             "chips": chips_status,
             "history": current_history,
+            "entry": entry,
         }
 
     async def get_fixtures(self) -> list:
