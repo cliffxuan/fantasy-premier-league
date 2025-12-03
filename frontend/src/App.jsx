@@ -138,7 +138,7 @@ function Dashboard() {
             <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} />
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
               <div className="flex flex-col gap-8">
-                {squad && <SquadDisplay squad={squad} chips={chips} />}
+                {squad && <SquadDisplay squad={squad} chips={chips} gameweek={entry?.current_event} />}
                 <LeagueTable />
               </div>
 

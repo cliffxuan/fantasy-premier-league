@@ -30,7 +30,7 @@ const Chip = ({ name, label, status, event }) => {
 			{getIcon(name)}
 			<span className={textClass}>{label}</span>
 			<span className={subTextClass}>
-				{status === 'active' ? 'Active' : status === 'played' ? `Played GW${event}` : 'Play'}
+				{status === 'active' ? 'Active' : status === 'played' ? `Played GW${event}` : 'Available'}
 			</span>
 		</div>
 	);
@@ -130,7 +130,7 @@ const ListView = ({ squad }) => {
 	);
 };
 
-const SquadDisplay = ({ squad, chips }) => {
+const SquadDisplay = ({ squad, chips, gameweek }) => {
 	const [viewMode, setViewMode] = useState('pitch'); // 'pitch' or 'list'
 
 	if (!squad || squad.length === 0) return null;
@@ -209,7 +209,9 @@ const SquadDisplay = ({ squad, chips }) => {
 		<div className="flex flex-col gap-6">
 			{/* Header with Toggle */}
 			<div className="flex justify-between items-center">
-				<h2 className="text-2xl font-bold">Pick Team</h2>
+				<h2 className="text-2xl font-bold">
+					Squad Selection <span className="text-ds-text-muted text-lg font-normal ml-2">GW{gameweek}</span>
+				</h2>
 				<div className="flex bg-ds-card rounded-lg p-1 border border-ds-border">
 					<button
 						onClick={() => setViewMode('pitch')}
