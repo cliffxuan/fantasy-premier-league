@@ -82,7 +82,9 @@ function Dashboard() {
     setResult(null);
 
     try {
-      const data = await analyzeTeam(teamId, moneyInBank, freeTransfers, transfersRolled);
+      // Use money from entry if available, otherwise default to 0.5
+      const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
+      const data = await analyzeTeam(teamId, bank, freeTransfers, transfersRolled);
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -146,18 +148,6 @@ function Dashboard() {
                     Parameters
                   </h3>
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="moneyInBank" className="text-sm font-semibold text-gray-400">Money In Bank (£)</label>
-                      <input
-                        id="moneyInBank"
-                        type="number"
-                        step="0.1"
-                        value={moneyInBank}
-                        onChange={(e) => setMoneyInBank(e.target.value)}
-                        required
-                        className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
-                      />
-                    </div>
 
                     <div className="flex flex-col gap-2">
                       <label htmlFor="freeTransfers" className="text-sm font-semibold text-ds-text-muted">Free Transfers</label>
