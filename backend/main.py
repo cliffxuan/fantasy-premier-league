@@ -80,6 +80,18 @@ async def get_player_summary(player_id: int):
         )
 
 
+@app.get("/api/dream-team/{gw}")
+async def get_dream_team(gw: int):
+    service = FPLService()
+    try:
+        data = await service.get_dream_team(gw)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch dream team: {str(e)}"
+        )
+
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok"}

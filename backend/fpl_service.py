@@ -498,3 +498,102 @@ class FPLService:
                 )
 
             return data
+
+    async def get_dream_team(self, gw: int) -> Dict[str, Any]:
+        bootstrap = await self.get_bootstrap_static()
+        elements = {p["id"]: p for p in bootstrap["elements"]}
+        teams = {t["id"]: t for t in bootstrap["teams"]}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{FPL_BASE_URL}/dream-team/{gw}/")
+            response.raise_for_status()
+            data = response.json()
+
+        # Fetch fixtures for this GW
+        fixtures = await self.get_fixtures()
+        gw_fixtures = [f for f in fixtures if f["event"] == gw]
+
+        # Map team ID to fixture info
+        team_fixture = {}
+        for f in gw_fixtures:
+            # Home team
+            team_fixture[f["team_h"]] = {
+                "opponent_id": f["team_a"],
+                "is_home": True,
+                "score": f"{f['team_h_score']}-{f['team_a_score']}"
+                if f["finished"]
+                else None,
+            }
+            # Away team
+            team_fixture[f["team_a"]] = {
+                "opponent_id": f["team_h"],
+                "is_home": False,
+                "score": f"{f['team_a_score']}-{f['team_h_score']}"
+                if f["finished"]
+                else None,
+            }
+
+        squad = []
+        total_points = 0
+
+        for item in data["team"]:
+            player_id = item["element"]
+            player = elements.get(player_id)
+            if not player:
+                continue
+
+            team_id = player["team"]
+            team = teams.get(team_id)
+
+            # Resolve Fixture
+            fixture_info = team_fixture.get(team_id)
+            fixture_str = "-"
+            if fixture_info:
+                opponent = teams.get(fixture_info["opponent_id"])
+                opp_short = opponent["short_name"] if opponent else "UNK"
+                home_away = "(H)" if fixture_info["is_home"] else "(A)"
+                fixture_str = f"{opp_short} {home_away}"
+
+            squad.append(
+                {
+                    "id": player["id"],
+                    "name": player["web_name"],
+                    "full_name": f"{player['first_name']} {player['second_name']}",
+                    "position": player["element_type"],
+                    "team": team["name"] if team else "Unknown",
+                    "team_short": team["short_name"] if team else "UNK",
+                    "team_code": team["code"] if team else 0,
+                    "points": item["points"],
+                    "total_points": player["total_points"],  # Season total
+                    "event_points": item["points"],  # GW points
+                    "form": player["form"],
+                    "fixture": fixture_str,
+                    "code": player["code"],
+                    "status": player["status"],
+                    "is_captain": False,
+                    "is_vice_captain": False,
+                    "fixture_difficulty": 3,  # Default, not really needed for dream team
+                }
+            )
+            total_points += item["points"]
+
+        # Enrich top player
+        top_player_data = None
+        if "top_player" in data and data["top_player"]["id"]:
+            tp = elements.get(data["top_player"]["id"])
+            if tp:
+                top_player_data = {
+                    "name": tp["web_name"],
+                    "points": data["top_player"]["points"],
+                    "code": tp["code"],
+                    "team_code": teams[tp["team"]]["code"]
+                    if tp["team"] in teams
+                    else 0,
+                }
+
+        return {
+            "squad": squad,
+            "top_player": top_player_data,
+            "total_points": total_points,
+            "gameweek": gw,
+        }

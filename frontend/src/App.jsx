@@ -7,6 +7,7 @@ import SquadDisplay from './components/SquadDisplay';
 import PointsHistoryChart from './components/PointsHistoryChart';
 import TeamHeader from './components/TeamHeader';
 import LeagueTable from './components/LeagueTable';
+import DreamTeam from './components/DreamTeam';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -22,6 +23,7 @@ function Dashboard() {
   const [entry, setEntry] = useState(null);
   const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState('squad');
 
   // Fetch squad when URL param changes
   useEffect(() => {
@@ -136,9 +138,30 @@ function Dashboard() {
         {isTeamLoaded && (
           <>
             <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} />
+
+            {/* Tabs */}
+            <div className="flex gap-4 mb-8 border-b border-ds-border">
+              <button
+                className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'squad' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
+                onClick={() => setActiveTab('squad')}
+              >
+                My Squad
+              </button>
+              <button
+                className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'dream_team' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
+                onClick={() => setActiveTab('dream_team')}
+              >
+                Team of the Week
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
               <div className="flex flex-col gap-8">
-                {squad && <SquadDisplay squad={squad} chips={chips} gameweek={entry?.current_event} />}
+                {activeTab === 'squad' ? (
+                  squad && <SquadDisplay squad={squad} chips={chips} gameweek={entry?.current_event} />
+                ) : (
+                  <DreamTeam currentGw={entry?.current_event} />
+                )}
                 <LeagueTable />
               </div>
 

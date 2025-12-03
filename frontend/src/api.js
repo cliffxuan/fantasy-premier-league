@@ -40,3 +40,10 @@ export const getPlayerSummary = async (playerId) => {
 	}
 	return response.json();
 };
+export const getDreamTeam = async (gw) => {
+	const response = await fetch(`${API_BASE_URL}/dream-team/${gw}`);
+	if (!response.ok) {
+		return null;
+	}
+	return response.json();
+};
