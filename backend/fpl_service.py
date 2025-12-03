@@ -278,12 +278,70 @@ class FPLService:
                 # Append live data if not present (e.g. very start of GW)
                 current_history.append(live_history)
 
+        # Calculate Free Transfers
+        free_transfers = self.calculate_free_transfers(history, transfers, next_gw)
+
         return {
             "squad": squad,
             "chips": chips_status,
             "history": current_history,
             "entry": entry,
+            "free_transfers": free_transfers,
         }
+
+    def calculate_free_transfers(
+        self, history: Dict[str, Any], transfers: list, next_gw: int
+    ) -> int:
+        # Algorithm to calculate available free transfers
+        # 1. Start with 0 (before GW1)
+        # 2. Iterate through history
+        # 3. Apply rules: +1 per week, max 5. Deduct used.
+        # 4. Handle chips (WC/FH don't consume FTs, and don't reset saved FTs in 24/25)
+
+        ft = 0
+        current_history = history.get("current", [])
+        chips = history.get("chips", [])
+
+        # Map chips to events for easy lookup
+        chips_played = {c["event"]: c["name"] for c in chips}
+
+        # Sort history by event just in case
+        current_history.sort(key=lambda x: x["event"])
+
+        for h in current_history:
+            event = h["event"]
+
+            if event == 1:
+                # GW1: You start with 1 FT for the *next* round (GW2).
+                # Transfers made for GW1 were unlimited.
+                ft = 1
+                continue
+
+            # Check if WC or FH was active in this GW
+            chip = chips_played.get(event)
+            is_free_round = chip in ["wildcard", "freehit"]
+
+            if not is_free_round:
+                used = h["event_transfers"]
+                ft = max(0, ft - used)
+
+            # You get +1 for the next round, capped at 5
+            ft = min(5, ft + 1)
+
+        # Now deduct transfers already made for the upcoming gameweek (next_gw)
+        # These transfers are in the 'transfers' list but not yet in 'history' (if next_gw is future)
+        # Or if next_gw is current but not finished?
+        # 'transfers' endpoint lists all transfers.
+
+        transfers_next_gw = 0
+        if transfers:
+            for t in transfers:
+                if t["event"] == next_gw:
+                    transfers_next_gw += 1
+
+        ft = max(0, ft - transfers_next_gw)
+
+        return ft
 
     async def get_fixtures(self) -> list:
         now = time.time()

@@ -13,9 +13,6 @@ function Dashboard() {
   const navigate = useNavigate();
 
   const [teamId, setTeamId] = useState(paramTeamId || '');
-  const [moneyInBank, setMoneyInBank] = useState('0.5');
-  const [freeTransfers, setFreeTransfers] = useState('1');
-  const [transfersRolled, setTransfersRolled] = useState(false);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,6 +20,7 @@ function Dashboard() {
   const [chips, setChips] = useState([]);
   const [history, setHistory] = useState([]);
   const [entry, setEntry] = useState(null);
+  const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
   // Fetch squad when URL param changes
@@ -36,6 +34,7 @@ function Dashboard() {
       setChips([]);
       setHistory([]);
       setEntry(null);
+      setCalculatedFreeTransfers(1);
       setIsTeamLoaded(false);
       setResult(null);
     }
@@ -48,6 +47,7 @@ function Dashboard() {
     setChips([]);
     setHistory([]);
     setEntry(null);
+    setCalculatedFreeTransfers(1);
     setIsTeamLoaded(false);
     setResult(null);
 
@@ -58,6 +58,7 @@ function Dashboard() {
         setChips(squadData.chips || []);
         setHistory(squadData.history || []);
         setEntry(squadData.entry || null);
+        setCalculatedFreeTransfers(squadData.free_transfers !== undefined ? squadData.free_transfers : 1);
         setIsTeamLoaded(true);
       } else {
         setError('Failed to fetch team. Please try again.');
@@ -84,7 +85,8 @@ function Dashboard() {
     try {
       // Use money from entry if available, otherwise default to 0.5
       const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
-      const data = await analyzeTeam(teamId, bank, freeTransfers, transfersRolled);
+      // Use calculated free transfers
+      const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false);
       setResult(data);
     } catch (err) {
       setError(err.message);
@@ -133,7 +135,7 @@ function Dashboard() {
       <main className="w-full max-w-[1200px] mx-auto p-8 box-border">
         {isTeamLoaded && (
           <>
-            <TeamHeader entry={entry} />
+            <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} />
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
               <div className="flex flex-col gap-8">
                 {squad && <SquadDisplay squad={squad} chips={chips} />}
@@ -143,38 +145,7 @@ function Dashboard() {
               <div className="flex flex-col gap-6">
                 <PointsHistoryChart history={history} />
                 <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
-                  <h3 className="mt-0 mb-6 text-ds-text font-bold text-lg flex items-center gap-2">
-                    <span className="w-1 h-6 bg-ds-primary rounded-full"></span>
-                    Parameters
-                  </h3>
                   <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-
-                    <div className="flex flex-col gap-2">
-                      <label htmlFor="freeTransfers" className="text-sm font-semibold text-ds-text-muted">Free Transfers</label>
-                      <input
-                        id="freeTransfers"
-                        type="number"
-                        min="1"
-                        max="5"
-                        value={freeTransfers}
-                        onChange={(e) => setFreeTransfers(e.target.value)}
-                        required
-                        className="p-3 rounded-md border border-ds-border bg-ds-bg text-ds-text text-base focus:outline-none focus:border-ds-primary font-mono transition-colors"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2 text-white cursor-pointer">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={transfersRolled}
-                          onChange={(e) => setTransfersRolled(e.target.checked)}
-                          className="w-5 h-5 accent-ds-primary rounded border-ds-border bg-ds-bg"
-                        />
-                        Transfers Rolled?
-                      </label>
-                    </div>
-
                     <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-mono">
                       {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
                     </button>

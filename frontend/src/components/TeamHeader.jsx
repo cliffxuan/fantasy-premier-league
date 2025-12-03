@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-const TeamHeader = ({ entry }) => {
+const TeamHeader = ({ entry, freeTransfers }) => {
 	if (!entry || !entry.name) return null;
 
 	const {
@@ -36,7 +36,7 @@ const TeamHeader = ({ entry }) => {
 				</div>
 			</div>
 
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full md:w-auto">
+			<div className="grid grid-cols-2 md:grid-cols-5 gap-4 w-full md:w-auto">
 				<div className="bg-ds-bg p-3 rounded-lg border border-ds-border text-center">
 					<div className="text-xs text-ds-text-muted uppercase tracking-wider mb-1">Points</div>
 					<div className="text-xl font-bold text-ds-primary">{summary_overall_points}</div>
@@ -52,6 +52,10 @@ const TeamHeader = ({ entry }) => {
 				<div className="bg-ds-bg p-3 rounded-lg border border-ds-border text-center">
 					<div className="text-xs text-ds-text-muted uppercase tracking-wider mb-1">Bank</div>
 					<div className="text-xl font-bold text-ds-text">£{bank}m</div>
+				</div>
+				<div className="bg-ds-bg p-3 rounded-lg border border-ds-border text-center">
+					<div className="text-xs text-ds-text-muted uppercase tracking-wider mb-1">Free Transfer</div>
+					<div className="text-xl font-bold text-ds-text">{freeTransfers}</div>
 				</div>
 			</div>
 		</div>
