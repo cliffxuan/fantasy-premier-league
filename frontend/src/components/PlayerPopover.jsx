@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getPlayerSummary } from '../api';
+import { getPlayerImage, handlePlayerImageError } from '../utils';
 
 const PlayerPopover = ({ player, children }) => {
 	const [isVisible, setIsVisible] = useState(false);
@@ -79,10 +80,10 @@ const PlayerPopover = ({ player, children }) => {
 					<div className="flex items-center gap-3 mb-3 border-b border-ds-border pb-3">
 						<div className="w-12 h-12 rounded-full overflow-hidden bg-ds-bg border border-ds-border">
 							<img
-								src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+								src={getPlayerImage(player.code)}
 								alt={player.name}
 								className="w-full h-full object-cover"
-								onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
+								onError={(e) => handlePlayerImageError(e, player)}
 							/>
 						</div>
 						<div>

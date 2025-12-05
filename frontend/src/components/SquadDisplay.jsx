@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout } from 'lucide-react';
 import PlayerPopover from './PlayerPopover';
+import { getPlayerImage, handlePlayerImageError } from '../utils';
 
 const Chip = ({ name, label, status, event }) => {
 	const getIcon = (name) => {
@@ -56,10 +57,10 @@ const ListView = ({ squad }) => {
 			<div className="flex items-center gap-3">
 				<div className="relative w-8 h-10">
 					<img
-						src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+						src={getPlayerImage(player.code)}
 						alt={player.name}
 						className="w-full h-full object-cover rounded-full"
-						onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
+						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 					{player.status !== 'a' && (
 						<div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center text-[8px] font-bold border border-ds-bg
@@ -151,10 +152,10 @@ const SquadDisplay = ({ squad, chips, gameweek }) => {
 				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
 					{/* Player Photo */}
 					<img
-						src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+						src={getPlayerImage(player.code)}
 						alt={player.name}
 						className="w-[60px] h-[75px] object-cover drop-shadow-lg"
-						onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
+						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 
 					{/* Form Badge */}

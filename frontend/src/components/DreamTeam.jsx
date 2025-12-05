@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getDreamTeam } from '../api';
 import PlayerPopover from './PlayerPopover';
+import { getPlayerImage, handlePlayerImageError } from '../utils';
 
 const DreamTeam = ({ currentGw }) => {
 	const [gw, setGw] = useState(currentGw || 1);
@@ -54,10 +55,10 @@ const DreamTeam = ({ currentGw }) => {
 				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
 					{/* Player Photo */}
 					<img
-						src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.code}.png`}
+						src={getPlayerImage(player.code)}
 						alt={player.name}
 						className="w-[60px] h-[75px] object-cover drop-shadow-lg"
-						onError={(e) => { e.target.src = `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.team_code}-66.png` }}
+						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 
 					{/* Points Badge (Top Left) */}
@@ -123,9 +124,10 @@ const DreamTeam = ({ currentGw }) => {
 							<div className="text-xs text-ds-text-muted uppercase tracking-wider mb-1">Player of the Week</div>
 							<div className="flex items-center gap-2">
 								<img
-									src={`https://resources.premierleague.com/premierleague/photos/players/40x40/p${top_player.code}.png`}
+									src={getPlayerImage(top_player.code, '40x40')}
 									alt={top_player.name}
 									className="w-8 h-8 rounded-full object-cover border border-ds-border"
+									onError={(e) => handlePlayerImageError(e, top_player, '40x40')}
 								/>
 								<div className="text-left">
 									<div className="text-sm font-bold leading-tight">{top_player.name}</div>
