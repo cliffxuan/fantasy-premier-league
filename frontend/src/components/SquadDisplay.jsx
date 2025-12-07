@@ -86,7 +86,7 @@ const ListView = ({ squad }) => {
 
 			{/* Stats */}
 			<div className="text-center text-sm">{player.form}</div>
-			<div className="text-center text-sm">{player.event_points}</div>
+			<div className="text-center text-sm">{(player.event_points !== 0 || player.minutes > 0 || player.match_finished) ? player.event_points : ''}</div>
 			<div className="text-center text-sm font-bold">{player.total_points}</div>
 
 			{/* Fixture */}
@@ -168,9 +168,11 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 					{/* Form/Points Badge */}
 					{gameweek <= (currentGw || 38) ? (
-						<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white">
-							{player.event_points}
-						</div>
+						(player.event_points !== 0 || player.minutes > 0 || player.match_finished) && (
+							<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white">
+								{player.event_points}
+							</div>
+						)
 					) : (
 						<div className={`absolute -top-1 -left-2 text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white
 							${parseFloat(player.form) >= 6.0 ? 'bg-ds-accent text-black' :

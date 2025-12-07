@@ -169,12 +169,18 @@ class FPLService:
                     "opponent_id": f["team_a"],
                     "is_home": True,
                     "difficulty": f["team_h_difficulty"],
+                    "started": f.get("started", False),
+                    "finished": f.get("finished", False),
+                    "kickoff_time": f["kickoff_time"],
                 }
                 # Away team
                 team_next_fixture[f["team_a"]] = {
                     "opponent_id": f["team_h"],
                     "is_home": False,
                     "difficulty": f["team_a_difficulty"],
+                    "started": f.get("started", False),
+                    "finished": f.get("finished", False),
+                    "kickoff_time": f["kickoff_time"],
                 }
 
         # Fetch live data for points
@@ -208,8 +214,10 @@ class FPLService:
 
                 # Get points for this GW
                 event_points = player["event_points"]  # Default to current
+                minutes = 0
                 if live_elements and player["id"] in live_elements:
                     event_points = live_elements[player["id"]]["total_points"]
+                    minutes = live_elements[player["id"]]["minutes"]
 
                 # Calculate prices
                 current_price = player["now_cost"]
@@ -277,6 +285,13 @@ class FPLService:
                         "is_vice_captain": pick["is_vice_captain"],
                         "form": player["form"],
                         "event_points": event_points,
+                        "minutes": minutes,
+                        "match_started": fixture_info["started"]
+                        if fixture_info
+                        else False,
+                        "match_finished": fixture_info["finished"]
+                        if fixture_info
+                        else False,
                         "total_points": player["total_points"],
                         "fixture": fixture_str,
                         "fixture_difficulty": difficulty,
