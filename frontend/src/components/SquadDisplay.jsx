@@ -139,7 +139,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 	};
 
 	const handleNext = () => {
-		if (gameweek < (currentGw || 38) && onGwChange) onGwChange(gameweek + 1);
+		if (gameweek < 38 && onGwChange) onGwChange(gameweek + 1);
 	};
 
 	if (!squad || squad.length === 0) return null;
@@ -239,7 +239,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 					</h2>
 					<button
 						onClick={handleNext}
-						disabled={gameweek >= (currentGw || 38) || loading}
+						disabled={gameweek >= 38 || loading}
 						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 					>
 						<ChevronRight size={24} />

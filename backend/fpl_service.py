@@ -127,9 +127,17 @@ class FPLService:
         except Exception:
             history = {"chips": [], "current": []}
 
+        # Determine which GW to fetch picks from
+        # If querying for a future GW, we use the current GW's squad as a base
+        picks_gw = gw
+        if gw > current_gw:
+            picks_gw = current_gw
+
         try:
-            picks = await self.get_entry_picks(team_id, gw)
+            picks = await self.get_entry_picks(team_id, picks_gw)
         except Exception:
+            # Fallback for future weeks if exact fetch fails?
+            # If we are already pointing to current_gw, then maybe the team doesn't exist yet.
             return {"squad": [], "chips": [], "entry": entry}
 
         logger.info(f"gw={gw} picks={picks}")
