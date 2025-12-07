@@ -24,8 +24,13 @@ export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersR
 	return response.json();
 };
 
-export const getSquad = async (teamId) => {
-	const response = await fetch(`${API_BASE_URL}/team/${teamId}/squad`);
+export const getSquad = async (teamId, gw = null) => {
+	let url = `${API_BASE_URL}/team/${teamId}/squad`;
+	if (gw !== null && gw !== undefined) {
+		url += `?gw=${gw}`;
+	}
+	console.log("Fetching squad from:", url);
+	const response = await fetch(url);
 	if (!response.ok) {
 		// It's okay if squad is not found immediately (e.g. invalid ID), just return null
 		return null;

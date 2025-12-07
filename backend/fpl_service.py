@@ -1,5 +1,6 @@
 import time
 from typing import Any, Dict
+from loguru import logger
 
 import httpx
 
@@ -77,17 +78,36 @@ class FPLService:
             response.raise_for_status()
             return response.json()
 
-    async def get_enriched_squad(self, team_id: int) -> Dict[str, Any]:
-        bootstrap = await self.get_bootstrap_static()
-        # We want the squad for the 'current' active view, but for 'Fix' we want the NEXT fixture.
-        # Usually 'Pick Team' shows the squad you have for the *next* deadline.
-        # But get_entry_picks(gw) gets the picks for that specific GW.
-        # If we want to show the "Pick Team" view, we should technically fetch the picks for the *next* GW if they exist (transfers made),
-        # but usually we view the *current* squad state.
-        # Let's stick to 'current' GW for picks, but show 'next' GW for fixtures.
+    async def get_event_live(self, gw: int) -> Dict[str, Any]:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{FPL_BASE_URL}/event/{gw}/live/")
+            response.raise_for_status()
+            return response.json()
 
-        gw = await self.get_current_gameweek()
-        next_gw = await self.get_next_gameweek_id()
+    async def get_enriched_squad(
+        self, team_id: int, gw: int | None = None
+    ) -> Dict[str, Any]:
+        print(f"DEBUG: get_enriched_squad called for team {team_id} with gw={gw}")
+        bootstrap = await self.get_bootstrap_static()
+
+        current_gw = await self.get_current_gameweek()
+        if gw is None:
+            gw = current_gw
+        else:
+            gw = int(gw)
+
+        print(f"DEBUG: Using gw={gw} (current_gw={current_gw})")
+
+        # For fixtures, we usually want to see the fixtures for the *next* deadline relative to the squad we are viewing.
+        # If we are viewing a past GW, we probably want to see the fixtures/results for THAT GW.
+        # If we are viewing the current/active GW, we want to see the upcoming fixtures.
+        # Let's assume if gw < current_gw, we show the results/fixtures for that GW.
+        # If gw == current_gw, we show the upcoming fixtures (or current live ones).
+
+        target_fixture_gw = gw
+        if gw > current_gw:
+            # Viewing a future team? (e.g. transfers made for next week)
+            target_fixture_gw = gw
 
         try:
             entry = await self.get_entry(team_id)
@@ -112,19 +132,38 @@ class FPLService:
         except Exception:
             return {"squad": [], "chips": [], "entry": entry}
 
+        logger.info(f"gw={gw} picks={picks}")
         try:
-            transfers = await self.get_transfers(team_id)
+            all_transfers = await self.get_transfers(team_id)
         except Exception:
-            transfers = []
+            all_transfers = []
 
         elements = {p["id"]: p for p in bootstrap["elements"]}
         teams = {t["id"]: t for t in bootstrap["teams"]}
+
+        # Filter transfers for this specific GW and enrich them
+        gw_transfers = []
+        for t in all_transfers:
+            if t["event"] == gw:
+                p_in = elements.get(t["element_in"])
+                p_out = elements.get(t["element_out"])
+                gw_transfers.append(
+                    {
+                        "time": t["time"],
+                        "element_in": t["element_in"],
+                        "element_in_name": p_in["web_name"] if p_in else "Unknown",
+                        "element_in_cost": t["element_in_cost"],
+                        "element_out": t["element_out"],
+                        "element_out_name": p_out["web_name"] if p_out else "Unknown",
+                        "element_out_cost": t["element_out_cost"],
+                    }
+                )
 
         # Fetch fixtures for next GW to show in 'Fix' column
         fixtures = await self.get_fixtures()
         team_next_fixture = {}
         for f in fixtures:
-            if f["event"] == next_gw:
+            if f["event"] == target_fixture_gw:
                 # Home team
                 team_next_fixture[f["team_h"]] = {
                     "opponent_id": f["team_a"],
@@ -138,7 +177,19 @@ class FPLService:
                     "difficulty": f["team_a_difficulty"],
                 }
 
+        # Fetch live data for points
+        try:
+            live_data = await self.get_event_live(gw)
+            live_elements = {e["id"]: e["stats"] for e in live_data["elements"]}
+            print(
+                f"DEBUG: Fetched live data for GW{gw}, {len(live_elements)} elements found."
+            )
+        except Exception as e:
+            print(f"DEBUG: Failed to fetch live data for GW{gw}: {e}")
+            live_elements = {}
+
         squad = []
+        print(f"DEBUG: Processing {len(picks['picks'])} picks for GW{gw}")
         for pick in picks["picks"]:
             player = elements.get(pick["element"])
             if player:
@@ -155,15 +206,20 @@ class FPLService:
                     fixture_str = f"{opp_name} {home_away}"
                     difficulty = fixture_info["difficulty"]
 
+                # Get points for this GW
+                event_points = player["event_points"]  # Default to current
+                if live_elements and player["id"] in live_elements:
+                    event_points = live_elements[player["id"]]["total_points"]
+
                 # Calculate prices
                 current_price = player["now_cost"]
                 purchase_price = None
                 selling_price = None
 
                 # 1. Try to find purchase price from transfers (latest transfer in)
-                if transfers:
+                if all_transfers:
                     player_transfers = [
-                        t for t in transfers if t["element_in"] == player["id"]
+                        t for t in all_transfers if t["element_in"] == player["id"]
                     ]
                     if player_transfers:
                         player_transfers.sort(key=lambda x: x["time"], reverse=True)
@@ -173,28 +229,25 @@ class FPLService:
                 # We can infer the purchase price from the player's cost at GW1 if they were in the team then.
                 # However, without fetching GW1 picks, we can't be 100% sure.
                 # But we can check the player's history to find their cost at GW1.
+                # The history shows the price at each GW.
+                # If we assume they have been in the team since GW1 (because no transfer in record found),
+                # then their purchase price is their price at GW1.
+
+                # NOTE: This is an optimization. Ideally we should check if they were actually in the team at GW1.
+                # But if they are in the current squad and have NO transfer in record, they MUST be from GW1 (or a wildcard/freehit that wiped history? unlikely for 'transfers' endpoint).
+                # Actually, 'transfers' endpoint covers all transfers.
+                # So if no transfer IN, they are original squad.
+
+                # We need to get the player's price at GW1.
+                # We can get this from element-summary, but that requires an extra call per player which is slow.
+                # Alternatively, we can use the 'history' from get_player_summary if we had it.
+                # But we don't want to call get_player_summary for every player in the loop.
+
+                # Optimization: Use the 'cost_change_start' from bootstrap-static to calculate original price.
+                # current_price = original_price + cost_change_start
+                # So original_price = current_price - cost_change_start
+
                 if not purchase_price:
-                    # We need to check if the player has been in the team since the start.
-                    # Since we don't have full history of every GW picks here easily without many requests,
-                    # we can try to fetch the player's summary and look at their history.
-                    # The history shows the price at each GW.
-                    # If we assume they have been in the team since GW1 (because no transfer in record found),
-                    # then their purchase price is their price at GW1.
-
-                    # NOTE: This is an optimization. Ideally we should check if they were actually in the team at GW1.
-                    # But if they are in the current squad and have NO transfer in record, they MUST be from GW1 (or a wildcard/freehit that wiped history? unlikely for 'transfers' endpoint).
-                    # Actually, 'transfers' endpoint covers all transfers.
-                    # So if no transfer IN, they are original squad.
-
-                    # We need to get the player's price at GW1.
-                    # We can get this from element-summary, but that requires an extra call per player which is slow.
-                    # Alternatively, we can use the 'history' from get_player_summary if we had it.
-                    # But we don't want to call get_player_summary for every player in the loop.
-
-                    # Optimization: Use the 'cost_change_start' from bootstrap-static to calculate original price.
-                    # current_price = original_price + cost_change_start
-                    # So original_price = current_price - cost_change_start
-
                     purchase_price = current_price - player["cost_change_start"]
 
                 if purchase_price:
@@ -223,7 +276,7 @@ class FPLService:
                         "is_captain": pick["is_captain"],
                         "is_vice_captain": pick["is_vice_captain"],
                         "form": player["form"],
-                        "event_points": player["event_points"],
+                        "event_points": event_points,
                         "total_points": player["total_points"],
                         "fixture": fixture_str,
                         "fixture_difficulty": difficulty,
@@ -279,7 +332,14 @@ class FPLService:
                 current_history.append(live_history)
 
         # Calculate Free Transfers
-        free_transfers = self.calculate_free_transfers(history, transfers, next_gw)
+        # We need next_gw for this calculation. If we are viewing a past GW, this calculation might be for THAT GW.
+        # But calculate_free_transfers logic seems to be about "available for NEXT deadline".
+        # If we are viewing history, maybe we want to know how many FTs they had at that time?
+        # For now, let's just use the current next_gw logic, or maybe pass the viewed gw + 1?
+        next_gw_for_calc = gw + 1
+        free_transfers = self.calculate_free_transfers(
+            history, all_transfers, next_gw_for_calc
+        )
 
         return {
             "squad": squad,
@@ -287,6 +347,8 @@ class FPLService:
             "history": current_history,
             "entry": entry,
             "free_transfers": free_transfers,
+            "transfers": gw_transfers,
+            "gameweek": gw,
         }
 
     def calculate_free_transfers(

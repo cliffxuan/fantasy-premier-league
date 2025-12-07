@@ -32,10 +32,11 @@ async def analyze_team(request: AnalysisRequest):
 
 
 @app.get("/api/team/{team_id}/squad")
-async def get_squad(team_id: int):
+async def get_squad(team_id: int, gw: int | None = None):
+    print(f"DEBUG: Endpoint get_squad called with team_id={team_id}, gw={gw}")
     service = FPLService()
     try:
-        data = await service.get_enriched_squad(team_id)
+        data = await service.get_enriched_squad(team_id, gw)
         return data
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")

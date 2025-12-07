@@ -18,12 +18,15 @@ function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [squad, setSquad] = useState(null);
+  const [transfers, setTransfers] = useState([]);
   const [chips, setChips] = useState([]);
   const [history, setHistory] = useState([]);
   const [entry, setEntry] = useState(null);
   const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
+  const [viewGw, setViewGw] = useState(null);
+  const [squadLoading, setSquadLoading] = useState(false);
 
   // Fetch squad when URL param changes
   useEffect(() => {
@@ -57,10 +60,12 @@ function Dashboard() {
       const squadData = await getSquad(id);
       if (squadData && squadData.squad) {
         setSquad(squadData.squad);
+        setTransfers(squadData.transfers || []);
         setChips(squadData.chips || []);
         setHistory(squadData.history || []);
         setEntry(squadData.entry || null);
         setCalculatedFreeTransfers(squadData.free_transfers !== undefined ? squadData.free_transfers : 1);
+        setViewGw(squadData.gameweek || squadData.entry?.current_event);
         setIsTeamLoaded(true);
       } else {
         setError('Failed to fetch team. Please try again.');
@@ -75,6 +80,29 @@ function Dashboard() {
   const handleGoClick = () => {
     if (teamId) {
       navigate(`/${teamId}`);
+    }
+  };
+
+  const handleGwChange = async (newGw) => {
+    if (!teamId) return;
+    setSquadLoading(true);
+    try {
+      const squadData = await getSquad(teamId, newGw);
+      if (squadData && squadData.squad) {
+        setSquad(squadData.squad);
+        setTransfers(squadData.transfers || []);
+        setViewGw(newGw);
+        // Don't update entry/history/chips as they are global or we want to keep them consistent?
+        // Actually get_enriched_squad returns everything for that GW context, so maybe we should update everything?
+        // But chips status might depend on history which is full history.
+        // Let's update everything to be safe as the backend returns the state "as of" that GW (mostly).
+        // Except history is full history.
+        // Let's just update squad and transfers for now as that's what changes visually in the pitch.
+      }
+    } catch (err) {
+      console.error("Failed to change GW", err);
+    } finally {
+      setSquadLoading(false);
     }
   };
 
@@ -158,7 +186,15 @@ function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
               <div className="flex flex-col gap-8">
                 {activeTab === 'squad' ? (
-                  squad && <SquadDisplay squad={squad} chips={chips} gameweek={entry?.current_event} />
+                  squad && <SquadDisplay
+                    squad={squad}
+                    chips={chips}
+                    gameweek={viewGw || entry?.current_event}
+                    transfers={transfers}
+                    onGwChange={handleGwChange}
+                    loading={squadLoading}
+                    currentGw={entry?.current_event}
+                  />
                 ) : (
                   <DreamTeam currentGw={entry?.current_event} />
                 )}

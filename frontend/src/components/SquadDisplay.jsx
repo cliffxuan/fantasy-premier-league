@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout } from 'lucide-react';
+import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout, ChevronLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import PlayerPopover from './PlayerPopover';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
@@ -131,8 +131,16 @@ const ListView = ({ squad }) => {
 	);
 };
 
-const SquadDisplay = ({ squad, chips, gameweek }) => {
+const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, currentGw }) => {
 	const [viewMode, setViewMode] = useState('pitch'); // 'pitch' or 'list'
+
+	const handlePrev = () => {
+		if (gameweek > 1 && onGwChange) onGwChange(gameweek - 1);
+	};
+
+	const handleNext = () => {
+		if (gameweek < (currentGw || 38) && onGwChange) onGwChange(gameweek + 1);
+	};
 
 	if (!squad || squad.length === 0) return null;
 
@@ -158,13 +166,19 @@ const SquadDisplay = ({ squad, chips, gameweek }) => {
 						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 
-					{/* Form Badge */}
-					<div className={`absolute -top-1 -left-2 text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white
-						${parseFloat(player.form) >= 6.0 ? 'bg-ds-accent text-black' :
-							parseFloat(player.form) >= 3.0 ? 'bg-gray-600 text-white' :
-								'bg-ds-card text-ds-text-muted'}`}>
-						{player.form}
-					</div>
+					{/* Form/Points Badge */}
+					{gameweek <= (currentGw || 38) ? (
+						<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white">
+							{player.event_points}
+						</div>
+					) : (
+						<div className={`absolute -top-1 -left-2 text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white
+							${parseFloat(player.form) >= 6.0 ? 'bg-ds-accent text-black' :
+								parseFloat(player.form) >= 3.0 ? 'bg-gray-600 text-white' :
+									'bg-ds-card text-ds-text-muted'}`}>
+							{player.form}
+						</div>
+					)}
 
 					{/* Captain/Vice-Captain Badges */}
 					{player.is_captain && (
@@ -208,11 +222,27 @@ const SquadDisplay = ({ squad, chips, gameweek }) => {
 
 	return (
 		<div className="flex flex-col gap-6">
-			{/* Header with Toggle */}
-			<div className="flex justify-between items-center">
-				<h2 className="text-2xl font-bold">
-					Squad Selection <span className="text-ds-text-muted text-lg font-normal ml-2">GW{gameweek}</span>
-				</h2>
+			{/* Header with Navigation and Toggle */}
+			<div className="flex flex-col md:flex-row justify-between items-center gap-4">
+				<div className="flex items-center gap-4">
+					<button
+						onClick={handlePrev}
+						disabled={gameweek <= 1 || loading}
+						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+					>
+						<ChevronLeft size={24} />
+					</button>
+					<h2 className="text-2xl font-bold text-center min-w-[200px]">
+						Gameweek {gameweek}
+					</h2>
+					<button
+						onClick={handleNext}
+						disabled={gameweek >= (currentGw || 38) || loading}
+						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+					>
+						<ChevronRight size={24} />
+					</button>
+				</div>
 				<div className="flex bg-ds-card rounded-lg p-1 border border-ds-border">
 					<button
 						onClick={() => setViewMode('pitch')}
@@ -231,14 +261,50 @@ const SquadDisplay = ({ squad, chips, gameweek }) => {
 				</div>
 			</div>
 
-			{/* Chips Row */}
-			{chips && chips.length > 0 && (
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-					{chips.map(chip => <Chip key={chip.name} {...chip} />)}
+			{/* Loading Overlay */}
+			{loading && (
+				<div className="text-center p-4 text-ds-text-muted animate-pulse font-mono">
+					Loading squad...
 				</div>
 			)}
 
-			{viewMode === 'pitch' ? (
+			{!loading && (
+				<>
+					{/* Chips Row */}
+					{chips && chips.length > 0 && (
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+							{chips.map(chip => <Chip key={chip.name} {...chip} />)}
+						</div>
+					)}
+
+					{/* Transfers Section */}
+					{transfers && transfers.length > 0 && (
+						<div className="bg-ds-card p-4 rounded-xl border border-ds-border">
+							<h3 className="text-sm font-bold text-ds-text-muted uppercase mb-3 flex items-center gap-2">
+								<ArrowRightLeft size={16} />
+								Transfers
+							</h3>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								{transfers.map((t, i) => (
+									<div key={i} className="flex items-center justify-between bg-ds-bg/50 p-2 rounded border border-ds-border text-sm font-mono">
+										<div className="flex items-center gap-2">
+											<span className="text-ds-danger font-bold text-xs">OUT</span>
+											<span>{t.element_out_name}</span>
+										</div>
+										<ArrowRightLeft size={12} className="text-ds-text-muted" />
+										<div className="flex items-center gap-2">
+											<span className="text-ds-accent font-bold text-xs">IN</span>
+											<span>{t.element_in_name}</span>
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)}
+				</>
+			)}
+
+			{!loading && (viewMode === 'pitch' ? (
 				<>
 					<div className="bg-ds-card rounded-xl p-8 relative border border-ds-border min-h-[600px] flex flex-col justify-between overflow-hidden">
 						{/* Pitch Pattern Overlay */}
@@ -276,7 +342,7 @@ const SquadDisplay = ({ squad, chips, gameweek }) => {
 				</>
 			) : (
 				<ListView squad={squad} />
-			)}
+			))}
 		</div>
 	);
 };
