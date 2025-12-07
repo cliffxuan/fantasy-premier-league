@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
+import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
@@ -12,6 +12,7 @@ import DreamTeam from './components/DreamTeam';
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [teamId, setTeamId] = useState(paramTeamId || '');
   const [result, setResult] = useState(null);
@@ -24,15 +25,20 @@ function Dashboard() {
   const [entry, setEntry] = useState(null);
   const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState('squad');
-  const [viewGw, setViewGw] = useState(null);
+
+  const activeTab = searchParams.get('tab') || 'squad';
+  const gwParam = searchParams.get('gw');
+  const viewGw = gwParam ? parseInt(gwParam) : null;
+
   const [squadLoading, setSquadLoading] = useState(false);
 
   // Fetch squad when URL param changes
   useEffect(() => {
     if (paramTeamId) {
       setTeamId(paramTeamId);
-      fetchSquad(paramTeamId);
+      // If we already have loaded the team and only GW changed, we might want to do a lighter fetch?
+      // For simplicity/robustness, we reuse fetchSquad but maybe we can optimize
+      fetchSquad(paramTeamId, gwParam);
     } else {
       setTeamId('');
       setSquad(null);
@@ -43,21 +49,24 @@ function Dashboard() {
       setIsTeamLoaded(false);
       setResult(null);
     }
-  }, [paramTeamId]);
+  }, [paramTeamId, gwParam]);
 
-  const fetchSquad = async (id) => {
-    setLoading(true);
+  const fetchSquad = async (id, gw) => {
+    // Only set global loading if we are doing a full first load
+    if (!isTeamLoaded) {
+      setLoading(true);
+    } else {
+      setSquadLoading(true);
+    }
     setError(null);
-    setSquad(null);
-    setChips([]);
-    setHistory([]);
-    setEntry(null);
-    setCalculatedFreeTransfers(1);
-    setIsTeamLoaded(false);
-    setResult(null);
+    // Don't wipe squad immediately to avoid flicker if just changing GW, unless it's a new team
+    if (!isTeamLoaded) {
+      setSquad(null);
+      setResult(null);
+    }
 
     try {
-      const squadData = await getSquad(id);
+      const squadData = await getSquad(id, gw);
       if (squadData && squadData.squad) {
         setSquad(squadData.squad);
         setTransfers(squadData.transfers || []);
@@ -65,7 +74,18 @@ function Dashboard() {
         setHistory(squadData.history || []);
         setEntry(squadData.entry || null);
         setCalculatedFreeTransfers(squadData.free_transfers !== undefined ? squadData.free_transfers : 1);
-        setViewGw(squadData.gameweek || squadData.entry?.current_event);
+
+        const resolvedGw = squadData.gameweek || squadData.entry?.current_event;
+
+        // If no GW in URL, set it
+        if (!gw && resolvedGw) {
+          setSearchParams(prev => {
+            const newP = new URLSearchParams(prev);
+            newP.set('gw', resolvedGw);
+            return newP;
+          }, { replace: true });
+        }
+
         setIsTeamLoaded(true);
       } else {
         setError('Failed to fetch team. Please try again.');
@@ -74,6 +94,7 @@ function Dashboard() {
       setError(err.message || 'Failed to fetch team. Please try again.');
     } finally {
       setLoading(false);
+      setSquadLoading(false);
     }
   };
 
@@ -83,27 +104,20 @@ function Dashboard() {
     }
   };
 
-  const handleGwChange = async (newGw) => {
-    if (!teamId) return;
-    setSquadLoading(true);
-    try {
-      const squadData = await getSquad(teamId, newGw);
-      if (squadData && squadData.squad) {
-        setSquad(squadData.squad);
-        setTransfers(squadData.transfers || []);
-        setViewGw(newGw);
-        // Don't update entry/history/chips as they are global or we want to keep them consistent?
-        // Actually get_enriched_squad returns everything for that GW context, so maybe we should update everything?
-        // But chips status might depend on history which is full history.
-        // Let's update everything to be safe as the backend returns the state "as of" that GW (mostly).
-        // Except history is full history.
-        // Let's just update squad and transfers for now as that's what changes visually in the pitch.
-      }
-    } catch (err) {
-      console.error("Failed to change GW", err);
-    } finally {
-      setSquadLoading(false);
-    }
+  const handleGwChange = (newGw) => {
+    setSearchParams(prev => {
+      const newP = new URLSearchParams(prev);
+      newP.set('gw', newGw);
+      return newP;
+    });
+  };
+
+  const handleTabChange = (tab) => {
+    setSearchParams(prev => {
+      const newP = new URLSearchParams(prev);
+      newP.set('tab', tab);
+      return newP;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -171,13 +185,13 @@ function Dashboard() {
             <div className="flex gap-4 mb-8 border-b border-ds-border">
               <button
                 className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'squad' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
-                onClick={() => setActiveTab('squad')}
+                onClick={() => handleTabChange('squad')}
               >
                 My Squad
               </button>
               <button
                 className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'dream_team' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
-                onClick={() => setActiveTab('dream_team')}
+                onClick={() => handleTabChange('dream_team')}
               >
                 Team of the Week
               </button>
@@ -196,7 +210,11 @@ function Dashboard() {
                     currentGw={entry?.current_event}
                   />
                 ) : (
-                  <DreamTeam currentGw={entry?.current_event} />
+                  <DreamTeam
+                    currentGw={entry?.current_event}
+                    gw={viewGw || entry?.current_event}
+                    onGwChange={handleGwChange}
+                  />
                 )}
                 <LeagueTable />
               </div>

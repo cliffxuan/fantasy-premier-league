@@ -4,16 +4,9 @@ import { getDreamTeam } from '../api';
 import PlayerPopover from './PlayerPopover';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
-const DreamTeam = ({ currentGw }) => {
-	const [gw, setGw] = useState(currentGw || 1);
+const DreamTeam = ({ currentGw, gw, onGwChange }) => {
 	const [data, setData] = useState(null);
 	const [loading, setLoading] = useState(false);
-
-	useEffect(() => {
-		if (currentGw) {
-			setGw(currentGw);
-		}
-	}, [currentGw]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -27,15 +20,15 @@ const DreamTeam = ({ currentGw }) => {
 				setLoading(false);
 			}
 		};
-		fetchData();
+		if (gw) fetchData();
 	}, [gw]);
 
 	const handlePrev = () => {
-		if (gw > 1) setGw(gw - 1);
+		if (gw > 1 && onGwChange) onGwChange(gw - 1);
 	};
 
 	const handleNext = () => {
-		if (gw < (currentGw || 38)) setGw(gw + 1);
+		if (gw < (currentGw || 38) && onGwChange) onGwChange(gw + 1);
 	};
 
 	if (!data && loading) return <div className="text-center p-8 text-ds-text-muted">Loading Dream Team...</div>;
