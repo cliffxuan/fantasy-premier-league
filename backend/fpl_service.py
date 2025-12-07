@@ -648,6 +648,9 @@ class FPLService:
                     "team": team["name"] if team else "Unknown",
                     "team_short": team["short_name"] if team else "UNK",
                     "team_code": team["code"] if team else 0,
+                    "cost": player["now_cost"] / 10,
+                    "purchase_price": player["now_cost"] / 10,
+                    "selling_price": player["now_cost"] / 10,
                     "points": item["points"],
                     "total_points": player["total_points"],  # Season total
                     "event_points": item["points"],  # GW points
