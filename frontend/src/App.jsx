@@ -206,6 +206,7 @@ function Dashboard() {
                     gameweek={viewGw || entry?.current_event}
                     transfers={transfers}
                     onGwChange={handleGwChange}
+                    onTabSwitch={() => handleTabChange('dream_team')}
                     loading={squadLoading}
                     currentGw={entry?.current_event}
                   />
@@ -214,6 +215,7 @@ function Dashboard() {
                     currentGw={entry?.current_event}
                     gw={viewGw || entry?.current_event}
                     onGwChange={handleGwChange}
+                    onTabSwitch={() => handleTabChange('squad')}
                   />
                 )}
                 <LeagueTable />

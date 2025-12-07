@@ -4,7 +4,7 @@ import { getDreamTeam } from '../api';
 import PlayerPopover from './PlayerPopover';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
-const DreamTeam = ({ currentGw, gw, onGwChange }) => {
+const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 	const [data, setData] = useState(null);
 	const [loading, setLoading] = useState(false);
 
@@ -95,9 +95,19 @@ const DreamTeam = ({ currentGw, gw, onGwChange }) => {
 					>
 						<ChevronLeft size={24} />
 					</button>
-					<h2 className="text-2xl font-bold text-center min-w-[200px]">
-						Gameweek {gw}
-					</h2>
+					<div className="flex flex-col items-center min-w-[200px]">
+						<h2 className="text-2xl font-bold text-center">
+							Gameweek {gw}
+						</h2>
+						{onTabSwitch && (
+							<button
+								onClick={onTabSwitch}
+								className="text-xs text-ds-primary hover:text-ds-primary-hover hover:underline mt-1 font-mono uppercase tracking-wide"
+							>
+								View My Squad
+							</button>
+						)}
+					</div>
 					<button
 						onClick={handleNext}
 						disabled={gw >= (currentGw || 38)}
