@@ -131,7 +131,7 @@ const ListView = ({ squad }) => {
 	);
 };
 
-const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, currentGw, onTabSwitch }) => {
+const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, currentGw, onTabSwitch, history }) => {
 	const [viewMode, setViewMode] = useState('pitch'); // 'pitch' or 'list'
 
 	const handlePrev = () => {
@@ -140,6 +140,12 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 	const handleNext = () => {
 		if (gameweek < 38 && onGwChange) onGwChange(gameweek + 1);
+	};
+
+	const getGwPoints = () => {
+		if (!history) return 0;
+		const entry = history.find(h => h.event === gameweek);
+		return entry ? entry.points : 0;
 	};
 
 	if (!squad || squad.length === 0) return null;
@@ -225,7 +231,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 	return (
 		<div className="flex flex-col gap-6">
 			{/* Header with Navigation and Toggle */}
-			<div className="flex flex-col md:flex-row justify-between items-center gap-4">
+			<div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-ds-card p-4 rounded-xl border border-ds-border">
 				<div className="flex items-center gap-4">
 					<button
 						onClick={handlePrev}
@@ -255,21 +261,31 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 						<ChevronRight size={24} />
 					</button>
 				</div>
-				<div className="flex bg-ds-card rounded-lg p-1 border border-ds-border">
-					<button
-						onClick={() => setViewMode('pitch')}
-						className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'pitch' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
-					>
-						<Layout size={16} />
-						Pitch View
-					</button>
-					<button
-						onClick={() => setViewMode('list')}
-						className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'list' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
-					>
-						<List size={16} />
-						List View
-					</button>
+
+				<div className="flex items-center gap-8">
+					<div className="text-center">
+						<div className="text-xs text-ds-text-muted uppercase tracking-wider mb-1">Total Points</div>
+						<div className="text-3xl font-bold text-ds-primary">{getGwPoints()}</div>
+					</div>
+
+					<div className="h-10 w-px bg-ds-border hidden md:block"></div>
+
+					<div className="flex bg-ds-bg rounded-lg p-1 border border-ds-border">
+						<button
+							onClick={() => setViewMode('pitch')}
+							className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'pitch' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+						>
+							<Layout size={16} />
+							<span className="hidden md:inline">Pitch</span>
+						</button>
+						<button
+							onClick={() => setViewMode('list')}
+							className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === 'list' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+						>
+							<List size={16} />
+							<span className="hidden md:inline">List</span>
+						</button>
+					</div>
 				</div>
 			</div>
 

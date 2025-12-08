@@ -209,6 +209,7 @@ function Dashboard() {
                     onTabSwitch={() => handleTabChange('dream_team')}
                     loading={squadLoading}
                     currentGw={entry?.current_event}
+                    history={history}
                   />
                 ) : (
                   <DreamTeam
