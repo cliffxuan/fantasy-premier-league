@@ -29,7 +29,7 @@ const LeagueTable = () => {
 	if (!table || table.length === 0) return null;
 
 	return (
-		<div className="bg-ds-card rounded-xl p-6 border border-ds-border shadow-sm">
+		<div className="bg-ds-card rounded-xl p-4 md:p-6 border border-ds-border shadow-sm">
 			<h2 className="text-xl font-bold mb-4 text-ds-text flex items-center gap-2">
 				<span className="text-ds-primary">🏆</span> Premier League Table
 			</h2>
@@ -37,20 +37,20 @@ const LeagueTable = () => {
 				<table className="w-full text-sm text-left text-ds-text font-mono">
 					<thead className="text-xs text-ds-text-muted uppercase bg-ds-card-hover/50 border-b border-ds-border">
 						<tr>
-							<th className="px-4 py-3 rounded-tl-lg">Pos</th>
-							<th className="px-4 py-3">Team</th>
-							<th className="px-4 py-3 text-center">P</th>
-							<th className="px-4 py-3 text-center">W</th>
-							<th className="px-4 py-3 text-center">D</th>
-							<th className="px-4 py-3 text-center">L</th>
-							<th className="px-4 py-3 text-center font-bold text-ds-primary">Pts</th>
+							<th className="px-1 py-2 md:px-4 md:py-3 rounded-tl-lg">Pos</th>
+							<th className="px-1 py-2 md:px-4 md:py-3">Team</th>
+							<th className="px-1 py-2 md:px-4 md:py-3 text-center">P</th>
+							<th className="px-1 py-2 md:px-4 md:py-3 text-center">W</th>
+							<th className="px-1 py-2 md:px-4 md:py-3 text-center">D</th>
+							<th className="px-1 py-2 md:px-4 md:py-3 text-center">L</th>
+							<th className="px-1 py-2 md:px-4 md:py-3 text-center font-bold text-ds-primary">Pts</th>
 						</tr>
 					</thead>
 					<tbody>
 						{table.map((team) => (
 							<tr key={team.id} className="border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none">
-								<td className="px-4 py-3 font-bold">{team.position}</td>
-								<td className="px-4 py-3 flex items-center gap-2">
+								<td className="px-1 py-2 md:px-4 md:py-3 font-bold">{team.position}</td>
+								<td className="px-1 py-2 md:px-4 md:py-3 flex items-center gap-2">
 									<img
 										src={`https://resources.premierleague.com/premierleague/badges/25/t${team.code}.png`}
 										alt={team.short_name}
@@ -60,11 +60,11 @@ const LeagueTable = () => {
 									<span className="hidden sm:inline font-sans">{team.name}</span>
 									<span className="sm:hidden font-sans">{team.short_name}</span>
 								</td>
-								<td className="px-4 py-3 text-center text-ds-text-muted">{team.played}</td>
-								<td className="px-4 py-3 text-center text-ds-text-muted">{team.won}</td>
-								<td className="px-4 py-3 text-center text-ds-text-muted">{team.drawn}</td>
-								<td className="px-4 py-3 text-center text-ds-text-muted">{team.lost}</td>
-								<td className="px-4 py-3 text-center font-bold text-ds-primary">{team.points}</td>
+								<td className="px-1 py-2 md:px-4 md:py-3 text-center text-ds-text-muted">{team.played}</td>
+								<td className="px-1 py-2 md:px-4 md:py-3 text-center text-ds-text-muted">{team.won}</td>
+								<td className="px-1 py-2 md:px-4 md:py-3 text-center text-ds-text-muted">{team.drawn}</td>
+								<td className="px-1 py-2 md:px-4 md:py-3 text-center text-ds-text-muted">{team.lost}</td>
+								<td className="px-1 py-2 md:px-4 md:py-3 text-center font-bold text-ds-primary">{team.points}</td>
 							</tr>
 						))}
 					</tbody>

@@ -141,7 +141,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white">
-      <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm py-12 px-8 flex flex-col items-center text-center">
+      <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm py-8 px-4 md:py-12 md:px-8 flex flex-col items-center text-center">
         <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight text-ds-text">
           <span className="text-ds-primary">FPL</span> Assistant
         </h1>
@@ -176,7 +176,7 @@ function Dashboard() {
         )}
       </div>
 
-      <main className="w-full max-w-[1200px] mx-auto p-8 box-border">
+      <main className="w-full max-w-[1200px] mx-auto p-4 md:p-8 box-border">
         {isTeamLoaded && (
           <>
             <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} />
