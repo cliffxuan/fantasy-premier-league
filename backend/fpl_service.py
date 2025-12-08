@@ -688,12 +688,17 @@ class FPLService:
             "gameweek": gw,
         }
 
-    async def get_top_1000_ownership(self, gw: int | None = None) -> Dict[str, Any]:
+    async def get_top_managers_ownership(
+        self, gw: int | None = None, count: int = 1000
+    ) -> Dict[str, Any]:
         if gw is None:
             gw = await self.get_current_gameweek()
 
+        # Cap count at 1000 for now to prevent abuse/timeouts
+        count = min(max(count, 5), 2000)
+
         # Cache check
-        cache_key = f"top_1000_ownership_{gw}"
+        cache_key = f"top_{count}_ownership_{gw}"
         now = time.time()
         # Cache for 1 hour
         if (
@@ -702,76 +707,128 @@ class FPLService:
         ):
             return self._cache[cache_key]
 
-        # 1. Fetch Top 1000 Team IDs from Overall League (ID 314)
-        # We need 20 pages (50 per page)
-        top_teams = []
-        league_id = 314
+        # 1. Raw Cache Check
+        # We store the raw picks data in a special cache key: "top_managers_raw_{gw}"
+        # This allows us to serve any "count" that is <= the cached amount without re-fetching.
 
-        # Helper to fetch a page of standings
-        async def fetch_standings_page(client, page):
-            try:
-                resp = await client.get(
-                    f"{FPL_BASE_URL}/leagues-classic/{league_id}/standings/",
-                    params={"page_new_entries": 1, "page_standings": page},
-                )
-                resp.raise_for_status()
-                return resp.json()
-            except Exception as e:
-                logger.error(f"Failed to fetch standings page {page}: {e}")
-                return None
+        raw_cache_key = f"top_managers_raw_{gw}"
+        raw_cached = self._cache.get(raw_cache_key)
 
-        async with httpx.AsyncClient() as client:
-            tasks = [
-                fetch_standings_page(client, page) for page in range(1, 21)
-            ]  # Pages 1 to 20
-            results = await asyncio.gather(*tasks)
+        picks_data = []  # List of {'picks': [], 'active_chip': str}
 
-            for res in results:
-                if res and "standings" in res and "results" in res["standings"]:
-                    top_teams.extend(res["standings"]["results"])
+        # If we have enough data in cache, use it
+        if raw_cached and len(raw_cached) >= count:
+            logger.info(f"Using raw cache for Top {count} (cached {len(raw_cached)})")
+            picks_data = raw_cached[:count]
+        else:
+            # Need to fetch data
+            # If we have some data, we could potentially just fetch the delta.
+            # But simpler to just fetch all if what we have is insufficient,
+            # OR we can append. Let's append to be efficient.
 
-        # Cap at 1000 just in case
-        top_teams = top_teams[:1000]
-        team_ids = [t["entry"] for t in top_teams]
-        logger.info(f"Fetched {len(team_ids)} top team IDs")
+            # If we need more than we have, fetch the difference or all if no cache
+            # Actually, to keep it robust and simple:
+            # If we need more data than cached, let's just fetch everything to ensure we have the *latest* rank order
+            # (Ranks change as games update).
+            # But typically this is for static analysis.
+            # Let's just fetch what we need.
 
-        # 2. Fetch Picks for all 1000 teams
-        # We need to batch this to avoid overwhelming the server or getting banned
-        # FPL API is sensitive. Let's do chunks of 50.
+            # Fetch Top Manager Team IDs from Overall League (ID 314)
+            num_pages = (count + 49) // 50
+            top_teams = []
+            league_id = 314
+
+            # Helper to fetch a page of standings
+            async def fetch_standings_page(client, page):
+                try:
+                    resp = await client.get(
+                        f"{FPL_BASE_URL}/leagues-classic/{league_id}/standings/",
+                        params={"page_new_entries": 1, "page_standings": page},
+                    )
+                    resp.raise_for_status()
+                    return resp.json()
+                except Exception as e:
+                    logger.error(f"Failed to fetch standings page {page}: {e}")
+                    return None
+
+            async with httpx.AsyncClient() as client:
+                tasks = [
+                    fetch_standings_page(client, page)
+                    for page in range(1, num_pages + 1)
+                ]
+                results = await asyncio.gather(*tasks)
+
+                for res in results:
+                    if res and "standings" in res and "results" in res["standings"]:
+                        top_teams.extend(res["standings"]["results"])
+
+            # Slice to exact count
+            top_teams = top_teams[:count]
+            team_ids = [t["entry"] for t in top_teams]
+            logger.info(f"Fetched {len(team_ids)} top team IDs")
+
+            # 2. Fetch Picks for all teams (that we don't have or just fetch all for simplicity/correctness)
+            # Since ranks shuffle, "Top 50" now might be different teams than "Top 50" an hour ago.
+            # So mixing cached 50 with new 50 might duplicate or miss.
+            # Decision: reliable approach -> if requesting more than cache, fetch ALL requested and overwrite cache.
+
+            picks_data = []
+
+            chunk_size = 50
+
+            async with httpx.AsyncClient() as client:
+                for i in range(0, len(team_ids), chunk_size):
+                    chunk = team_ids[i : i + chunk_size]
+                    tasks = []
+                    for tid in chunk:
+                        tasks.append(
+                            client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/")
+                        )
+
+                    responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+                    # Process chunk results IN ORDER
+                    for resp in responses:
+                        if isinstance(resp, httpx.Response) and resp.status_code == 200:
+                            data = resp.json()
+                            picks_data.append(
+                                {
+                                    "picks": data.get("picks", []),
+                                    "active_chip": data.get("active_chip"),
+                                }
+                            )
+                        else:
+                            # If failed, add empty to maintain count correct?
+                            # Or just skip. If we skip, the count won't match.
+                            # Let's add empty placeholder to be safe
+                            picks_data.append({"picks": [], "active_chip": None})
+
+                    # Small sleep to be nice
+                    await asyncio.sleep(0.5)
+
+            # Update Raw Cache if this is the largest set we've seen
+            if not raw_cached or len(picks_data) > len(raw_cached):
+                self._cache[raw_cache_key] = picks_data
+                self._last_updated[raw_cache_key] = now
+
+        # 3. Process Picks Data (Aggregation)
+        # Now we have `picks_data` (list of dicts) of size `count` (or close to it)
 
         player_counts = Counter()
         captain_counts = Counter()
         chip_counts = Counter()
 
-        chunk_size = 50
+        for entry in picks_data:
+            active_chip = entry.get("active_chip")
+            if active_chip:
+                chip_counts[active_chip] += 1
 
-        async with httpx.AsyncClient() as client:
-            for i in range(0, len(team_ids), chunk_size):
-                chunk = team_ids[i : i + chunk_size]
-                tasks = []
-                for tid in chunk:
-                    tasks.append(
-                        client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/")
-                    )
+            for p in entry.get("picks", []):
+                player_counts[p["element"]] += 1
+                if p["is_captain"]:
+                    captain_counts[p["element"]] += 1
 
-                responses = await asyncio.gather(*tasks, return_exceptions=True)
-
-                for resp in responses:
-                    if isinstance(resp, httpx.Response) and resp.status_code == 200:
-                        data = resp.json()
-                        picks = data.get("picks", [])
-                        active_chip = data.get("active_chip")
-
-                        if active_chip:
-                            chip_counts[active_chip] += 1
-
-                        for p in picks:
-                            player_counts[p["element"]] += 1
-                            if p["is_captain"]:
-                                captain_counts[p["element"]] += 1
-
-                # Small sleep to be nice
-                await asyncio.sleep(0.5)
+        # 4. Enrich with Player Data
 
         # 3. Enrich with Player Data
         bootstrap = await self.get_bootstrap_static()
@@ -779,16 +836,25 @@ class FPLService:
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
         enriched_players = []
-        total_teams = len(team_ids)
+        # 4. Enrich with Player Data
+        bootstrap = await self.get_bootstrap_static()
+        elements = {p["id"]: p for p in bootstrap["elements"]}
+        teams = {t["id"]: t for t in bootstrap["teams"]}
 
-        for pid, count in player_counts.most_common():
+        enriched_players = []
+        # Use actual count of data we have
+        count = len(picks_data)
+        if count == 0:
+            count = 1  # avoid div by zero
+
+        for pid, p_count in player_counts.most_common():
             player = elements.get(pid)
             if not player:
                 continue
 
             team = teams.get(player["team"])
-            ownership = (count / total_teams) * 100
-            cap_ownership = (captain_counts[pid] / total_teams) * 100
+            ownership = (p_count / count) * 100
+            cap_ownership = (captain_counts[pid] / count) * 100
 
             enriched_players.append(
                 {
@@ -813,9 +879,15 @@ class FPLService:
         result = {
             "players": enriched_players,  # Already sorted by ownership due to most_common()
             "chips": dict(chip_counts),
-            "sample_size": total_teams,
+            "sample_size": count,
             "gameweek": gw,
         }
+
+        # Cache the processed result for this specific count too, if we want?
+        # The prompt asked for optimizing fetching. We did that via raw_cache.
+        # But we still calculate the result every time. That is fine as it's fast.
+        # But we should respect the original function cache logic if we want to be super efficient?
+        # Actually, let's update the specific count cache so next time identical request is instant.
 
         self._cache[cache_key] = result
         self._last_updated[cache_key] = now

@@ -98,15 +98,15 @@ async def health_check():
     return {"status": "ok"}
 
 
-@app.get("/api/analysis/top-1000")
-async def get_top_1000_analysis(gw: int | None = None):
+@app.get("/api/analysis/top-managers")
+async def get_top_managers_analysis(gw: int | None = None, count: int = 1000):
     service = FPLService()
     try:
-        data = await service.get_top_1000_ownership(gw)
+        data = await service.get_top_managers_ownership(gw, count)
         return data
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to fetch top 1000 analysis: {str(e)}"
+            status_code=500, detail=f"Failed to fetch top managers analysis: {str(e)}"
         )
 
 

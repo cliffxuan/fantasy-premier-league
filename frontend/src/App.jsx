@@ -8,7 +8,7 @@ import PointsHistoryChart from './components/PointsHistoryChart';
 import TeamHeader from './components/TeamHeader';
 import LeagueTable from './components/LeagueTable';
 import DreamTeam from './components/DreamTeam';
-import Top1000Analysis from './components/Top1000Analysis';
+import TopManagersAnalysis from './components/TopManagersAnalysis';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -197,10 +197,10 @@ function Dashboard() {
                 Team of the Week
               </button>
               <button
-                className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'top1000' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
-                onClick={() => handleTabChange('top1000')}
+                className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'analysis' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
+                onClick={() => handleTabChange('analysis')}
               >
-                Top 1k Analysis
+                Rank Analysis
               </button>
             </div>
 
@@ -226,7 +226,7 @@ function Dashboard() {
                     onTabSwitch={() => handleTabChange('squad')}
                   />
                 ) : (
-                  <Top1000Analysis />
+                  <TopManagersAnalysis />
                 )}
                 <LeagueTable />
               </div>
