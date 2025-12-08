@@ -120,6 +120,18 @@ async def solve_optimization(budget: float = 100.0):
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
 
 
+@app.get("/api/optimization/fixtures")
+async def get_fixture_analysis(gw: int | None = None):
+    service = FPLService()
+    try:
+        data = await service.get_advanced_fixtures(gw)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Fixture analysis failed: {str(e)}"
+        )
+
+
 # Serve static files
 
 

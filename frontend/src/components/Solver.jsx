@@ -106,7 +106,17 @@ const Solver = () => {
 											{['GKP', 'DEF', 'MID', 'FWD'][p.position - 1]}
 										</td>
 										<td className="px-3 py-2 font-bold">{p.name}</td>
-										<td className="px-3 py-2 text-ds-text-muted">{p.team_short}</td>
+										<td className="px-3 py-2 text-ds-text-muted">
+											<div className="flex items-center gap-2">
+												<img
+													src={`https://resources.premierleague.com/premierleague/badges/70/t${p.team_code}.png`}
+													alt={p.team_short}
+													className="w-5 h-5 object-contain"
+													onError={(e) => { e.target.style.display = 'none'; }}
+												/>
+												<span>{p.team_short}</span>
+											</div>
+										</td>
 										<td className="px-3 py-2 text-right">£{p.cost}m</td>
 										<td className="px-3 py-2 text-right font-bold text-ds-primary">{p.points}</td>
 									</tr>

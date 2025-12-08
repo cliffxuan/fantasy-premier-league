@@ -863,6 +863,7 @@ class FPLService:
                     "web_name": player["web_name"],
                     "full_name": f"{player['first_name']} {player['second_name']}",
                     "team_short": team["short_name"] if team else "UNK",
+                    "team_code": team["code"] if team else 0,
                     "element_type": player[
                         "element_type"
                     ],  # 1=GKP, 2=DEF, 3=MID, 4=FWD
@@ -1002,6 +1003,7 @@ class FPLService:
                     {
                         **p,
                         "team_short": t_info["short_name"] if t_info else "UNK",
+                        "team_code": t_info["code"] if t_info else 0,
                         "full_team_name": t_info["name"] if t_info else "Unknown",
                     }
                 )
@@ -1020,3 +1022,139 @@ class FPLService:
             "status": status,
             "budget_used": round(total_cost, 1),
         }
+
+    async def get_advanced_fixtures(self, gw: int | None = None) -> list:
+        # If gw is None, user likely wants fixtures for upcoming GWs
+        # Let's say we return the next 38 - current GW fixtures
+        current_gw = await self.get_current_gameweek()
+        start_gw = gw if gw else current_gw
+
+        fixtures = await self.get_fixtures()
+        bootstrap = await self.get_bootstrap_static()
+        teams = {t["id"]: t for t in bootstrap["teams"]}
+
+        # 1. Calculate Team Strength Metrics
+        # Official FDR is static. We want dynamic based on actual performance.
+        # Strength = Base Strength + Form Modifier
+
+        # Simple Model:
+        # Attack Strength = Goals For / Games Played
+        # Defense Weakness = Goals Conceded / Games Played
+
+        team_stats = {}
+        for t in bootstrap["teams"]:
+            # Populate team stats for advanced modeling later
+            # Currently using official strength, but we can enrich here
+            team_stats[t["id"]] = {
+                "name": t["name"],
+                "short_name": t["short_name"],
+                "attack": t[
+                    "strength_attack_home"
+                ],  # Simplified, use official for now as baseline
+                "defence": t["strength_defence_home"],
+                "overall": t["strength_overall_home"],
+                "form": t["form"],
+            }
+
+        # 2. Process Fixtures
+        # We want to identify "Good Run" for teams.
+        # Calculates a custom difficulty score for each fixture.
+
+        enriched_fixtures = []
+
+        # Filter futures
+        future_fixtures = [
+            f
+            for f in fixtures
+            if not f["finished"] and f["event"] is not None and f["event"] >= start_gw
+        ]
+
+        # Group by team
+        team_fixtures = {t_id: [] for t_id in teams}
+
+        for f in future_fixtures:
+            # Home Team Perspective
+            # Difficulty = Opponent Defense Strength (if we are attacking) vs Our Attack?
+            # Actually, standard FDR is "How hard is it to win/get points?".
+            # For attackers: Opponent Defense Strength.
+            # For defenders: Opponent Attack Strength.
+
+            h_team = teams[f["team_h"]]
+            a_team = teams[f["team_a"]]
+
+            # Difficulty for Home Team (to Attack)
+            # Opponent is Away Team
+            h_diff_attack = a_team["strength_defence_away"]
+            # Difficulty for Home Team (to Defend)
+            h_diff_defend = a_team["strength_attack_away"]
+
+            # Difficulty for Away Team (to Attack)
+            a_diff_attack = h_team["strength_defence_home"]
+            # Difficulty for Away Team (to Defend)
+            a_diff_defend = h_team["strength_attack_home"]
+
+            # Custom Rating (1-5 scale re-mapped from strength ~1000-1350)
+            # 1350 is Hard (Man City), 1000 is Easy (Promoted)
+            # Map 1000->1, 1350->5
+            def map_strength(s):
+                return max(1, min(5, (s - 950) / 80))
+
+            team_fixtures[f["team_h"]].append(
+                {
+                    "gameweek": f["event"],
+                    "opponent": a_team["short_name"],
+                    "opponent_id": f["team_a"],
+                    "is_home": True,
+                    "fdr_official": f["team_h_difficulty"],
+                    "fdr_attack": round(map_strength(h_diff_attack), 2),
+                    "fdr_defend": round(map_strength(h_diff_defend), 2),
+                    "kickoff": f["kickoff_time"],
+                }
+            )
+
+            team_fixtures[f["team_a"]].append(
+                {
+                    "gameweek": f["event"],
+                    "opponent": h_team["short_name"],
+                    "opponent_id": f["team_h"],
+                    "is_home": False,
+                    "fdr_official": f["team_a_difficulty"],
+                    "fdr_attack": round(map_strength(a_diff_attack), 2),
+                    "fdr_defend": round(map_strength(a_diff_defend), 2),
+                    "kickoff": f["kickoff_time"],
+                }
+            )
+
+        # 3. Analyze "Tickers" (Next 5 GWs)
+        ticker_data = []
+        for t_id, fixs in team_fixtures.items():
+            # Get next 5
+            next_5 = sorted(fixs, key=lambda x: x["gameweek"])[:5]
+            if not next_5:
+                continue
+
+            avg_diff_off = sum(f["fdr_official"] for f in next_5) / len(next_5)
+            avg_diff_att = sum(f["fdr_attack"] for f in next_5) / len(next_5)
+            avg_diff_def = sum(f["fdr_defend"] for f in next_5) / len(next_5)
+
+            ticker_data.append(
+                {
+                    "team_id": t_id,
+                    "team_name": teams[t_id]["name"],
+                    "team_short": teams[t_id]["short_name"],
+                    "team_code": teams[t_id]["code"],
+                    "next_5": next_5,
+                    "avg_difficulty_official": round(avg_diff_off, 2),
+                    "avg_difficulty_attack": round(
+                        avg_diff_att, 2
+                    ),  # Lower is better (easier opponent defense)
+                    "avg_difficulty_defend": round(
+                        avg_diff_def, 2
+                    ),  # Lower is better (weaker opponent attack)
+                }
+            )
+
+        # Sort by best attacking fixtures (lowest difficulty)
+        ticker_data.sort(key=lambda x: x["avg_difficulty_attack"])
+
+        return ticker_data

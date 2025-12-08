@@ -1,0 +1,140 @@
+import React, { useState, useEffect } from 'react';
+
+const FixtureTicker = () => {
+	const [data, setData] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const [mode, setMode] = useState('attack'); // 'attack' or 'defense'
+
+	// Initial load
+	useEffect(() => {
+		const fetchData = async () => {
+			setLoading(true);
+			try {
+				const response = await fetch(`/api/optimization/fixtures`);
+				if (!response.ok) {
+					throw new Error('Failed to fetch fixture analysis');
+				}
+				const result = await response.json();
+				setData(result);
+			} catch (err) {
+				setError(err.message);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchData();
+	}, []);
+
+	const getDifficultyColor = (diff, type) => {
+		// Attack/Defense maps 1-5 (1=Easy, 5=Hard)
+		// Official FDR maps 1-5 (1=Easy, 5=Hard)
+		// We want green for easy (1-2), gray (3), red (4-5)
+
+		const val = Math.round(diff);
+		if (val <= 2) return 'bg-ds-primary text-white font-bold shadow-sm'; // Easy (Green equivalent) - using Primary for now or specific green
+		if (val === 3) return 'bg-ds-surface border border-ds-border text-ds-text-muted'; // Medium (Grey)
+		return 'bg-ds-danger text-white font-bold opacity-90'; // Hard (Red)
+	};
+
+	// Custom color map for 1-5 scale
+	const getFDRColor = (score) => {
+		if (score <= 2.2) return 'bg-green-500 text-white'; // Easy
+		if (score <= 2.8) return 'bg-green-600/80 text-white'; // Good
+		if (score <= 3.2) return 'bg-gray-500 text-white'; // Average
+		if (score <= 4.0) return 'bg-red-500/90 text-white'; // Hard
+		return 'bg-red-700 text-white'; // Very Hard
+	};
+
+	const sortedData = data ? [...data].sort((a, b) => {
+		if (mode === 'attack') return a.avg_difficulty_attack - b.avg_difficulty_attack;
+		return a.avg_difficulty_defend - b.avg_difficulty_defend;
+	}) : [];
+
+	if (loading) return (
+		<div className="bg-ds-card rounded-xl p-8 md:p-12 border border-ds-border shadow-sm flex flex-col items-center justify-center text-center">
+			<div className="w-8 h-8 border-4 border-ds-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+			<p className="text-ds-text-muted text-sm">Analyzing Strength of Schedule...</p>
+		</div>
+	);
+
+	if (error) return null;
+
+	return (
+		<div className="bg-ds-card rounded-xl border border-ds-border shadow-sm overflow-hidden animate-in fade-in duration-500">
+			<div className="p-4 border-b border-ds-border flex justify-between items-center bg-ds-surface/50">
+				<div>
+					<h2 className="text-lg font-bold text-ds-text flex items-center gap-2">
+						<span className="text-ds-primary">🗓️</span> Fixture Ticker (Next 5)
+					</h2>
+					<p className="text-xs text-ds-text-muted">Dynamic difficulty based on opponent {mode === 'attack' ? 'defense' : 'attack'} strength.</p>
+				</div>
+
+				<div className="flex bg-ds-bg rounded-lg p-1 border border-ds-border text-xs font-bold">
+					<button
+						onClick={() => setMode('attack')}
+						className={`px-3 py-1 rounded-md transition-all ${mode === 'attack' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+					>
+						Attack
+					</button>
+					<button
+						onClick={() => setMode('defense')}
+						className={`px-3 py-1 rounded-md transition-all ${mode === 'defense' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+					>
+						Defense
+					</button>
+				</div>
+			</div>
+
+			<div className="overflow-x-auto">
+				<table className="w-full text-xs md:text-sm text-left text-ds-text font-mono">
+					<thead className="bg-ds-surface text-ds-text-muted border-b border-ds-border uppercase text-[10px]">
+						<tr>
+							<th className="px-3 py-2 w-16">Rank</th>
+							<th className="px-3 py-2 w-24">Team</th>
+							{sortedData[0]?.next_5.map((f, i) => (
+								<th key={i} className="px-1 py-2 text-center w-12 text-ds-text/50">GW{f.gameweek}</th>
+							))}
+							<th className="px-3 py-2 text-right">FDR</th>
+						</tr>
+					</thead>
+					<tbody>
+						{sortedData.slice(0, 20).map((team, index) => (
+							<tr key={team.team_id} className="border-b border-ds-border hover:bg-ds-card-hover/50 transition-colors last:border-none">
+								<td className="px-3 py-2 font-bold text-ds-text-muted">#{index + 1}</td>
+								<td className="px-3 py-2">
+									<div className="flex items-center gap-2">
+										<img
+											src={`https://resources.premierleague.com/premierleague/badges/70/t${team.team_code}.png`}
+											alt={team.team_short}
+											className="w-6 h-6 object-contain"
+											onError={(e) => { e.target.style.display = 'none'; }}
+										/>
+										<span className="font-bold">{team.team_short}</span>
+									</div>
+								</td>
+								{team.next_5.map((f, i) => {
+									const difficulty = mode === 'attack' ? f.fdr_attack : f.fdr_defend;
+									return (
+										<td key={i} className="p-1">
+											<div className={`w-full h-8 flex flex-col items-center justify-center rounded text-[10px] leading-tight ${getFDRColor(difficulty)}`}>
+												<span className="font-bold">{f.opponent}</span>
+												<span className="opacity-75 transform scale-75">{f.is_home ? '(H)' : '(A)'}</span>
+											</div>
+										</td>
+									);
+								})}
+								<td className="px-3 py-2 text-right font-bold text-ds-text">
+									{mode === 'attack' ? team.avg_difficulty_attack.toFixed(2) : team.avg_difficulty_defend.toFixed(2)}
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	);
+};
+
+export default FixtureTicker;

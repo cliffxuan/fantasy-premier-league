@@ -8,25 +8,28 @@ const TopManagersAnalysis = () => {
 	const [positionFilter, setPositionFilter] = useState('ALL'); // ALL, GKP, DEF, MID, FWD
 
 	// Initial load and subsequent updates
-	useEffect(() => {
-		const fetchData = async () => {
-			setLoading(true); // Reset loading state on refetch
-			try {
-				const response = await fetch(`/api/analysis/top-managers?count=${managerCount}`);
-				if (!response.ok) {
-					throw new Error('Failed to fetch Top Managers analysis');
-				}
-				const result = await response.json();
-				setData(result);
-			} catch (err) {
-				setError(err.message);
-			} finally {
-				setLoading(false);
+	// Define fetch logic
+	const fetchData = async () => {
+		setLoading(true); // Reset loading state on refetch
+		try {
+			const response = await fetch(`/api/analysis/top-managers?count=${managerCount}`);
+			if (!response.ok) {
+				throw new Error('Failed to fetch Top Managers analysis');
 			}
-		};
+			const result = await response.json();
+			setData(result);
+		} catch (err) {
+			setError(err.message);
+		} finally {
+			setLoading(false);
+		}
+	};
 
+	// Initial load only
+	useEffect(() => {
 		fetchData();
-	}, [managerCount]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []); // Only run on mount, subsequent updates via button
 
 	const handleCountChange = (e) => {
 		setManagerCount(Number(e.target.value));
@@ -101,6 +104,14 @@ const TopManagersAnalysis = () => {
 							<option key={v} value={v}>{v}</option>
 						))}
 					</select>
+
+					<button
+						onClick={fetchData}
+						disabled={loading}
+						className="ml-2 bg-ds-primary text-white font-bold px-4 py-2 rounded-lg hover:bg-ds-primary-hover active:scale-95 transition-all text-sm disabled:opacity-50 disabled:scale-100"
+					>
+						{loading ? '...' : 'Analyze'}
+					</button>
 				</div>
 			</div>
 
@@ -142,7 +153,17 @@ const TopManagersAnalysis = () => {
 												</span>
 											)}
 										</td>
-										<td className="px-3 py-3 text-center text-ds-text-muted">{player.team_short}</td>
+										<td className="px-3 py-2 text-center text-ds-text-muted">
+											<div className="flex flex-col items-center justify-center gap-1">
+												<img
+													src={`https://resources.premierleague.com/premierleague/badges/70/t${player.team_code}.png`}
+													alt={player.team_short}
+													className="w-5 h-5 object-contain"
+													onError={(e) => { e.target.style.display = 'none'; }}
+												/>
+												<span className="text-[10px]">{player.team_short}</span>
+											</div>
+										</td>
 										<td className="px-3 py-3 text-center text-ds-text-muted">
 											{['GKP', 'DEF', 'MID', 'FWD'][player.element_type - 1]}
 										</td>

@@ -10,6 +10,7 @@ import LeagueTable from './components/LeagueTable';
 import DreamTeam from './components/DreamTeam';
 import TopManagersAnalysis from './components/TopManagersAnalysis';
 import Solver from './components/Solver';
+import FixtureTicker from './components/FixtureTicker';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -235,7 +236,10 @@ function Dashboard() {
                 ) : activeTab === 'analysis' ? (
                   <TopManagersAnalysis />
                 ) : (
-                  <Solver />
+                  <div className="space-y-8">
+                    <Solver />
+                    <FixtureTicker />
+                  </div>
                 )}
                 <LeagueTable />
               </div>
