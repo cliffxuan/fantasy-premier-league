@@ -44,18 +44,18 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 
 	const PlayerCard = ({ player }) => (
 		<PlayerPopover player={player}>
-			<div className="relative flex flex-col items-center justify-center w-[90px]">
+			<div className="relative flex flex-col items-center justify-center w-[70px] md:w-[90px]">
 				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
 					{/* Player Photo */}
 					<img
 						src={getPlayerImage(player.code)}
 						alt={player.name}
-						className="w-[60px] h-[75px] object-cover drop-shadow-lg"
+						className="w-[45px] h-[60px] md:w-[60px] md:h-[75px] object-cover drop-shadow-lg"
 						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 
 					{/* Points Badge (Top Left) */}
-					<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[12px] font-bold w-7 h-6 flex items-center justify-center rounded-full border border-white shadow-sm">
+					<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[10px] md:text-[12px] font-bold w-5 h-5 md:w-7 md:h-6 flex items-center justify-center rounded-full border border-white shadow-sm">
 						{player.event_points}
 					</div>
 
@@ -143,7 +143,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 			</div>
 
 			{/* Pitch View */}
-			<div className="bg-ds-card rounded-xl p-8 relative border border-ds-border min-h-[600px] flex flex-col justify-between overflow-hidden">
+			<div className="bg-ds-card rounded-xl p-2 md:p-8 relative border border-ds-border min-h-[500px] md:min-h-[600px] flex flex-col justify-between overflow-hidden">
 				{/* Pitch Pattern Overlay */}
 				<div className="absolute inset-0 opacity-5 pointer-events-none"
 					style={{
@@ -156,16 +156,16 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 				{/* Halfway Line */}
 				<div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/5 pointer-events-none"></div>
 
-				<div className="flex justify-center gap-4 z-10">
+				<div className="flex justify-center gap-1 md:gap-4 z-10">
 					{gkp.map((p, i) => <PlayerCard key={`gkp-${i}`} player={p} />)}
 				</div>
-				<div className="flex justify-center gap-4 z-10">
+				<div className="flex justify-center gap-1 md:gap-4 z-10">
 					{def.map((p, i) => <PlayerCard key={`def-${i}`} player={p} />)}
 				</div>
-				<div className="flex justify-center gap-4 z-10">
+				<div className="flex justify-center gap-1 md:gap-4 z-10">
 					{mid.map((p, i) => <PlayerCard key={`mid-${i}`} player={p} />)}
 				</div>
-				<div className="flex justify-center gap-4 z-10">
+				<div className="flex justify-center gap-1 md:gap-4 z-10">
 					{fwd.map((p, i) => <PlayerCard key={`fwd-${i}`} player={p} />)}
 				</div>
 			</div>
