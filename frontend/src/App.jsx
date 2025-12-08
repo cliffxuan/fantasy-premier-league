@@ -9,6 +9,7 @@ import TeamHeader from './components/TeamHeader';
 import LeagueTable from './components/LeagueTable';
 import DreamTeam from './components/DreamTeam';
 import TopManagersAnalysis from './components/TopManagersAnalysis';
+import Solver from './components/Solver';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -202,6 +203,12 @@ function Dashboard() {
               >
                 Rank Analysis
               </button>
+              <button
+                className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'solver' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
+                onClick={() => handleTabChange('solver')}
+              >
+                AI Solver
+              </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
@@ -225,8 +232,10 @@ function Dashboard() {
                     onGwChange={handleGwChange}
                     onTabSwitch={() => handleTabChange('squad')}
                   />
-                ) : (
+                ) : activeTab === 'analysis' ? (
                   <TopManagersAnalysis />
+                ) : (
+                  <Solver />
                 )}
                 <LeagueTable />
               </div>

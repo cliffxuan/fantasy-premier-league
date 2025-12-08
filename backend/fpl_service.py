@@ -1,10 +1,11 @@
+import asyncio
 import time
+from collections import Counter
 from typing import Any, Dict
-from loguru import logger
 
 import httpx
-import asyncio
-from collections import Counter
+import pulp
+from loguru import logger
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -893,3 +894,129 @@ class FPLService:
         self._last_updated[cache_key] = now
 
         return result
+
+    async def get_optimized_team(self, budget: float = 100.0) -> Dict[str, Any]:
+        bootstrap = await self.get_bootstrap_static()
+        elements = bootstrap["elements"]
+
+        # Prepare data for solver
+        # Filter out unavailable players? (status != 'a')
+        # Let's keep it simple: Optimize for total_points (historical data)
+        # In a real predictor, we would use projected points.
+
+        players = []
+        for p in elements:
+            # Skip players with 0 points to reduce problem size
+            if p["total_points"] == 0:
+                continue
+
+            players.append(
+                {
+                    "id": p["id"],
+                    "name": p["web_name"],
+                    "position": p["element_type"],  # 1:GKP, 2:DEF, 3:MID, 4:FWD
+                    "team": p["team"],
+                    "cost": p["now_cost"] / 10.0,
+                    "points": p["total_points"],
+                    "form": float(p["form"]),
+                    "status": p["status"],
+                }
+            )
+
+        # Problem Definition
+        prob = pulp.LpProblem("FPL_Team_Optimization", pulp.LpMaximize)
+
+        # Decision Variables
+        # x[i] = 1 if player i is selected, 0 otherwise
+        player_vars = pulp.LpVariable.dicts(
+            "Player", [p["id"] for p in players], cat="Binary"
+        )
+
+        # Objective Function: Maximize Total Points
+        prob += (
+            pulp.lpSum([p["points"] * player_vars[p["id"]] for p in players]),
+            "Total Points",
+        )
+
+        # Constraints
+
+        # 1. Budget Constraint
+        prob += (
+            pulp.lpSum([p["cost"] * player_vars[p["id"]] for p in players]) <= budget,
+            "Budget",
+        )
+
+        # 2. Squad Size (Exactly 15 players)
+        prob += pulp.lpSum([player_vars[p["id"]] for p in players]) == 15, "Squad Size"
+
+        # 3. Position Constraints
+        # GKP: 2
+        prob += (
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 1])
+            == 2,
+            "GKP Count",
+        )
+        # DEF: 5
+        prob += (
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 2])
+            == 5,
+            "DEF Count",
+        )
+        # MID: 5
+        prob += (
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 3])
+            == 5,
+            "MID Count",
+        )
+        # FWD: 3
+        prob += (
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 4])
+            == 3,
+            "FWD Count",
+        )
+
+        # 4. Max Players per Team (3)
+        teams = set(p["team"] for p in players)
+        for t in teams:
+            prob += (
+                pulp.lpSum([player_vars[p["id"]] for p in players if p["team"] == t])
+                <= 3,
+                f"Max Players Team {t}",
+            )
+
+        # Solve
+        # Suppress output
+        prob.solve(pulp.PULP_CBC_CMD(msg=False))
+
+        # Extract Results
+        selected_players = []
+        total_cost = 0
+        total_points = 0
+
+        team_map = {t["id"]: t for t in bootstrap["teams"]}
+
+        for p in players:
+            if pulp.value(player_vars[p["id"]]) == 1:
+                t_info = team_map.get(p["team"])
+                selected_players.append(
+                    {
+                        **p,
+                        "team_short": t_info["short_name"] if t_info else "UNK",
+                        "full_team_name": t_info["name"] if t_info else "Unknown",
+                    }
+                )
+                total_cost += p["cost"]
+                total_points += p["points"]
+
+        # Sort by position then points
+        selected_players.sort(key=lambda x: (x["position"], -x["points"]))
+
+        status = pulp.LpStatus[prob.status]
+
+        return {
+            "squad": selected_players,
+            "total_points": total_points,
+            "total_cost": round(total_cost, 1),
+            "status": status,
+            "budget_used": round(total_cost, 1),
+        }
