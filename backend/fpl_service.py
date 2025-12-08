@@ -3,6 +3,8 @@ from typing import Any, Dict
 from loguru import logger
 
 import httpx
+import asyncio
+from collections import Counter
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -685,3 +687,137 @@ class FPLService:
             "total_points": total_points,
             "gameweek": gw,
         }
+
+    async def get_top_1000_ownership(self, gw: int | None = None) -> Dict[str, Any]:
+        if gw is None:
+            gw = await self.get_current_gameweek()
+
+        # Cache check
+        cache_key = f"top_1000_ownership_{gw}"
+        now = time.time()
+        # Cache for 1 hour
+        if (
+            cache_key in self._cache
+            and (now - self._last_updated.get(cache_key, 0)) < 3600
+        ):
+            return self._cache[cache_key]
+
+        # 1. Fetch Top 1000 Team IDs from Overall League (ID 314)
+        # We need 20 pages (50 per page)
+        top_teams = []
+        league_id = 314
+
+        # Helper to fetch a page of standings
+        async def fetch_standings_page(client, page):
+            try:
+                resp = await client.get(
+                    f"{FPL_BASE_URL}/leagues-classic/{league_id}/standings/",
+                    params={"page_new_entries": 1, "page_standings": page},
+                )
+                resp.raise_for_status()
+                return resp.json()
+            except Exception as e:
+                logger.error(f"Failed to fetch standings page {page}: {e}")
+                return None
+
+        async with httpx.AsyncClient() as client:
+            tasks = [
+                fetch_standings_page(client, page) for page in range(1, 21)
+            ]  # Pages 1 to 20
+            results = await asyncio.gather(*tasks)
+
+            for res in results:
+                if res and "standings" in res and "results" in res["standings"]:
+                    top_teams.extend(res["standings"]["results"])
+
+        # Cap at 1000 just in case
+        top_teams = top_teams[:1000]
+        team_ids = [t["entry"] for t in top_teams]
+        logger.info(f"Fetched {len(team_ids)} top team IDs")
+
+        # 2. Fetch Picks for all 1000 teams
+        # We need to batch this to avoid overwhelming the server or getting banned
+        # FPL API is sensitive. Let's do chunks of 50.
+
+        player_counts = Counter()
+        captain_counts = Counter()
+        chip_counts = Counter()
+
+        chunk_size = 50
+
+        async with httpx.AsyncClient() as client:
+            for i in range(0, len(team_ids), chunk_size):
+                chunk = team_ids[i : i + chunk_size]
+                tasks = []
+                for tid in chunk:
+                    tasks.append(
+                        client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/")
+                    )
+
+                responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+                for resp in responses:
+                    if isinstance(resp, httpx.Response) and resp.status_code == 200:
+                        data = resp.json()
+                        picks = data.get("picks", [])
+                        active_chip = data.get("active_chip")
+
+                        if active_chip:
+                            chip_counts[active_chip] += 1
+
+                        for p in picks:
+                            player_counts[p["element"]] += 1
+                            if p["is_captain"]:
+                                captain_counts[p["element"]] += 1
+
+                # Small sleep to be nice
+                await asyncio.sleep(0.5)
+
+        # 3. Enrich with Player Data
+        bootstrap = await self.get_bootstrap_static()
+        elements = {p["id"]: p for p in bootstrap["elements"]}
+        teams = {t["id"]: t for t in bootstrap["teams"]}
+
+        enriched_players = []
+        total_teams = len(team_ids)
+
+        for pid, count in player_counts.most_common():
+            player = elements.get(pid)
+            if not player:
+                continue
+
+            team = teams.get(player["team"])
+            ownership = (count / total_teams) * 100
+            cap_ownership = (captain_counts[pid] / total_teams) * 100
+
+            enriched_players.append(
+                {
+                    "id": pid,
+                    "web_name": player["web_name"],
+                    "full_name": f"{player['first_name']} {player['second_name']}",
+                    "team_short": team["short_name"] if team else "UNK",
+                    "element_type": player[
+                        "element_type"
+                    ],  # 1=GKP, 2=DEF, 3=MID, 4=FWD
+                    "cost": player["now_cost"] / 10,
+                    "total_points": player["total_points"],
+                    "ownership_top_1000": round(ownership, 1),
+                    "captain_top_1000": round(cap_ownership, 1),
+                    "global_ownership": float(player["selected_by_percent"]),
+                    "rank_diff": round(
+                        ownership - float(player["selected_by_percent"]), 1
+                    ),
+                }
+            )
+
+        result = {
+            "players": enriched_players,  # Already sorted by ownership due to most_common()
+            "chips": dict(chip_counts),
+            "sample_size": total_teams,
+            "gameweek": gw,
+        }
+
+        self._cache[cache_key] = result
+        self._last_updated[cache_key] = now
+
+        return result

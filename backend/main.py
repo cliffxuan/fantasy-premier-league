@@ -98,6 +98,18 @@ async def health_check():
     return {"status": "ok"}
 
 
+@app.get("/api/analysis/top-1000")
+async def get_top_1000_analysis(gw: int | None = None):
+    service = FPLService()
+    try:
+        data = await service.get_top_1000_ownership(gw)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch top 1000 analysis: {str(e)}"
+        )
+
+
 # Serve static files
 
 
