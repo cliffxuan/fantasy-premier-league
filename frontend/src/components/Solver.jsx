@@ -4,7 +4,7 @@ import PlayerPopover from './PlayerPopover';
 const Solver = () => {
 	const [budget, setBudget] = useState(100.0);
 	const [minGw, setMinGw] = useState(1);
-	const [maxGw, setMaxGw] = useState(38);
+	const [maxGw, setMaxGw] = useState(null);
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
@@ -15,10 +15,26 @@ const Solver = () => {
 				const response = await fetch('/api/gameweek/current');
 				if (response.ok) {
 					const data = await response.json();
-					setMaxGw(data.gameweek);
+					console.log('Current GW Data:', data);
+					const status = data.status;
+
+					let safeMax = 38;
+					if (status) {
+						// If GW has started (deadline passed), use it. otherwise use previous.
+						safeMax = status.started ? status.id : Math.max(1, status.id - 1);
+					} else if (data.gameweek) {
+						// Fallback if status object is missing (stale backend)
+						safeMax = data.gameweek;
+					}
+
+					setMaxGw(safeMax);
+				} else {
+					console.error('API Error:', response.status);
+					setMaxGw(38); // Fallback on error
 				}
 			} catch (err) {
 				console.error('Failed to fetch current gameweek:', err);
+				setMaxGw(38); // Fallback on exception
 			}
 		};
 		fetchCurrentGw();
@@ -87,12 +103,13 @@ const Solver = () => {
 							type="number"
 							min="1"
 							max="38"
-							value={maxGw}
+							value={maxGw || ''}
 							onChange={(e) => setMaxGw(parseInt(e.target.value))}
-							className="w-full bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono text-center"
-							placeholder="End"
+							className={`w-full bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono text-center ${!maxGw ? 'animate-pulse' : ''}`}
+							placeholder={maxGw ? maxGw : '...'}
 						/>
 					</div>
+					{!maxGw && <div className="text-[10px] text-ds-primary mt-1">Loading...</div>}
 				</div>
 				<button
 					type="submit"

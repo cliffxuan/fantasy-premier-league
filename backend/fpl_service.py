@@ -462,12 +462,16 @@ class FPLService:
 
     async def get_gameweek_status(self) -> Dict[str, Any]:
         data = await self.get_bootstrap_static()
+        now = time.time()
         for event in data["events"]:
             if event["is_current"]:
+                deadline = event.get("deadline_time_epoch", 0)
+                started = now > deadline
                 return {
                     "id": event["id"],
                     "finished": event["finished"],
                     "data_checked": event["data_checked"],
+                    "started": started,
                 }
         # Fallback if no current (e.g. pre-season)
         for event in data["events"]:
@@ -477,8 +481,9 @@ class FPLService:
                     "id": prev_id,
                     "finished": True,  # Assume prev is finished
                     "data_checked": True,
+                    "started": True,
                 }
-        return {"id": 38, "finished": True, "data_checked": True}
+        return {"id": 38, "finished": True, "data_checked": True, "started": True}
 
     async def get_next_gameweek_id(self) -> int:
         data = await self.get_bootstrap_static()
