@@ -138,8 +138,8 @@ async def get_fixture_analysis(gw: int | None = None):
 async def get_current_gameweek():
     service = FPLService()
     try:
-        gw = await service.get_current_gameweek()
-        return {"gameweek": gw}
+        status = await service.get_gameweek_status()
+        return {"gameweek": status["id"], "status": status}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch current gameweek: {str(e)}"

@@ -7,29 +7,27 @@ import { getPlayerImage, handlePlayerImageError } from '../utils';
 const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 	const [data, setData] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [fetchedCurrentGw, setFetchedCurrentGw] = useState(null);
+	const [fetchedStatus, setFetchedStatus] = useState(null);
 
-	// Fetch current GW if missing
+	// Fetch current GW status always to ensure we know the latest finalized week
 	useEffect(() => {
-		if (!gw || !currentGw) {
-			const fetchCurrent = async () => {
-				try {
-					const response = await fetch('/api/gameweek/current');
-					if (response.ok) {
-						const res = await response.json();
-						setFetchedCurrentGw(res.gameweek);
-						// Only update GW if it's missing
-						if (!gw && onGwChange) {
-							onGwChange(res.gameweek);
-						}
+		const fetchCurrent = async () => {
+			try {
+				const response = await fetch('/api/gameweek/current');
+				if (response.ok) {
+					const res = await response.json();
+					setFetchedStatus(res.status);
+					// Only update GW if it's missing
+					if (!gw && onGwChange) {
+						onGwChange(res.gameweek);
 					}
-				} catch (e) {
-					console.error("Failed to fetch current GW", e);
 				}
-			};
-			fetchCurrent();
-		}
-	}, [gw, currentGw, onGwChange]);
+			} catch (e) {
+				console.error("Failed to fetch current GW", e);
+			}
+		};
+		fetchCurrent();
+	}, [gw, onGwChange]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -51,13 +49,29 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 	};
 
 	const handleNext = () => {
-		const maxGw = currentGw || fetchedCurrentGw || 38;
+		const maxGw = currentGw || fetchedStatus?.id || 38;
 		if (gw < maxGw && onGwChange) onGwChange(gw + 1);
 	};
 
 
 	if (!data && loading) return <div className="text-center p-8 text-ds-text-muted">Loading Dream Team...</div>;
 	if (!data) {
+		const currentStatus = fetchedStatus || {};
+
+		// Determine the latest "Safe" Gameweek (one that should have data)
+		// Start with either the fetched current ID or the prop passed down
+		let safeGw = currentStatus.id || currentGw || 1;
+
+		// If we know for sure that the current one isn't finalized, go back one
+		if (currentStatus.id && !currentStatus.data_checked) {
+			safeGw = Math.max(1, currentStatus.id - 1);
+		}
+
+		// Calculate redirection target:
+		// 1. If we are in the future (gw > safeGw), jump straight to safeGw.
+		// 2. If we are AT safeGw or earlier (but still no data/error), just go back one step.
+		const targetGw = gw > safeGw ? safeGw : Math.max(1, gw - 1);
+
 		return (
 			<div className="flex flex-col items-center justify-center p-12 gap-6 border border-ds-border rounded-xl bg-ds-card animate-in fade-in zoom-in-95 duration-300">
 				<div className="text-center space-y-2">
@@ -66,15 +80,13 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 						The Dream Team for this gameweek hasn't been finalized yet.
 					</p>
 				</div>
-				{gw > 1 && (
-					<button
-						onClick={() => onGwChange && onGwChange(gw - 1)}
-						className="flex items-center gap-2 bg-ds-primary text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-ds-primary-hover hover:scale-105 active:scale-95 transition-all"
-					>
-						<ChevronLeft size={18} />
-						View Gameweek {gw - 1}
-					</button>
-				)}
+				<button
+					onClick={() => onGwChange && onGwChange(targetGw)}
+					className="flex items-center gap-2 bg-ds-primary text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-ds-primary-hover hover:scale-105 active:scale-95 transition-all"
+				>
+					<ChevronLeft size={18} />
+					View Gameweek {targetGw}
+				</button>
 			</div>
 		);
 	}
@@ -155,7 +167,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 					</div>
 					<button
 						onClick={handleNext}
-						disabled={gw >= (currentGw || fetchedCurrentGw || 38)}
+						disabled={gw >= (currentGw || fetchedStatus?.id || 38)}
 						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 					>
 						<ChevronRight size={24} />
