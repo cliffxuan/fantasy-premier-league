@@ -7,6 +7,29 @@ import { getPlayerImage, handlePlayerImageError } from '../utils';
 const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 	const [data, setData] = useState(null);
 	const [loading, setLoading] = useState(false);
+	const [fetchedCurrentGw, setFetchedCurrentGw] = useState(null);
+
+	// Fetch current GW if missing
+	useEffect(() => {
+		if (!gw || !currentGw) {
+			const fetchCurrent = async () => {
+				try {
+					const response = await fetch('/api/gameweek/current');
+					if (response.ok) {
+						const res = await response.json();
+						setFetchedCurrentGw(res.gameweek);
+						// Only update GW if it's missing
+						if (!gw && onGwChange) {
+							onGwChange(res.gameweek);
+						}
+					}
+				} catch (e) {
+					console.error("Failed to fetch current GW", e);
+				}
+			};
+			fetchCurrent();
+		}
+	}, [gw, currentGw, onGwChange]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -28,11 +51,33 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 	};
 
 	const handleNext = () => {
-		if (gw < (currentGw || 38) && onGwChange) onGwChange(gw + 1);
+		const maxGw = currentGw || fetchedCurrentGw || 38;
+		if (gw < maxGw && onGwChange) onGwChange(gw + 1);
 	};
 
+
 	if (!data && loading) return <div className="text-center p-8 text-ds-text-muted">Loading Dream Team...</div>;
-	if (!data) return null;
+	if (!data) {
+		return (
+			<div className="flex flex-col items-center justify-center p-12 gap-6 border border-ds-border rounded-xl bg-ds-card animate-in fade-in zoom-in-95 duration-300">
+				<div className="text-center space-y-2">
+					<h3 className="text-xl font-bold text-ds-text">Gameweek {gw} Unavailable</h3>
+					<p className="text-ds-text-muted max-w-xs mx-auto">
+						The Dream Team for this gameweek hasn't been finalized yet.
+					</p>
+				</div>
+				{gw > 1 && (
+					<button
+						onClick={() => onGwChange && onGwChange(gw - 1)}
+						className="flex items-center gap-2 bg-ds-primary text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-ds-primary-hover hover:scale-105 active:scale-95 transition-all"
+					>
+						<ChevronLeft size={18} />
+						View Gameweek {gw - 1}
+					</button>
+				)}
+			</div>
+		);
+	}
 
 	const { squad, top_player, total_points } = data;
 
@@ -110,7 +155,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 					</div>
 					<button
 						onClick={handleNext}
-						disabled={gw >= (currentGw || 38)}
+						disabled={gw >= (currentGw || fetchedCurrentGw || 38)}
 						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
 					>
 						<ChevronRight size={24} />

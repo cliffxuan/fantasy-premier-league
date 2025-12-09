@@ -897,19 +897,83 @@ class FPLService:
 
         return result
 
-    async def get_optimized_team(self, budget: float = 100.0) -> Dict[str, Any]:
+    async def get_optimized_team(
+        self,
+        budget: float = 100.0,
+        min_gw: int | None = None,
+        max_gw: int | None = None,
+    ) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = bootstrap["elements"]
+        current_gw = await self.get_current_gameweek()
 
-        # Prepare data for solver
-        # Filter out unavailable players? (status != 'a')
-        # Let's keep it simple: Optimize for total_points (historical data)
-        # In a real predictor, we would use projected points.
+        # Default range
+        if min_gw is None:
+            min_gw = 1
+        if max_gw is None:
+            max_gw = current_gw
+
+        # Determine if we need to fetch history (partial range)
+        # If requesting full history (1 to current), use bootstrap total_points (FAST)
+        # Otherwise, need detailed history (SLOW)
+        use_history = False
+        if min_gw > 1 or max_gw < current_gw:
+            use_history = True
+
+        logger.info(
+            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}"
+        )
 
         players = []
-        for p in elements:
-            # Skip players with 0 points to reduce problem size
-            if p["total_points"] == 0:
+
+        # Filter candidates first to reduce requests if using history
+        # Players with 0 total points can be skipped safely for maximization
+        candidates = [p for p in elements if p["total_points"] > 0]
+
+        player_period_points = {}  # pid -> adjusted points
+
+        if use_history:
+            # Batch fetch histories
+            # We need to fetch element-summary for each candidate
+            sem = asyncio.Semaphore(20)  # Concurrency limit
+
+            async def fetch_player_points(client, pid):
+                async with sem:
+                    try:
+                        resp = await client.get(
+                            f"{FPL_BASE_URL}/element-summary/{pid}/"
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
+                        history = data.get("history", [])
+                        # Sum points in range
+                        pts = sum(
+                            h["total_points"]
+                            for h in history
+                            if min_gw <= h["round"] <= max_gw
+                        )
+                        return pid, pts
+                    except Exception as e:
+                        logger.error(f"Failed to fetch history for {pid}: {e}")
+                        return pid, 0
+
+            async with httpx.AsyncClient() as client:
+                tasks = [fetch_player_points(client, p["id"]) for p in candidates]
+                results = await asyncio.gather(*tasks)
+                for pid, pts in results:
+                    player_period_points[pid] = pts
+        else:
+            # Use total_points from bootstrap
+            for p in candidates:
+                player_period_points[p["id"]] = p["total_points"]
+
+        # Prepare for Solver
+        for p in candidates:
+            # Use calculated points
+            points = player_period_points.get(p["id"], 0)
+
+            # Skip players with 0 points in the period to reduce problem size
+            if points <= 0:
                 continue
 
             players.append(
@@ -920,7 +984,7 @@ class FPLService:
                     "position": p["element_type"],  # 1:GKP, 2:DEF, 3:MID, 4:FWD
                     "team": p["team"],
                     "cost": p["now_cost"] / 10.0,
-                    "points": p["total_points"],
+                    "points": points,
                     "form": float(p["form"]),
                     "status": p["status"],
                     "code": p["code"],
@@ -1024,6 +1088,7 @@ class FPLService:
             "total_cost": round(total_cost, 1),
             "status": status,
             "budget_used": round(total_cost, 1),
+            "gameweek_range": f"{min_gw}-{max_gw}",
         }
 
     async def get_advanced_fixtures(self, gw: int | None = None) -> list:
@@ -1062,8 +1127,6 @@ class FPLService:
         # 2. Process Fixtures
         # We want to identify "Good Run" for teams.
         # Calculates a custom difficulty score for each fixture.
-
-        enriched_fixtures = []
 
         # Filter futures
         future_fixtures = [

@@ -82,11 +82,14 @@ function Dashboard() {
 
         // If no GW in URL, set it
         if (!gw && resolvedGw) {
-          setSearchParams(prev => {
-            const newP = new URLSearchParams(prev);
-            newP.set('gw', resolvedGw);
-            return newP;
-          }, { replace: true });
+          const currentTab = searchParams.get('tab') || 'squad';
+          if (['squad', 'dream_team'].includes(currentTab)) {
+            setSearchParams(prev => {
+              const newP = new URLSearchParams(prev);
+              newP.set('gw', resolvedGw);
+              return newP;
+            }, { replace: true });
+          }
         }
 
         setIsTeamLoaded(true);
@@ -119,6 +122,9 @@ function Dashboard() {
     setSearchParams(prev => {
       const newP = new URLSearchParams(prev);
       newP.set('tab', tab);
+      if (['analysis', 'solver'].includes(tab)) {
+        newP.delete('gw');
+      }
       return newP;
     });
   };

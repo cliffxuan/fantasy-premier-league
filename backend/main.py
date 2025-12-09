@@ -111,10 +111,12 @@ async def get_top_managers_analysis(gw: int | None = None, count: int = 1000):
 
 
 @app.get("/api/optimization/solve")
-async def solve_optimization(budget: float = 100.0):
+async def solve_optimization(
+    budget: float = 100.0, min_gw: int | None = None, max_gw: int | None = None
+):
     service = FPLService()
     try:
-        data = await service.get_optimized_team(budget)
+        data = await service.get_optimized_team(budget, min_gw, max_gw)
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
@@ -129,6 +131,18 @@ async def get_fixture_analysis(gw: int | None = None):
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Fixture analysis failed: {str(e)}"
+        )
+
+
+@app.get("/api/gameweek/current")
+async def get_current_gameweek():
+    service = FPLService()
+    try:
+        gw = await service.get_current_gameweek()
+        return {"gameweek": gw}
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch current gameweek: {str(e)}"
         )
 
 

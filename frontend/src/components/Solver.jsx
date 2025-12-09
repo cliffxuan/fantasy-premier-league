@@ -1,11 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PlayerPopover from './PlayerPopover';
 
 const Solver = () => {
 	const [budget, setBudget] = useState(100.0);
+	const [minGw, setMinGw] = useState(1);
+	const [maxGw, setMaxGw] = useState(38);
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const fetchCurrentGw = async () => {
+			try {
+				const response = await fetch('/api/gameweek/current');
+				if (response.ok) {
+					const data = await response.json();
+					setMaxGw(data.gameweek);
+				}
+			} catch (err) {
+				console.error('Failed to fetch current gameweek:', err);
+			}
+		};
+		fetchCurrentGw();
+	}, []);
 
 	const handleSolve = async (e) => {
 		e.preventDefault();
@@ -14,7 +31,7 @@ const Solver = () => {
 		setResult(null);
 
 		try {
-			const response = await fetch(`/api/optimization/solve?budget=${budget}`);
+			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}`);
 			if (!response.ok) {
 				const err = await response.json();
 				throw new Error(err.detail || 'Solver failed');
@@ -53,6 +70,30 @@ const Solver = () => {
 						className="bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono"
 					/>
 				</div>
+				<div className="flex flex-col gap-1 w-full max-w-xs">
+					<label className="text-xs uppercase font-bold text-ds-text-muted">Gameweek Range</label>
+					<div className="flex items-center gap-2">
+						<input
+							type="number"
+							min="1"
+							max="38"
+							value={minGw}
+							onChange={(e) => setMinGw(parseInt(e.target.value))}
+							className="w-full bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono text-center"
+							placeholder="Start"
+						/>
+						<span className="text-ds-text-muted font-bold">-</span>
+						<input
+							type="number"
+							min="1"
+							max="38"
+							value={maxGw}
+							onChange={(e) => setMaxGw(parseInt(e.target.value))}
+							className="w-full bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono text-center"
+							placeholder="End"
+						/>
+					</div>
+				</div>
 				<button
 					type="submit"
 					disabled={loading}
@@ -72,7 +113,7 @@ const Solver = () => {
 				<div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						<div className="bg-ds-surface p-3 rounded border border-ds-border text-center">
-							<div className="text-xs text-ds-text-muted uppercase">Total Points</div>
+							<div className="text-xs text-ds-text-muted uppercase">Total Points {result.gameweek_range ? `(GW ${result.gameweek_range})` : ''}</div>
 							<div className="text-2xl font-bold text-ds-primary">{result.total_points}</div>
 						</div>
 						<div className="bg-ds-surface p-3 rounded border border-ds-border text-center">
