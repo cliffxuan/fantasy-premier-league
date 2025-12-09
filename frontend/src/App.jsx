@@ -214,33 +214,38 @@ function Dashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
               <div className="flex flex-col gap-8">
-                {activeTab === 'squad' ? (
-                  squad && <SquadDisplay
-                    squad={squad}
-                    chips={chips}
-                    gameweek={viewGw || entry?.current_event}
-                    transfers={transfers}
-                    onGwChange={handleGwChange}
-                    onTabSwitch={() => handleTabChange('dream_team')}
-                    loading={squadLoading}
-                    currentGw={entry?.current_event}
-                    history={history}
-                  />
-                ) : activeTab === 'dream_team' ? (
+                <div style={{ display: activeTab === 'squad' ? 'block' : 'none' }}>
+                  {squad && (
+                    <SquadDisplay
+                      squad={squad}
+                      chips={chips}
+                      gameweek={viewGw || entry?.current_event}
+                      transfers={transfers}
+                      onGwChange={handleGwChange}
+                      onTabSwitch={() => handleTabChange('dream_team')}
+                      loading={squadLoading}
+                      currentGw={entry?.current_event}
+                      history={history}
+                    />
+                  )}
+                </div>
+                <div style={{ display: activeTab === 'dream_team' ? 'block' : 'none' }}>
                   <DreamTeam
                     currentGw={entry?.current_event}
                     gw={viewGw || entry?.current_event}
                     onGwChange={handleGwChange}
                     onTabSwitch={() => handleTabChange('squad')}
                   />
-                ) : activeTab === 'analysis' ? (
+                </div>
+                <div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
                   <TopManagersAnalysis />
-                ) : (
+                </div>
+                <div style={{ display: activeTab === 'solver' ? 'block' : 'none' }}>
                   <div className="space-y-8">
                     <Solver />
                     <FixtureTicker />
                   </div>
-                )}
+                </div>
                 <LeagueTable />
               </div>
 
