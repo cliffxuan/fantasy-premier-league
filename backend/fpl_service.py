@@ -869,6 +869,7 @@ class FPLService:
                     ],  # 1=GKP, 2=DEF, 3=MID, 4=FWD
                     "cost": player["now_cost"] / 10,
                     "total_points": player["total_points"],
+                    "code": player["code"],
                     "ownership_top_1000": round(ownership, 1),
                     "captain_top_1000": round(cap_ownership, 1),
                     "global_ownership": float(player["selected_by_percent"]),
@@ -915,12 +916,14 @@ class FPLService:
                 {
                     "id": p["id"],
                     "name": p["web_name"],
+                    "full_name": f"{p['first_name']} {p['second_name']}",
                     "position": p["element_type"],  # 1:GKP, 2:DEF, 3:MID, 4:FWD
                     "team": p["team"],
                     "cost": p["now_cost"] / 10.0,
                     "points": p["total_points"],
                     "form": float(p["form"]),
                     "status": p["status"],
+                    "code": p["code"],
                 }
             )
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PlayerPopover from './PlayerPopover';
 
 const TopManagersAnalysis = () => {
 	const [data, setData] = useState(null);
@@ -148,13 +149,29 @@ const TopManagersAnalysis = () => {
 										return (
 											<tr key={player.id} className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none ${getRowStyle(player.ownership_top_1000)}`}>
 												<td className="px-3 py-3 text-ds-text-muted font-bold">{index + 1}</td>
-												<td className="px-3 py-3 font-sans font-medium text-ds-text flex flex-col">
-													<span>{player.web_name}</span>
-													{player.captain_top_1000 > 5 && (
-														<span className="text-[10px] text-ds-primary uppercase tracking-wider">
-															© {player.captain_top_1000}% Cap
-														</span>
-													)}
+												<td className="px-3 py-3 font-sans font-medium text-ds-text">
+													<PlayerPopover player={{
+														id: player.id,
+														code: player.code,
+														name: player.web_name,
+														full_name: player.full_name,
+														team: player.team_short,
+														position: player.element_type,
+														total_points: player.total_points,
+														cost: player.cost,
+														// Approximations as we don't have user-specific purchase data
+														purchase_price: player.cost,
+														selling_price: player.cost
+													}}>
+														<div className="flex flex-col cursor-pointer hover:text-ds-primary transition-colors">
+															<span>{player.web_name}</span>
+															{player.captain_top_1000 > 5 && (
+																<span className="text-[10px] text-ds-primary uppercase tracking-wider">
+																	© {player.captain_top_1000}% Cap
+																</span>
+															)}
+														</div>
+													</PlayerPopover>
 												</td>
 												<td className="px-3 py-2 text-center text-ds-text-muted">
 													<div className="flex flex-col items-center justify-center gap-1">

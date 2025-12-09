@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PlayerPopover from './PlayerPopover';
 
 const Solver = () => {
 	const [budget, setBudget] = useState(100.0);
@@ -105,7 +106,22 @@ const Solver = () => {
 										<td className="px-3 py-2 text-ds-text-muted">
 											{['GKP', 'DEF', 'MID', 'FWD'][p.position - 1]}
 										</td>
-										<td className="px-3 py-2 font-bold">{p.name}</td>
+										<td className="px-3 py-2 font-bold hover:text-ds-primary cursor-pointer transition-colors">
+											<PlayerPopover player={{
+												id: p.id,
+												code: p.code,
+												name: p.name,
+												full_name: p.full_name,
+												team: p.team_short,
+												position: p.position,
+												total_points: p.points,
+												cost: p.cost,
+												purchase_price: p.cost,
+												selling_price: p.cost
+											}}>
+												{p.name}
+											</PlayerPopover>
+										</td>
 										<td className="px-3 py-2 text-ds-text-muted">
 											<div className="flex items-center gap-2">
 												<img
