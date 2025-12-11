@@ -416,6 +416,10 @@ class FPLService:
             # You get +1 for the next round, capped at 5
             ft = min(5, ft + 1)
 
+            # Special rule for 2025/26 season: 5 free transfers top-up after GW15 (AFCON)
+            if event == 15:
+                ft = 5
+
         # Now deduct transfers already made for the upcoming gameweek (next_gw)
         # These transfers are in the 'transfers' list but not yet in 'history' (if next_gw is future)
         # Or if next_gw is current but not finished?
