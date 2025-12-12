@@ -931,6 +931,7 @@ class FPLService:
         budget: float = 100.0,
         min_gw: int | None = None,
         max_gw: int | None = None,
+        exclude_bench: bool = False,
     ) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = bootstrap["elements"]
@@ -950,14 +951,18 @@ class FPLService:
             use_history = True
 
         logger.info(
-            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}"
+            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}, Exclude Bench={exclude_bench}"
         )
 
         players = []
 
         # Filter candidates first to reduce requests if using history
-        # Players with 0 total points can be skipped safely for maximization
-        candidates = [p for p in elements if p["total_points"] > 0]
+        # If exclude_bench is On, we MUST include valid fodder (low cost, potentially 0 points).
+        # To avoid fetching history for everyone, we can assume players with 0 total points have 0 window points.
+        candidates = elements
+        if not exclude_bench:
+            # Standard optimization: skip players with 0 total points
+            candidates = [p for p in elements if p["total_points"] > 0]
 
         player_period_points = {}  # pid -> adjusted points
 
@@ -987,7 +992,16 @@ class FPLService:
                         return pid, 0
 
             async with httpx.AsyncClient() as client:
-                tasks = [fetch_player_points(client, p["id"]) for p in candidates]
+                # Optimized task creation: Only fetch history if player has total_points > 0.
+                # If total_points is 0 (fodder), their window points must be 0.
+                tasks = []
+                for p in candidates:
+                    if p["total_points"] > 0:
+                        tasks.append(fetch_player_points(client, p["id"]))
+                    else:
+                        # Implicitly 0 points, no need to fetch
+                        pass
+
                 results = await asyncio.gather(*tasks)
                 for pid, pts in results:
                     player_period_points[pid] = pts
@@ -1002,7 +1016,8 @@ class FPLService:
             points = player_period_points.get(p["id"], 0)
 
             # Skip players with 0 points in the period to reduce problem size
-            if points <= 0:
+            # BUT if exclude_bench is True, we need them for fodder.
+            if not exclude_bench and points <= 0:
                 continue
 
             players.append(
@@ -1029,11 +1044,64 @@ class FPLService:
             "Player", [p["id"] for p in players], cat="Binary"
         )
 
-        # Objective Function: Maximize Total Points
-        prob += (
-            pulp.lpSum([p["points"] * player_vars[p["id"]] for p in players]),
-            "Total Points",
-        )
+        # Objective Function
+        if exclude_bench:
+            # If excluding bench points, we verify optimization based on Starting XI only.
+            # We need additional variables for "Starter".
+            starter_vars = pulp.LpVariable.dicts(
+                "Starter", [p["id"] for p in players], cat="Binary"
+            )
+
+            # Link Starter to Squad: if starter, must be in squad
+            for p in players:
+                prob += starter_vars[p["id"]] <= player_vars[p["id"]]
+
+            # 11 Starters
+            prob += (
+                pulp.lpSum([starter_vars[p["id"]] for p in players]) == 11,
+                "Starter Count",
+            )
+
+            # Formation Constraints (Starters)
+            # 1 GK
+            prob += (
+                pulp.lpSum(
+                    [starter_vars[p["id"]] for p in players if p["position"] == 1]
+                )
+                == 1,
+                "Starter GKP",
+            )
+            # Min 3 DEF
+            prob += (
+                pulp.lpSum(
+                    [starter_vars[p["id"]] for p in players if p["position"] == 2]
+                )
+                >= 3,
+                "Starter Min DEF",
+            )
+            # Min 1 FWD
+            prob += (
+                pulp.lpSum(
+                    [starter_vars[p["id"]] for p in players if p["position"] == 4]
+                )
+                >= 1,
+                "Starter Min FWD",
+            )
+
+            # Objective: Maximize Starter Points - 0.001 * Total Cost (to prefer cheaper bench/squad)
+            prob += (
+                pulp.lpSum([p["points"] * starter_vars[p["id"]] for p in players])
+                - 0.001
+                * pulp.lpSum([p["cost"] * player_vars[p["id"]] for p in players]),
+                "Total Points",
+            )
+
+        else:
+            # Objective Function: Maximize Total Points (All 15)
+            prob += (
+                pulp.lpSum([p["points"] * player_vars[p["id"]] for p in players]),
+                "Total Points",
+            )
 
         # Constraints
 
@@ -1095,19 +1163,31 @@ class FPLService:
         for p in players:
             if pulp.value(player_vars[p["id"]]) == 1:
                 t_info = team_map.get(p["team"])
+                is_starter = True
+                if exclude_bench:
+                    is_starter = pulp.value(starter_vars[p["id"]]) == 1
+
                 selected_players.append(
                     {
                         **p,
                         "team_short": t_info["short_name"] if t_info else "UNK",
                         "team_code": t_info["code"] if t_info else 0,
                         "full_team_name": t_info["name"] if t_info else "Unknown",
+                        "is_starter": is_starter,
                     }
                 )
                 total_cost += p["cost"]
-                total_points += p["points"]
+                if not exclude_bench or is_starter:
+                    total_points += p["points"]
 
-        # Sort by position then points
-        selected_players.sort(key=lambda x: (x["position"], -x["points"]))
+        # Sort by Starter status (desc), then Position, then Points
+        selected_players.sort(
+            key=lambda x: (
+                -1 if x.get("is_starter", True) else 1,
+                x["position"],
+                -x["points"],
+            )
+        )
 
         status = pulp.LpStatus[prob.status]
 

@@ -112,11 +112,14 @@ async def get_top_managers_analysis(gw: int | None = None, count: int = 1000):
 
 @app.get("/api/optimization/solve")
 async def solve_optimization(
-    budget: float = 100.0, min_gw: int | None = None, max_gw: int | None = None
+    budget: float = 100.0,
+    min_gw: int | None = None,
+    max_gw: int | None = None,
+    exclude_bench: bool = False,
 ):
     service = FPLService()
     try:
-        data = await service.get_optimized_team(budget, min_gw, max_gw)
+        data = await service.get_optimized_team(budget, min_gw, max_gw, exclude_bench)
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")

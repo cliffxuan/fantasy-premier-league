@@ -6,6 +6,7 @@ const Solver = () => {
 	const [minGw, setMinGw] = useState(1);
 	const [maxGw, setMaxGw] = useState(null);
 	const [sliderMax, setSliderMax] = useState(38);
+	const [excludeBench, setExcludeBench] = useState(false);
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
@@ -51,7 +52,7 @@ const Solver = () => {
 		setResult(null);
 
 		try {
-			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}`);
+			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}`);
 			if (!response.ok) {
 				const err = await response.json();
 				throw new Error(err.detail || 'Solver failed');
@@ -89,6 +90,20 @@ const Solver = () => {
 						onChange={(e) => setBudget(e.target.value)}
 						className="bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono"
 					/>
+				</div>
+				<div className="flex flex-col gap-2 w-full max-w-xs">
+					<label className="flex items-center gap-2 cursor-pointer mt-6">
+						<input
+							type="checkbox"
+							checked={excludeBench}
+							onChange={(e) => setExcludeBench(e.target.checked)}
+							className="w-4 h-4 rounded border-ds-border bg-ds-surface text-ds-primary focus:ring-ds-primary"
+						/>
+						<span className="text-sm text-ds-text">Exclude Bench Points</span>
+					</label>
+					<span className="text-[10px] text-ds-text-muted leading-tight ml-6">
+						Optimize for Starting XI only (Free Hit style). Bench will be fodder.
+					</span>
 				</div>
 				<div className="flex flex-col gap-3 w-full max-w-sm">
 					<div className="flex justify-between items-end">
@@ -261,7 +276,7 @@ const Solver = () => {
 							</thead>
 							<tbody>
 								{result.squad.map((p) => (
-									<tr key={p.id} className="border-b border-ds-border hover:bg-ds-card-hover transition-colors">
+									<tr key={p.id} className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors ${p.is_starter === false ? 'opacity-60 bg-ds-surface/50' : ''}`}>
 										<td className="px-3 py-2 text-ds-text-muted">
 											{['GKP', 'DEF', 'MID', 'FWD'][p.position - 1]}
 										</td>
