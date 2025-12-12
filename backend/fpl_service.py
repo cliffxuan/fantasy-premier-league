@@ -932,6 +932,7 @@ class FPLService:
         min_gw: int | None = None,
         max_gw: int | None = None,
         exclude_bench: bool = False,
+        exclude_unavailable: bool = False,
     ) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = bootstrap["elements"]
@@ -951,7 +952,7 @@ class FPLService:
             use_history = True
 
         logger.info(
-            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}, Exclude Bench={exclude_bench}"
+            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}, Exclude Bench={exclude_bench}, Exclude Unavailable={exclude_unavailable}"
         )
 
         players = []
@@ -963,6 +964,60 @@ class FPLService:
         if not exclude_bench:
             # Standard optimization: skip players with 0 total points
             candidates = [p for p in elements if p["total_points"] > 0]
+
+        # Apply Availability Filter
+        if exclude_unavailable:
+            # Filter out players who cannot play.
+            # Criteria: status is NOT 'a' (available) or chance_of_playing_next_round is 0.
+            # 'd' (doubtful) usually has chance of 75/50/25.
+            # 'i' (injured), 's' (suspended), 'u' (unavailable), 'n' (loan) usually chance is 0.
+
+            # We want to be strict if the user asks for it.
+            # Exclude if chance is explicitly 0, or status is in [i, s, u, n]
+
+            filtered_candidates = []
+            for p in candidates:
+                chance = p.get("chance_of_playing_next_round")
+                status = p.get("status")
+
+                # If chance is known and 0, definitely exclude
+                if chance is not None and chance == 0:
+                    continue
+
+                # If status is permanently unavailable types
+                if status in ["u", "i", "s", "n"]:
+                    # Double check chance? Sometimes status is 'i' but chance is 75 (returning)?
+                    # Usually chance overrides status. If chance is None (100) but status is 'i', it's weird.
+                    # Let's trust chance if it exists.
+                    if chance is None:
+                        # If chance is None, it implies 100%. But if status is 'i', maybe they just got injured and chance hasn't updated?
+                        # Safest to exclude if status implies definitely out. 'i' might be short term.
+                        # 's' (suspended) is definite.
+                        # 'u' (unavailable) is definite.
+                        # 'n' (loan) is definite.
+                        if status in ["s", "u", "n"]:
+                            continue
+                        # If 'i', and chance is None, maybe recent injury? Let's check news?
+                        # Simpler: If user says exclude unavailable, they probably mean red flags.
+                        pass
+
+                # If chance is strictly less than 100? User said "cannot play".
+                # A 75% chance player CAN play.
+                # So we only exclude 0% chance players or definitely suspended.
+
+                # Let's use a simpler robust logic:
+                # Exclude if chance == 0
+                # OR status == 's' (Suspended)
+                # OR status == 'u' (Unavailable)
+                # OR status == 'n' (Loan)
+
+                if chance == 0:
+                    continue
+                if status == "s" or status == "u" or status == "n":
+                    continue
+
+                filtered_candidates.append(p)
+            candidates = filtered_candidates
 
         player_period_points = {}  # pid -> adjusted points
 

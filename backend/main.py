@@ -116,10 +116,13 @@ async def solve_optimization(
     min_gw: int | None = None,
     max_gw: int | None = None,
     exclude_bench: bool = False,
+    exclude_unavailable: bool = False,
 ):
     service = FPLService()
     try:
-        data = await service.get_optimized_team(budget, min_gw, max_gw, exclude_bench)
+        data = await service.get_optimized_team(
+            budget, min_gw, max_gw, exclude_bench, exclude_unavailable
+        )
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")

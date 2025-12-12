@@ -7,6 +7,7 @@ const Solver = () => {
 	const [maxGw, setMaxGw] = useState(null);
 	const [sliderMax, setSliderMax] = useState(38);
 	const [excludeBench, setExcludeBench] = useState(false);
+	const [excludeUnavailable, setExcludeUnavailable] = useState(false);
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
@@ -52,7 +53,7 @@ const Solver = () => {
 		setResult(null);
 
 		try {
-			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}`);
+			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}`);
 			if (!response.ok) {
 				const err = await response.json();
 				throw new Error(err.detail || 'Solver failed');
@@ -103,6 +104,20 @@ const Solver = () => {
 					</label>
 					<span className="text-[10px] text-ds-text-muted leading-tight ml-6">
 						Optimize for Starting XI only (Free Hit style). Bench will be fodder.
+					</span>
+				</div>
+				<div className="flex flex-col gap-2 w-full max-w-xs">
+					<label className="flex items-center gap-2 cursor-pointer">
+						<input
+							type="checkbox"
+							checked={excludeUnavailable}
+							onChange={(e) => setExcludeUnavailable(e.target.checked)}
+							className="w-4 h-4 rounded border-ds-border bg-ds-surface text-ds-primary focus:ring-ds-primary"
+						/>
+						<span className="text-sm text-ds-text">Exclude Unavailable</span>
+					</label>
+					<span className="text-[10px] text-ds-text-muted leading-tight ml-6">
+						Exclude injured (0%), suspended, or unavailable players.
 					</span>
 				</div>
 				<div className="flex flex-col gap-3 w-full max-w-sm">
