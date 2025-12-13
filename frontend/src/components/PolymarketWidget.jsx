@@ -110,7 +110,7 @@ const PolymarketWidget = () => {
 													{isDraw ? "Draw" : (idx === 0 ? "1" : "2")}
 												</span>
 												<span className={`text-sm font-bold font-mono ${textColor}`}>
-													{Math.round(outcome.price * 100)}¢
+													{Math.round(outcome.price * 100)}%
 												</span>
 											</div>
 										);
