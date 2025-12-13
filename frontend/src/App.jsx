@@ -29,7 +29,7 @@ function Dashboard() {
   const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
-  const activeTab = searchParams.get('tab') || 'market';
+  const activeTab = searchParams.get('tab') || 'matches';
   const gwParam = searchParams.get('gw');
   const viewGw = gwParam ? parseInt(gwParam) : null;
 
@@ -80,7 +80,7 @@ function Dashboard() {
         const resolvedGw = squadData.gameweek || squadData.entry?.current_event;
 
         if (!gw && resolvedGw) {
-          const currentTab = searchParams.get('tab') || 'market';
+          const currentTab = searchParams.get('tab') || 'matches';
           if (['squad', 'dream_team'].includes(currentTab)) {
             setSearchParams(prev => {
               const newP = new URLSearchParams(prev);
@@ -121,7 +121,7 @@ function Dashboard() {
     setSearchParams(prev => {
       const newP = new URLSearchParams(prev);
       newP.set('tab', tab);
-      if (['analysis', 'solver', 'market', 'standings'].includes(tab)) {
+      if (['analysis', 'solver', 'matches', 'standings'].includes(tab)) {
         newP.delete('gw');
       }
       return newP;
@@ -188,7 +188,7 @@ function Dashboard() {
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-6">
         <nav className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar">
           {[
-            { id: 'market', label: 'Match Center' },
+            { id: 'matches', label: 'Match Center' },
             { id: 'dream_team', label: 'Team of the Week' },
             { id: 'analysis', label: 'Rank Analysis' },
             { id: 'solver', label: 'AI Solver' },
@@ -280,7 +280,7 @@ function Dashboard() {
               </div>
             </div>
 
-            <div style={{ display: activeTab === 'market' ? 'block' : 'none' }}>
+            <div style={{ display: activeTab === 'matches' ? 'block' : 'none' }}>
               <MarketOverview />
             </div>
 
