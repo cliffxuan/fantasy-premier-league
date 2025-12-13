@@ -173,14 +173,16 @@ function Dashboard() {
   return (
     <div className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white">
       {/* Header Section */}
-      <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm py-4 px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 transition-all duration-300">
-        <div className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
-          <h1 className="text-2xl font-bold tracking-tight text-ds-text leading-tight">
-            FPL <span className="text-ds-primary">Alpha</span>
-          </h1>
-          <p className="text-[10px] md:text-xs text-ds-text-muted font-mono tracking-wide uppercase">
-            Data Science & AI Powered Insights
-          </p>
+      <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm sticky top-0 z-50 transition-all duration-300">
+        <div className="w-full max-w-[1400px] mx-auto py-4 px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
+            <h1 className="text-2xl font-bold tracking-tight text-ds-text leading-tight">
+              FPL <span className="text-ds-primary">Alpha</span>
+            </h1>
+            <p className="text-[10px] md:text-xs text-ds-text-muted font-mono tracking-wide uppercase">
+              Data Science & AI Powered Insights
+            </p>
+          </div>
         </div>
       </div>
 

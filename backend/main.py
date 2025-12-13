@@ -9,7 +9,7 @@ from .analysis_service import AnalysisService
 from .fpl_service import FPLService
 from .models import AnalysisRequest, AnalysisResponse
 
-app = FastAPI(title="FPL Assistant API")
+app = FastAPI(title="FPL Alpha API")
 
 # Configure CORS
 app.add_middleware(
