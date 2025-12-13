@@ -289,6 +289,27 @@ function Dashboard() {
           {/* RIGHT COLUMN: Sidebar */}
           <div className="flex flex-col gap-6 sticky top-24">
 
+            {/* Team Analysis Promo - Call To Action */}
+            {!isTeamLoaded && activeTab !== 'squad' && (
+              <div className="bg-ds-card p-6 rounded-xl border border-ds-primary/20 shadow-[0_0_30px_rgba(59,130,246,0.05)] relative overflow-hidden group hover:border-ds-primary/40 transition-all">
+                {/* Decorative Background */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-ds-primary/10 rounded-full blur-3xl group-hover:bg-ds-primary/20 transition-all"></div>
+
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">🚀</span>
+                    <h3 className="text-lg font-bold text-ds-text">Unlock AI Insights</h3>
+                  </div>
+                  <p className="text-xs text-ds-text-muted mb-4 leading-relaxed">
+                    Enter your Team ID to access live points tracking, transfer recommendations, and future planning tools.
+                  </p>
+                  <div className="scale-95 origin-left w-[105%]">
+                    <TeamInput />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Squad Specific Tools (Conditional) */}
             {activeTab === 'squad' && isTeamLoaded && (
               <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
