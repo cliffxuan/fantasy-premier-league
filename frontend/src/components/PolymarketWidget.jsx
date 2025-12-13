@@ -6,7 +6,7 @@ const PolymarketWidget = () => {
 	const [markets, setMarkets] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [selectedGw, setSelectedGw] = useState(null);
-	const [sortBy, setSortBy] = useState('date');
+	const [sortBy, setSortBy] = useState('odds');
 
 	useEffect(() => {
 		const fetchData = async () => {
