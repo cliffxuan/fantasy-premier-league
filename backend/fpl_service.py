@@ -7,6 +7,8 @@ import httpx
 import pulp
 from loguru import logger
 
+from .team_details import TEAM_MAPPINGS
+
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
 
@@ -929,7 +931,7 @@ class FPLService:
 
     async def get_polymarket_data(self) -> list:
         # Cache check
-        cache_key = "polymarket_premier_league_v7"  # Bump version
+        cache_key = "polymarket_premier_league_v8"  # Bump version
         now = time.time()
         # Cache for 10 minutes
         if (
@@ -947,39 +949,8 @@ class FPLService:
             "order": "volume",
             "ascending": "false",
         }
-
-        # Ensure we have static data for team mapping
-        try:
-            static_data = await self.get_bootstrap_static()
-            fpl_teams = static_data.get("teams", [])
-        except Exception:
-            fpl_teams = []
-
-        # Create Name Mapping
-        team_map = {}
-        for t in fpl_teams:
-            # Map full name
-            team_map[t["name"].lower()] = t
-            # Map short name
-            if t.get("short_name"):
-                team_map[t["short_name"].lower()] = t
-            # Manual Mappings for variances
-            if t["name"] == "Man City":
-                team_map["manchester city"] = t
-            if t["name"] == "Man Utd":
-                team_map["manchester united"] = t
-            if t["name"] == "Nott'm Forest":
-                team_map["nottingham forest"] = t
-            if t["name"] == "Spurs":
-                team_map["tottenham"] = t
-            if t["name"] == "Wolves":
-                team_map["wolverhampton"] = t
-            if t["name"] == "Brighton":
-                team_map["brighton & hove albion"] = t
-            if t["name"] == "Newcastle":
-                team_map["newcastle united"] = t
-            if t["name"] == "West Ham":
-                team_map["west ham united"] = t
+        # Use the static mapping imported from team_details
+        # No need to build it dynamically
 
         async with httpx.AsyncClient() as client:
             try:
@@ -1004,78 +975,39 @@ class FPLService:
                     try:
                         home_raw, away_raw = title.split(separator)
 
-                        # Helper to clean names
-                        def clean_name(n):
-                            n = n.strip()
-                            # 1. Remove noise suffixes first
-                            for suffix in [" FC", " AFC", " & District"]:
-                                if n.endswith(suffix):
-                                    n = n[: -len(suffix)]
+                        # Helper to normalize/clean strings for lookup
+                        def normalize(n):
+                            return n.strip().lower()
 
-                            n = n.strip()
+                        # Try to find in mapping
+                        h_key = normalize(home_raw)
+                        a_key = normalize(away_raw)
 
-                            # 2. Handle Special Cases (Man City, Man Utd) to prevent over-cleaning
-                            if n == "Manchester City":
-                                return "Man City"
-                            if n == "Manchester United":
-                                return "Man Utd"
-                            if n == "Wolverhampton Wanderers":
-                                return "Wolves"
-                            if n == "Nottingham Forest":
-                                return "Nott'm Forest"
-                            if n == "Brighton & Hove Albion":
-                                return "Brighton"
-                            if n == "Tottenham Hotspur":
-                                return "Tottenham"
-                            if n == "West Bromwich Albion":
-                                return "West Brom"
-                            if n == "AFC Bournemouth":
-                                return "Bournemouth"
+                        home_fpl = TEAM_MAPPINGS.get(h_key)
+                        away_fpl = TEAM_MAPPINGS.get(a_key)
 
-                            # 3. Remove generic suffixes for others (City, United, Town)
-                            for suffix in [" United", " City", " Town"]:
-                                if n.endswith(suffix):
-                                    n = n[: -len(suffix)]
+                        # If not found, try simple cleaning (removing FC/AFC)
+                        if not home_fpl:
+                            clean = (
+                                home_raw.replace(" FC", "")
+                                .replace(" AFC", "")
+                                .strip()
+                                .lower()
+                            )
+                            home_fpl = TEAM_MAPPINGS.get(clean)
 
-                            return n.strip()
+                        if not away_fpl:
+                            clean = (
+                                away_raw.replace(" FC", "")
+                                .replace(" AFC", "")
+                                .strip()
+                                .lower()
+                            )
+                            away_fpl = TEAM_MAPPINGS.get(clean)
 
-                        home_clean = clean_name(home_raw)
-                        away_clean = clean_name(away_raw)
-
-                        # Match with FPL Data
-                        home_fpl = team_map.get(home_clean.lower()) or team_map.get(
-                            home_raw.lower()
-                        )
-                        away_fpl = team_map.get(away_clean.lower()) or team_map.get(
-                            away_raw.lower()
-                        )
-
-                        # Fallback for some common polymarket names if not caught by cleaner/map
-                        if (
-                            not home_fpl
-                            and "manchester" in home_raw.lower()
-                            and "city" in home_raw.lower()
-                        ):
-                            home_fpl = team_map.get("man city")
-                        if (
-                            not home_fpl
-                            and "manchester" in home_raw.lower()
-                            and "united" in home_raw.lower()
-                        ):
-                            home_fpl = team_map.get("man utd")
-
-                        if (
-                            not away_fpl
-                            and "manchester" in away_raw.lower()
-                            and "city" in away_raw.lower()
-                        ):
-                            away_fpl = team_map.get("man city")
-                        if (
-                            not away_fpl
-                            and "manchester" in away_raw.lower()
-                            and "united" in away_raw.lower()
-                        ):
-                            away_fpl = team_map.get("man utd")
+                        # Display Names (use mapped name if available, else raw)
+                        home_clean = home_fpl["name"] if home_fpl else home_raw.strip()
+                        away_clean = away_fpl["name"] if away_fpl else away_raw.strip()
 
                         home_data = {
                             "name": home_clean,
@@ -1092,9 +1024,10 @@ class FPLService:
                             "code": away_fpl["code"] if away_fpl else None,
                         }
 
-                        # Keep full names for matching if needed, but display clean
+                        # Keep full names for matching loop below
                         home_name = home_raw.strip()
                         away_name = away_raw.strip()
+
                     except ValueError:
                         continue
 
@@ -1256,7 +1189,6 @@ class FPLService:
                             continue
                         # If 'i', and chance is None, maybe recent injury? Let's check news?
                         # Simpler: If user says exclude unavailable, they probably mean red flags.
-                        pass
 
                 # If chance is strictly less than 100? User said "cannot play".
                 # A 75% chance player CAN play.
