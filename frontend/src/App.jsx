@@ -191,9 +191,9 @@ function Dashboard() {
         <nav className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar">
           {[
             { id: 'matches', label: 'Match Center' },
-            { id: 'dream_team', label: 'Team of the Week' },
-            { id: 'analysis', label: 'Rank Analysis' },
             { id: 'solver', label: 'AI Solver' },
+            { id: 'analysis', label: 'Rank Analysis' },
+            { id: 'dream_team', label: 'Team of the Week' },
             { id: 'squad', label: 'My Squad' }
           ].map(tab => (
             <button
