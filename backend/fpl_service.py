@@ -931,7 +931,7 @@ class FPLService:
 
     async def get_polymarket_data(self) -> list:
         # Cache check
-        cache_key = "polymarket_premier_league_v9"  # Bump version
+        cache_key = "polymarket_premier_league_v10"  # Bump version
         now = time.time()
         # Cache for 10 minutes
         if (
@@ -951,6 +951,15 @@ class FPLService:
         }
         # Use the static mapping imported from team_details
         # No need to build it dynamically
+
+        # Fetch Gameweek Deadlines
+        try:
+            static_data = await self.get_bootstrap_static()
+            events = static_data.get("events", [])
+            events = [e for e in events if e.get("deadline_time")]
+            events.sort(key=lambda x: x["deadline_time"])
+        except Exception:
+            events = []
 
         async with httpx.AsyncClient() as client:
             try:
@@ -1009,27 +1018,40 @@ class FPLService:
                         home_clean = home_fpl["name"] if home_fpl else home_raw.strip()
                         away_clean = away_fpl["name"] if away_fpl else away_raw.strip()
 
-                        home_data = {
-                            "name": home_clean,
-                            "short_name": home_fpl["short_name"]
-                            if home_fpl
-                            else home_clean[:3].upper(),
-                            "code": home_fpl["code"] if home_fpl else None,
-                        }
-                        away_data = {
-                            "name": away_clean,
-                            "short_name": away_fpl["short_name"]
-                            if away_fpl
-                            else away_clean[:3].upper(),
-                            "code": away_fpl["code"] if away_fpl else None,
-                        }
-
                         # Keep full names for matching loop below
                         home_name = home_raw.strip()
                         away_name = away_raw.strip()
 
                     except ValueError:
                         continue
+
+                    # Calculate Gameweek
+                    gameweek = None
+                    match_date = item.get("endDate")
+                    if events and match_date:
+                        # Find the last deadline that is BEFORE the match date
+                        for e in events:
+                            if e["deadline_time"] < match_date:
+                                gameweek = e["id"]
+                            else:
+                                # Since events are sorted by deadline, once we hit a deadline > match_date,
+                                # the previous one was the correct gameweek.
+                                break
+
+                    home_data = {
+                        "name": home_clean,
+                        "short_name": home_fpl["short_name"]
+                        if home_fpl
+                        else home_clean[:3].upper(),
+                        "code": home_fpl["code"] if home_fpl else None,
+                    }
+                    away_data = {
+                        "name": away_clean,
+                        "short_name": away_fpl["short_name"]
+                        if away_fpl
+                        else away_clean[:3].upper(),
+                        "code": away_fpl["code"] if away_fpl else None,
+                    }
 
                     event_markets = item.get("markets", [])
                     home_price = 0.0
@@ -1102,6 +1124,7 @@ class FPLService:
                             "group": item.get("group"),
                             "home_team": home_data,
                             "away_team": away_data,
+                            "gameweek": gameweek,
                         }
                     )
                 # Sort by Date ascending (soonest first)

@@ -65,6 +65,7 @@ const PolymarketWidget = () => {
 								<div className="flex flex-col items-center md:items-start text-[10px] text-ds-text-muted font-mono w-20 shrink-0">
 									<span className="font-bold text-ds-text">{dateStr}</span>
 									<span>{timeStr}</span>
+									{market.gameweek && <span className="text-blue-400 font-bold mt-1">GW {market.gameweek}</span>}
 								</div>
 
 								{/* Center: Teams */}
