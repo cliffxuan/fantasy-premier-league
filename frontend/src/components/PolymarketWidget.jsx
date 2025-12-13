@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { getPolymarketData } from '../api';
 
 const PolymarketWidget = () => {
 	const [markets, setMarkets] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [selectedGw, setSelectedGw] = useState(null);
+	const [sortBy, setSortBy] = useState('date');
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -51,9 +52,19 @@ const PolymarketWidget = () => {
 
 	const availableGws = Array.from(new Set(markets.map(m => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
 	const hasGameweekData = availableGws.length > 0;
+
 	const displayedMarkets = hasGameweekData && selectedGw
 		? markets.filter(m => m.gameweek === selectedGw)
 		: markets;
+
+	const sortedMarkets = [...displayedMarkets].sort((a, b) => {
+		if (sortBy === 'odds') {
+			const maxA = Math.max(...a.outcomes.slice(0, 3).map(o => o.price || 0));
+			const maxB = Math.max(...b.outcomes.slice(0, 3).map(o => o.price || 0));
+			return maxB - maxA;
+		}
+		return new Date(a.endDate) - new Date(b.endDate);
+	});
 
 	const handlePrev = () => {
 		if (!selectedGw) return;
@@ -74,31 +85,41 @@ const PolymarketWidget = () => {
 					<span className="text-blue-500">◆</span> Market Insights
 				</h3>
 
-				{hasGameweekData && (
-					<div className="flex items-center gap-3 bg-ds-bg/50 rounded-full px-3 py-1.5 border border-ds-border transition-colors hover:border-ds-primary/30">
-						<button
-							onClick={handlePrev}
-							disabled={availableGws.indexOf(selectedGw) <= 0}
-							className="p-1 rounded-full hover:bg-ds-card hover:text-ds-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit disabled:cursor-not-allowed transition-colors"
-						>
-							<ChevronLeft size={18} />
-						</button>
-						<span className="text-sm font-bold text-center text-ds-text min-w-[100px]">
-							Gameweek {selectedGw}
-						</span>
-						<button
-							onClick={handleNext}
-							disabled={availableGws.indexOf(selectedGw) >= availableGws.length - 1}
-							className="p-1 rounded-full hover:bg-ds-card hover:text-ds-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit disabled:cursor-not-allowed transition-colors"
-						>
-							<ChevronRight size={18} />
-						</button>
-					</div>
-				)}
+				<div className="flex items-center gap-3">
+					<button
+						onClick={() => setSortBy(prev => prev === 'date' ? 'odds' : 'date')}
+						className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ds-bg/50 border border-ds-border hover:border-ds-primary/30 transition-colors text-xs font-medium text-ds-text-muted hover:text-ds-text"
+					>
+						<ArrowUpDown size={14} />
+						<span>{sortBy === 'date' ? 'By Date' : 'By Odds'}</span>
+					</button>
+
+					{hasGameweekData && (
+						<div className="flex items-center gap-3 bg-ds-bg/50 rounded-full px-3 py-1.5 border border-ds-border transition-colors hover:border-ds-primary/30">
+							<button
+								onClick={handlePrev}
+								disabled={availableGws.indexOf(selectedGw) <= 0}
+								className="p-1 rounded-full hover:bg-ds-card hover:text-ds-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit disabled:cursor-not-allowed transition-colors"
+							>
+								<ChevronLeft size={18} />
+							</button>
+							<span className="text-sm font-bold text-center text-ds-text min-w-[100px]">
+								Gameweek {selectedGw}
+							</span>
+							<button
+								onClick={handleNext}
+								disabled={availableGws.indexOf(selectedGw) >= availableGws.length - 1}
+								className="p-1 rounded-full hover:bg-ds-card hover:text-ds-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit disabled:cursor-not-allowed transition-colors"
+							>
+								<ChevronRight size={18} />
+							</button>
+						</div>
+					)}
+				</div>
 			</div>
 
 			<div className="flex flex-col gap-2">
-				{displayedMarkets.map((market) => {
+				{sortedMarkets.map((market) => {
 					const dateObj = new Date(market.endDate);
 					const dateStr = dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
 					const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
