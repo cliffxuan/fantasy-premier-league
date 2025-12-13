@@ -49,7 +49,9 @@ const FixtureTicker = () => {
 
 	const sortedData = data ? [...data].sort((a, b) => {
 		if (mode === 'attack') return a.avg_difficulty_attack - b.avg_difficulty_attack;
-		return a.avg_difficulty_defend - b.avg_difficulty_defend;
+		if (mode === 'defense') return a.avg_difficulty_defend - b.avg_difficulty_defend;
+		if (mode === 'market') return a.avg_difficulty_market - b.avg_difficulty_market;
+		return 0;
 	}) : [];
 
 	if (loading) return (
@@ -68,10 +70,14 @@ const FixtureTicker = () => {
 					<h2 className="text-lg font-bold text-ds-text flex items-center gap-2">
 						<span className="text-ds-primary">🗓️</span> Fixture Ticker (Next 5)
 					</h2>
-					<p className="text-xs text-ds-text-muted">Dynamic difficulty based on opponent {mode === 'attack' ? 'defense' : 'attack'} strength.</p>
+					<p className="text-xs text-ds-text-muted">
+						{mode === 'market'
+							? 'Real-time difficulty based on betting market odds.'
+							: `Dynamic difficulty based on opponent ${mode === 'attack' ? 'defense' : 'attack'} strength.`}
+					</p>
 				</div>
 
-				<div className="flex bg-ds-bg rounded-lg p-1 border border-ds-border text-xs font-bold">
+				<div className="flex bg-ds-bg rounded-lg p-1 border border-ds-border text-xs font-bold gap-1">
 					<button
 						onClick={() => setMode('attack')}
 						className={`px-3 py-1 rounded-md transition-all ${mode === 'attack' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
@@ -83,6 +89,12 @@ const FixtureTicker = () => {
 						className={`px-3 py-1 rounded-md transition-all ${mode === 'defense' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
 					>
 						Defense
+					</button>
+					<button
+						onClick={() => setMode('market')}
+						className={`px-3 py-1 rounded-md transition-all ${mode === 'market' ? 'bg-emerald-600 text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+					>
+						Market <sup>β</sup>
 					</button>
 				</div>
 			</div>
@@ -115,18 +127,40 @@ const FixtureTicker = () => {
 									</div>
 								</td>
 								{team.next_5.map((f, i) => {
-									const difficulty = mode === 'attack' ? f.fdr_attack : f.fdr_defend;
+									let difficulty;
+									if (mode === 'market') difficulty = f.fdr_market;
+									else if (mode === 'attack') difficulty = f.fdr_attack;
+									else difficulty = f.fdr_defend;
+
+									// Fallback for market if data missing (usually 3.0 from backend default, but good to handle)
+									if (difficulty === undefined) difficulty = 3.0;
+
 									return (
 										<td key={i} className="p-1">
-											<div className={`w-full h-8 flex flex-col items-center justify-center rounded text-[10px] leading-tight ${getFDRColor(difficulty)}`}>
+											<div className={`w-full h-8 flex flex-col items-center justify-center rounded text-[10px] leading-tight ${getFDRColor(difficulty)} relative group cursor-help`}>
 												<span className="font-bold">{f.opponent}</span>
 												<span className="opacity-75 transform scale-75">{f.is_home ? '(H)' : '(A)'}</span>
+												{/* Tooltip for Win % in Market Mode */}
+												{mode === 'market' && f.win_prob !== null && f.win_prob !== undefined && (
+													<div className="absolute bottom-full mb-1 hidden group-hover:block bg-black/90 text-white text-[9px] p-1 rounded whitespace-nowrap z-10">
+														Win: {(f.win_prob * 100).toFixed(0)}%
+														<span className="opacity-50 ml-1">
+															{f.source_type === 'market' && '(Mkt)'}
+															{f.source_type === 'calc' && '(Est)'}
+															{f.source_type === 'result' && '(Res)'}
+														</span>
+													</div>
+												)}
 											</div>
 										</td>
 									);
 								})}
 								<td className="px-3 py-2 text-right font-bold text-ds-text">
-									{mode === 'attack' ? team.avg_difficulty_attack.toFixed(2) : team.avg_difficulty_defend.toFixed(2)}
+									{mode === 'market'
+										? team.avg_difficulty_market?.toFixed(2)
+										: (mode === 'attack'
+											? team.avg_difficulty_attack.toFixed(2)
+											: team.avg_difficulty_defend.toFixed(2))}
 								</td>
 							</tr>
 						))}

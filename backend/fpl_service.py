@@ -1501,6 +1501,32 @@ class FPLService:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
+        # Fetch Polymarket Odds
+        try:
+            polymarket_data = await self.get_polymarket_data()
+            # Index by (gameweek, home_team_code, away_team_code) for fast lookup
+            # Polymarket data has 'home_team.code' and 'away_team.code' which match FPL codes.
+            market_lookup = {}
+            for param in polymarket_data:
+                # Check for keys safely
+                if (
+                    param.get("gameweek")
+                    and "home_team" in param
+                    and "away_team" in param
+                    and param["home_team"].get("code")
+                    and param["away_team"].get("code")
+                ):
+                    key = (
+                        param["gameweek"],
+                        param["home_team"]["code"],
+                        param["away_team"]["code"],
+                    )
+                    market_lookup[key] = param
+        except Exception as e:
+            logger.error(f"Failed to fetch polymarket data for fixtures: {e}")
+            polymarket_data = []
+            market_lookup = {}
+
         # 1. Calculate Team Strength Metrics
         # Official FDR is static. We want dynamic based on actual performance.
         # Strength = Base Strength + Form Modifier
@@ -1565,6 +1591,103 @@ class FPLService:
             def map_strength(s):
                 return max(1, min(5, (s - 950) / 80))
 
+            # Market FDR Calculation
+            # 1. Finished Games: Use actual Result.
+            # 2. Future Games: Use Market Odds.
+            # 3. Fallback: Use Stats.
+
+            is_finished = f.get("finished_provisional") or f.get("finished")
+
+            h_win_prob = 0.0
+            a_win_prob = 0.0
+            source_type = "calc"  # Default
+
+            if is_finished:
+                # Use actual result
+                h_score = f.get("team_h_score", 0)
+                a_score = f.get("team_a_score", 0)
+                source_type = "result"
+
+                if h_score > a_score:
+                    h_win_prob = 1.0
+                    a_win_prob = 0.0
+                elif a_score > h_score:
+                    h_win_prob = 0.0
+                    a_win_prob = 1.0
+                else:
+                    # Draw - neither won
+                    h_win_prob = 0.0
+                    a_win_prob = 0.0
+
+            elif f.get("started"):
+                # Game started but not finished (Live)
+                # Could use live scores? For now fallback to stats or pre-game odds if cached.
+                # But since we clear cache/don't have history, let's use stats as safe fallback.
+                source_type = "calc"
+
+            else:
+                # Future Game - Try Market
+                market_key = (f["event"], h_team["code"], a_team["code"])
+                market_event = market_lookup.get(market_key)
+
+                if market_event:
+                    outcomes = market_event.get("outcomes", [])
+                    if len(outcomes) >= 3:
+                        h_win_prob = outcomes[0]["price"]
+                        a_win_prob = outcomes[2]["price"]
+                        source_type = "market"
+
+            # Fallback to Statistical Model if Market Data Missing or Invalid
+            # We must have valid probabilities for BOTH sides to use the market data.
+            # If we only parsed one side (e.g. Draw + Home but Failed Away), we shouldn't trust it.
+            # Also if probability is suspiciously low (< 5%), it's likely a junk market or mapping error.
+            # BUT if it's a result (source_type == "result"), 0.0 is valid (loss), so skip specific fallback check.
+            should_fallback = False
+            if source_type != "result":
+                if h_win_prob < 0.05 or a_win_prob < 0.05:
+                    should_fallback = True
+
+            if should_fallback:
+                # Statistical Win Probs Strategy
+                # Using Team Strength (Overall)
+                # Home Advantage approx +40 strength points?
+                # Formula: WinProb = 0.5 + (StrengthDiff / 800)
+                # StrengthDiff = (Home + Adv) - Away
+
+                # Get Strengths (default 1000 if missing)
+                h_str = h_team.get("strength_overall_home", 1000)
+                a_str = a_team.get("strength_overall_away", 1000)
+
+                # Home Advantage Weight
+                home_adv = 40
+
+                diff = (h_str + home_adv) - a_str
+
+                # Calculate Home Win Prob
+                raw_h_prob = 0.5 + (diff / 800.0)
+                h_win_prob = max(0.05, min(0.95, raw_h_prob))  # Clamp
+
+                # Calculate Away Win Prob (Inverse perspective)
+                # Away Diff = Away - (Home + Adv) = -Diff
+                # raw_a_prob = 0.5 + (-diff / 800.0)
+                a_win_prob = max(0.05, min(0.95, 1.0 - h_win_prob))
+
+                source_type = "calc"
+
+            # Assume draw is residual? Or just use raw win probs for FDR?
+            # For FDR we just need "How likely are WE to win".
+            # If I am Home, my win prob is h_win_prob.
+            # If I am Away, my win prob is a_win_prob.
+
+            # Calculate FDR from Win Prob
+            # Higher Win Prob = Lower Difficulty (Easier)
+            # 1.0 prob -> 1.0 difficulty
+            # 0.0 prob -> 5.0 difficulty
+            # Formula: FDR = 1 + 4 * (1 - win_prob)
+
+            home_market_fdr = 1 + 4 * (1 - h_win_prob)
+            away_market_fdr = 1 + 4 * (1 - a_win_prob)
+
             team_fixtures[f["team_h"]].append(
                 {
                     "gameweek": f["event"],
@@ -1574,6 +1697,9 @@ class FPLService:
                     "fdr_official": f["team_h_difficulty"],
                     "fdr_attack": round(map_strength(h_diff_attack), 2),
                     "fdr_defend": round(map_strength(h_diff_defend), 2),
+                    "fdr_market": round(home_market_fdr, 2),
+                    "win_prob": round(h_win_prob, 2),
+                    "source_type": source_type,
                     "kickoff": f["kickoff_time"],
                 }
             )
@@ -1587,6 +1713,9 @@ class FPLService:
                     "fdr_official": f["team_a_difficulty"],
                     "fdr_attack": round(map_strength(a_diff_attack), 2),
                     "fdr_defend": round(map_strength(a_diff_defend), 2),
+                    "fdr_market": round(away_market_fdr, 2),
+                    "win_prob": round(a_win_prob, 2),
+                    "source_type": source_type,
                     "kickoff": f["kickoff_time"],
                 }
             )
@@ -1602,6 +1731,7 @@ class FPLService:
             avg_diff_off = sum(f["fdr_official"] for f in next_5) / len(next_5)
             avg_diff_att = sum(f["fdr_attack"] for f in next_5) / len(next_5)
             avg_diff_def = sum(f["fdr_defend"] for f in next_5) / len(next_5)
+            avg_diff_mkt = sum(f["fdr_market"] for f in next_5) / len(next_5)
 
             ticker_data.append(
                 {
@@ -1617,6 +1747,7 @@ class FPLService:
                     "avg_difficulty_defend": round(
                         avg_diff_def, 2
                     ),  # Lower is better (weaker opponent attack)
+                    "avg_difficulty_market": round(avg_diff_mkt, 2),
                 }
             )
 
