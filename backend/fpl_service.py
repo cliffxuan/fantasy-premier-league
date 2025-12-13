@@ -931,7 +931,7 @@ class FPLService:
 
     async def get_polymarket_data(self) -> list:
         # Cache check
-        cache_key = "polymarket_premier_league_v8"  # Bump version
+        cache_key = "polymarket_premier_league_v9"  # Bump version
         now = time.time()
         # Cache for 10 minutes
         if (
