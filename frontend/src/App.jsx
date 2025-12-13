@@ -10,8 +10,7 @@ import DreamTeam from './components/DreamTeam';
 import TopManagersAnalysis from './components/TopManagersAnalysis';
 import Solver from './components/Solver';
 import FixtureTicker from './components/FixtureTicker';
-import PolymarketWidget from './components/PolymarketWidget';
-import LiveFixtures from './components/LiveFixtures';
+import MarketOverview from './components/MarketOverview';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -282,10 +281,7 @@ function Dashboard() {
             </div>
 
             <div style={{ display: activeTab === 'market' ? 'block' : 'none' }}>
-              <div className="space-y-8">
-                <LiveFixtures />
-                <PolymarketWidget />
-              </div>
+              <MarketOverview />
             </div>
 
           </div>
