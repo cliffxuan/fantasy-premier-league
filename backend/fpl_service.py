@@ -929,7 +929,7 @@ class FPLService:
 
     async def get_polymarket_data(self) -> list:
         # Cache check
-        cache_key = "polymarket_premier_league_v6"  # Bump version
+        cache_key = "polymarket_premier_league_v7"  # Bump version
         now = time.time()
         # Cache for 10 minutes
         if (
@@ -943,7 +943,7 @@ class FPLService:
             "tag_id": "306",
             "active": "true",
             "closed": "false",
-            "limit": 50,
+            "limit": 100,
             "order": "volume",
             "ascending": "false",
         }
@@ -1174,8 +1174,8 @@ class FPLService:
                 # Sort by Date ascending (soonest first)
                 markets.sort(key=lambda x: x["endDate"])
 
-                # Cache top 20 (though usually there are fewer than 20 active matches)
-                final_list = markets[:20]
+                # Cache top 50 to cover multiple gameweeks if available
+                final_list = markets[:50]
                 self._cache[cache_key] = final_list
                 self._last_updated[cache_key] = now
                 return final_list
