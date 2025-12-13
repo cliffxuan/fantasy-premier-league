@@ -100,17 +100,45 @@ const PolymarketWidget = () => {
 								<div className="flex items-center gap-1">
 									{market.outcomes.slice(0, 3).map((outcome, idx) => {
 										const isDraw = outcome.label === "Draw";
-										const baseBg = isDraw ? "bg-slate-700/30 hover:bg-slate-700/50" : "bg-blue-600/10 hover:bg-blue-600/20";
-										const textColor = isDraw ? "text-slate-400" : "text-blue-400";
-										const borderColor = isDraw ? "border-slate-700/50" : "border-blue-500/20";
+										const prob = outcome.price;
+
+										let styles = {
+											bg: "bg-slate-700/10 hover:bg-slate-700/20",
+											text: "text-slate-500",
+											border: "border-slate-700/30",
+											label: "text-slate-600"
+										};
+
+										if (prob >= 0.6) {
+											styles = {
+												bg: "bg-emerald-500/20 hover:bg-emerald-500/30",
+												text: "text-emerald-400",
+												border: "border-emerald-500/50",
+												label: "text-emerald-400/60"
+											};
+										} else if (prob >= 0.4) {
+											styles = {
+												bg: "bg-blue-500/20 hover:bg-blue-500/30",
+												text: "text-blue-400",
+												border: "border-blue-500/50",
+												label: "text-blue-400/60"
+											};
+										} else if (prob >= 0.25) {
+											styles = {
+												bg: "bg-slate-500/20 hover:bg-slate-500/30",
+												text: "text-slate-300",
+												border: "border-slate-500/40",
+												label: "text-slate-400/60"
+											};
+										}
 
 										return (
-											<div key={idx} className={`w-14 h-10 flex flex-col items-center justify-center rounded border ${baseBg} ${borderColor} transition-colors`}>
-												<span className={`text-[9px] uppercase tracking-wider opacity-60 mb-0.5 ${isDraw ? 'text-slate-500' : 'text-blue-300'}`}>
+											<div key={idx} className={`w-14 h-10 flex flex-col items-center justify-center rounded border ${styles.bg} ${styles.border} transition-colors`}>
+												<span className={`text-[9px] uppercase tracking-wider mb-0.5 ${styles.label}`}>
 													{isDraw ? "Draw" : (idx === 0 ? "1" : "2")}
 												</span>
-												<span className={`text-sm font-bold font-mono ${textColor}`}>
-													{Math.round(outcome.price * 100)}%
+												<span className={`text-sm font-bold font-mono ${styles.text}`}>
+													{Math.round(prob * 100)}%
 												</span>
 											</div>
 										);
