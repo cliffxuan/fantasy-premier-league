@@ -11,6 +11,7 @@ import DreamTeam from './components/DreamTeam';
 import TopManagersAnalysis from './components/TopManagersAnalysis';
 import Solver from './components/Solver';
 import FixtureTicker from './components/FixtureTicker';
+import PolymarketWidget from './components/PolymarketWidget';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -271,6 +272,7 @@ function Dashboard() {
                   </div>
                 )}
                 <AnalysisResult data={result} />
+                <PolymarketWidget />
               </div>
             </div>
           </>

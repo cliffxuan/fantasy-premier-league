@@ -52,3 +52,17 @@ export const getDreamTeam = async (gw) => {
 	}
 	return response.json();
 };
+
+export const getPolymarketData = async () => {
+	try {
+		const response = await fetch(`${API_BASE_URL}/polymarket`);
+		if (!response.ok) {
+			return [];
+		}
+		return response.json();
+	} catch (e) {
+		console.error("Failed to fetch Polymarket data:", e);
+		return [];
+	}
+};
+

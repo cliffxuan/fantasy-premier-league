@@ -140,6 +140,18 @@ async def get_fixture_analysis(gw: int | None = None):
         )
 
 
+@app.get("/api/polymarket")
+async def get_polymarket_data():
+    service = FPLService()
+    try:
+        data = await service.get_polymarket_data()
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch Polymarket data: {str(e)}"
+        )
+
+
 @app.get("/api/gameweek/current")
 async def get_current_gameweek():
     service = FPLService()

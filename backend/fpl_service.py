@@ -798,6 +798,7 @@ class FPLService:
             logger.info(f"Fetched {len(team_ids)} top team IDs")
 
             # 2. Fetch Picks for all teams (that we don't have or just fetch all for simplicity/correctness)
+
             # Since ranks shuffle, "Top 50" now might be different teams than "Top 50" an hour ago.
             # So mixing cached 50 with new 50 might duplicate or miss.
             # Decision: reliable approach -> if requesting more than cache, fetch ALL requested and overwrite cache.
@@ -925,6 +926,157 @@ class FPLService:
         self._last_updated[cache_key] = now
 
         return result
+
+    async def get_polymarket_data(self) -> list:
+        # Cache check
+        cache_key = "polymarket_premier_league_v4"  # Bump version
+        now = time.time()
+        # Cache for 10 minutes
+        if (
+            cache_key in self._cache
+            and (now - self._last_updated.get(cache_key, 0)) < 600
+        ):
+            return self._cache[cache_key]
+
+        url = "https://gamma-api.polymarket.com/events"
+        params = {
+            "tag_id": "306",
+            "active": "true",
+            "closed": "false",
+            "limit": 50,
+            "order": "volume",
+            "ascending": "false",
+        }
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, params=params)
+                response.raise_for_status()
+                data = response.json()
+
+                markets = []
+                for item in data:
+                    title = item.get("title") or item.get("question") or ""
+
+                    # Filter for match events
+                    if " vs " not in title.lower() and " vs. " not in title.lower():
+                        continue
+
+                    # Filter out "More Markets"
+                    if " - More" in title or "More Markets" in title:
+                        continue
+
+                    # Parse Home/Away names from title
+                    separator = " vs " if " vs " in title else " vs. "
+                    try:
+                        home_raw, away_raw = title.split(separator)
+
+                        # Helper to clean names
+                        def clean_name(n):
+                            n = n.strip()
+                            # Remove common suffixes
+                            for suffix in [
+                                " FC",
+                                " AFC",
+                                " & Hove Albion",
+                                " Hotspur",
+                                " United",
+                                " City",
+                                " Town",
+                                " & District",
+                            ]:
+                                if n.endswith(suffix):
+                                    n = n[: -len(suffix)]
+                            return n.strip()
+
+                        home_clean = clean_name(home_raw)
+                        away_clean = clean_name(away_raw)
+
+                        # Keep full names for matching if needed, but display clean
+                        home_name = home_raw.strip()
+                        away_name = away_raw.strip()
+                    except ValueError:
+                        continue
+
+                    event_markets = item.get("markets", [])
+                    home_price = 0.0
+                    away_price = 0.0
+                    draw_price = 0.0
+
+                    # Logic to find the specific markets
+                    for market in event_markets:
+                        question = market.get("question", "")
+                        m_outcomes = market.get("outcomes", [])
+                        if isinstance(m_outcomes, str):
+                            import json
+
+                            m_outcomes = json.loads(m_outcomes)
+
+                        m_prices = market.get("outcomePrices", [])
+                        if isinstance(m_prices, str):
+                            import json
+
+                            m_prices = json.loads(m_prices)
+
+                        yes_price = 0.0
+                        if m_outcomes and "Yes" in m_outcomes and m_prices:
+                            try:
+                                yes_index = m_outcomes.index("Yes")
+                                yes_price = float(m_prices[yes_index])
+                            except (ValueError, IndexError):
+                                pass
+
+                        # Match logic
+                        if " draw" in question.lower() or "draw " in question.lower():
+                            draw_price = yes_price
+                        elif home_name in question:
+                            home_price = yes_price
+                        elif away_name in question:
+                            away_price = yes_price
+
+                    # Strict check: Must have at least Home and Away prices (Draw sometimes missing in rare formats, but for EPL 1x2 it should be there)
+                    # Let's say we need at least 2 non-zero prices to correspond to a valid market match
+                    valid_prices = sum(
+                        [1 for p in [home_price, draw_price, away_price] if p > 0]
+                    )
+                    if valid_prices < 2:
+                        continue
+
+                    # Structure outcomes specifically as Home, Draw, Away
+                    # Use Clean Names for display
+                    market_outcomes = [
+                        {"label": home_clean, "price": home_price},
+                        {"label": "Draw", "price": draw_price},
+                        {"label": away_clean, "price": away_price},
+                    ]
+
+                    # Construct clean title
+                    clean_title = f"{home_clean} vs {away_clean}"
+
+                    markets.append(
+                        {
+                            "id": item.get("id"),
+                            "question": clean_title,
+                            "slug": item.get("slug"),
+                            "outcomes": market_outcomes,
+                            "volume": float(item.get("volume"))
+                            if item.get("volume")
+                            else 0.0,
+                            "endDate": item.get("endDate"),
+                            "image": item.get("image") or item.get("icon"),
+                            "group": item.get("group"),
+                        }
+                    )
+
+                markets.sort(key=lambda x: x["volume"], reverse=True)
+
+                final_list = markets[:20]
+                self._cache[cache_key] = final_list
+                self._last_updated[cache_key] = now
+                return final_list
+            except Exception as e:
+                logger.error(f"Failed to fetch Polymarket data: {e}")
+                return []
 
     async def get_optimized_team(
         self,
