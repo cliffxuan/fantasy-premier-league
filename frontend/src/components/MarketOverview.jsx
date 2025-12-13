@@ -214,8 +214,8 @@ const MarketOverview = () => {
 		<div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
 			<div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
 				<h2 className="text-2xl font-bold flex items-center gap-3">
-					<span className="text-3xl">📊</span>
-					<span>Market <span className="text-ds-primary">Overview</span></span>
+					<span className="text-3xl">🏟️</span>
+					<span>Match <span className="text-ds-primary">Center</span></span>
 				</h2>
 
 				<div className="flex items-center gap-3">

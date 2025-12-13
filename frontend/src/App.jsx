@@ -188,7 +188,7 @@ function Dashboard() {
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-6">
         <nav className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar">
           {[
-            { id: 'market', label: 'Market Insights' },
+            { id: 'market', label: 'Match Center' },
             { id: 'dream_team', label: 'Team of the Week' },
             { id: 'analysis', label: 'Rank Analysis' },
             { id: 'solver', label: 'AI Solver' },
