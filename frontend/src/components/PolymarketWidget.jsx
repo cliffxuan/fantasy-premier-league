@@ -122,7 +122,7 @@ const PolymarketWidget = () => {
 				})}
 			</div>
 			<div className="mt-6 text-center">
-				<a href="https://polymarket.com/sport/soccer" target="_blank" rel="noopener noreferrer" className="text-xs text-ds-text-muted hover:text-ds-primary transition-colors">
+				<a href="https://polymarket.com/sports/epl/games" target="_blank" rel="noopener noreferrer" className="text-xs text-ds-text-muted hover:text-ds-primary transition-colors">
 					View all Premier League Markets on Polymarket →
 				</a>
 			</div>

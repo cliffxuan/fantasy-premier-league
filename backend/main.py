@@ -23,7 +23,7 @@ app.add_middleware(
 analysis_service = AnalysisService()
 
 
-@app.post("/api/analyze", response_model=AnalysisResponse)
+@app.post("/api/analyze", response_model=AnalysisResponse, tags=["Analysis"])
 async def analyze_team(request: AnalysisRequest):
     try:
         return await analysis_service.analyze_team(request)
@@ -31,7 +31,7 @@ async def analyze_team(request: AnalysisRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/team/{team_id}/squad")
+@app.get("/api/team/{team_id}/squad", tags=["FPL Team"])
 async def get_squad(team_id: int, gw: int | None = None):
     print(f"DEBUG: Endpoint get_squad called with team_id={team_id}, gw={gw}")
     service = FPLService()
@@ -42,7 +42,7 @@ async def get_squad(team_id: int, gw: int | None = None):
         raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")
 
 
-@app.get("/api/team/{team_id}/my-team")
+@app.get("/api/team/{team_id}/my-team", tags=["FPL Team"])
 async def get_my_team(team_id: int, authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
@@ -57,7 +57,7 @@ async def get_my_team(team_id: int, authorization: str = Header(None)):
         )
 
 
-@app.get("/api/league-table")
+@app.get("/api/league-table", tags=["FPL Data"])
 async def get_league_table():
     service = FPLService()
     try:
@@ -69,7 +69,7 @@ async def get_league_table():
         )
 
 
-@app.get("/api/player/{player_id}/summary")
+@app.get("/api/player/{player_id}/summary", tags=["FPL Data"])
 async def get_player_summary(player_id: int):
     service = FPLService()
     try:
@@ -81,7 +81,7 @@ async def get_player_summary(player_id: int):
         )
 
 
-@app.get("/api/dream-team/{gw}")
+@app.get("/api/dream-team/{gw}", tags=["FPL Data"])
 async def get_dream_team(gw: int):
     service = FPLService()
     try:
@@ -93,12 +93,12 @@ async def get_dream_team(gw: int):
         )
 
 
-@app.get("/api/health")
+@app.get("/api/health", tags=["System"])
 async def health_check():
     return {"status": "ok"}
 
 
-@app.get("/api/analysis/top-managers")
+@app.get("/api/analysis/top-managers", tags=["Analysis"])
 async def get_top_managers_analysis(gw: int | None = None, count: int = 1000):
     service = FPLService()
     try:
@@ -110,7 +110,7 @@ async def get_top_managers_analysis(gw: int | None = None, count: int = 1000):
         )
 
 
-@app.get("/api/optimization/solve")
+@app.get("/api/optimization/solve", tags=["Solver"])
 async def solve_optimization(
     budget: float = 100.0,
     min_gw: int | None = None,
@@ -128,7 +128,7 @@ async def solve_optimization(
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
 
 
-@app.get("/api/optimization/fixtures")
+@app.get("/api/optimization/fixtures", tags=["Solver"])
 async def get_fixture_analysis(gw: int | None = None):
     service = FPLService()
     try:
@@ -140,7 +140,7 @@ async def get_fixture_analysis(gw: int | None = None):
         )
 
 
-@app.get("/api/polymarket")
+@app.get("/api/polymarket", tags=["Polymarket"])
 async def get_polymarket_data():
     service = FPLService()
     try:
@@ -152,7 +152,7 @@ async def get_polymarket_data():
         )
 
 
-@app.get("/api/gameweek/current")
+@app.get("/api/gameweek/current", tags=["FPL Data"])
 async def get_current_gameweek():
     service = FPLService()
     try:
