@@ -454,6 +454,30 @@ class FPLService:
             self._last_updated["fixtures"] = now
             return data
 
+    async def get_live_fixtures(self, gw: int) -> list:
+        bootstrap = await self.get_bootstrap_static()
+        teams = {t["id"]: t for t in bootstrap["teams"]}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{FPL_BASE_URL}/fixtures/", params={"event": gw}
+            )
+            response.raise_for_status()
+            fixtures = response.json()
+
+        # Enrich with team names
+        for f in fixtures:
+            h_team = teams.get(f["team_h"])
+            a_team = teams.get(f["team_a"])
+            f["team_h_name"] = h_team["name"] if h_team else "Unknown"
+            f["team_h_short"] = h_team["short_name"] if h_team else "UNK"
+            f["team_a_name"] = a_team["name"] if a_team else "Unknown"
+            f["team_a_short"] = a_team["short_name"] if a_team else "UNK"
+            f["team_h_code"] = h_team["code"] if h_team else 0
+            f["team_a_code"] = a_team["code"] if a_team else 0
+
+        return fixtures
+
     async def get_current_gameweek(self) -> int:
         data = await self.get_bootstrap_static()
         for event in data["events"]:

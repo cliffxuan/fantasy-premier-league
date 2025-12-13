@@ -140,6 +140,21 @@ async def get_fixture_analysis(gw: int | None = None):
         )
 
 
+@app.get("/api/fixtures", tags=["FPL Data"])
+async def get_fixtures(event: int | None = None):
+    service = FPLService()
+    try:
+        if event:
+            data = await service.get_live_fixtures(event)
+        else:
+            data = await service.get_fixtures()
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch fixtures: {str(e)}"
+        )
+
+
 @app.get("/api/polymarket", tags=["Polymarket"])
 async def get_polymarket_data():
     service = FPLService()

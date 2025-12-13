@@ -11,6 +11,7 @@ import TopManagersAnalysis from './components/TopManagersAnalysis';
 import Solver from './components/Solver';
 import FixtureTicker from './components/FixtureTicker';
 import PolymarketWidget from './components/PolymarketWidget';
+import LiveFixtures from './components/LiveFixtures';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -192,7 +193,6 @@ function Dashboard() {
             { id: 'dream_team', label: 'Team of the Week' },
             { id: 'analysis', label: 'Rank Analysis' },
             { id: 'solver', label: 'AI Solver' },
-            { id: 'standings', label: 'Standings' },
             { id: 'squad', label: 'My Squad' }
           ].map(tab => (
             <button
@@ -217,30 +217,32 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Squad Tab */}
-        <div style={{ display: activeTab === 'squad' ? 'block' : 'none' }} className="animate-in fade-in duration-300">
-          {!isTeamLoaded ? (
-            <div className="text-center py-20 flex flex-col items-center justify-center opacity-60">
-              <div className="w-16 h-16 rounded-full bg-ds-card border border-ds-border flex items-center justify-center mb-6 shadow-xl">
-                <span className="text-3xl">⚽️</span>
-              </div>
-              <h2 className="text-2xl font-bold text-ds-text mb-6">My Squad</h2>
-              <div className="flex justify-center w-full">
-                <TeamInput centered={true} />
-              </div>
-              <p className="text-ds-text-muted max-w-md mx-auto mt-4 text-sm">
-                Enter your Team ID to unlock detailed analysis, point history, and AI insights.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-8">
-              {/* Input for switching teams */}
-              <div className="flex justify-end border-b border-ds-border pb-4">
-                <TeamInput />
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8 items-start">
+          {/* LEFT COLUMN: Main Content */}
+          <div className="flex flex-col gap-8 min-w-0">
 
-              <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
+            {/* Squad Tab */}
+            <div style={{ display: activeTab === 'squad' ? 'block' : 'none' }} className="animate-in fade-in duration-300">
+              {!isTeamLoaded ? (
+                <div className="text-center py-20 flex flex-col items-center justify-center opacity-60">
+                  <div className="w-16 h-16 rounded-full bg-ds-card border border-ds-border flex items-center justify-center mb-6 shadow-xl">
+                    <span className="text-3xl">⚽️</span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-ds-text mb-6">My Squad</h2>
+                  <div className="flex justify-center w-full">
+                    <TeamInput centered={true} />
+                  </div>
+                  <p className="text-ds-text-muted max-w-md mx-auto mt-4 text-sm">
+                    Enter your Team ID to unlock detailed analysis, point history, and AI insights.
+                  </p>
+                </div>
+              ) : (
                 <div className="flex flex-col gap-8">
+                  {/* Input for switching teams */}
+                  <div className="flex justify-end border-b border-ds-border pb-4">
+                    <TeamInput />
+                  </div>
+
                   <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} />
                   {squad && (
                     <SquadDisplay
@@ -256,64 +258,74 @@ function Dashboard() {
                     />
                   )}
                 </div>
-                {/* Sidebar: Analysis & History - Only visible when squad is loaded */}
-                <div className="flex flex-col gap-6 sticky top-24 animate-in slide-in-from-right-4 duration-500">
-                  {/* Move Points History to top for better visibility */}
-                  <PointsHistoryChart history={history} />
+              )}
+            </div>
 
-                  <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
-                    <h3 className="text-lg font-bold text-ds-text mb-2">Run Analysis</h3>
-                    <p className="text-sm text-ds-text-muted mb-6 leading-relaxed">
-                      Generate AI-powered insights for your current team selection.
-                    </p>
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                      <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 font-mono shadow-lg relative overflow-hidden">
-                        {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
-                      </button>
-                    </form>
-                  </div>
+            <div style={{ display: activeTab === 'dream_team' ? 'block' : 'none' }}>
+              <DreamTeam
+                currentGw={entry?.current_event}
+                gw={viewGw}
+                onGwChange={handleGwChange}
+                onTabSwitch={() => handleTabChange('squad')}
+              />
+            </div>
 
-                  {error && isTeamLoaded && (
-                    <div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
-                      {error}
-                    </div>
-                  )}
+            <div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
+              <TopManagersAnalysis />
+            </div>
 
-                  <AnalysisResult data={result} />
-                </div>
+            <div style={{ display: activeTab === 'solver' ? 'block' : 'none' }}>
+              <div className="space-y-8">
+                <Solver />
+                <FixtureTicker />
               </div>
             </div>
-          )}
-        </div>
 
-        <div style={{ display: activeTab === 'dream_team' ? 'block' : 'none' }}>
-          <DreamTeam
-            currentGw={entry?.current_event}
-            gw={viewGw}
-            onGwChange={handleGwChange}
-            onTabSwitch={() => handleTabChange('squad')}
-          />
-        </div>
+            <div style={{ display: activeTab === 'market' ? 'block' : 'none' }}>
+              <div className="space-y-8">
+                <LiveFixtures />
+                <PolymarketWidget />
+              </div>
+            </div>
 
-        <div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
-          <TopManagersAnalysis />
-        </div>
-
-        <div style={{ display: activeTab === 'solver' ? 'block' : 'none' }}>
-          <div className="space-y-8">
-            <Solver />
-            <FixtureTicker />
           </div>
-        </div>
 
-        <div style={{ display: activeTab === 'market' ? 'block' : 'none' }}>
-          <PolymarketWidget />
-        </div>
+          {/* RIGHT COLUMN: Sidebar */}
+          <div className="flex flex-col gap-6 sticky top-24">
 
-        <div style={{ display: activeTab === 'standings' ? 'block' : 'none' }}>
-          <LeagueTable />
-        </div>
+            {/* Squad Specific Tools (Conditional) */}
+            {activeTab === 'squad' && isTeamLoaded && (
+              <div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
+                <PointsHistoryChart history={history} />
 
+                <div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
+                  <h3 className="text-lg font-bold text-ds-text mb-2">Run Analysis</h3>
+                  <p className="text-sm text-ds-text-muted mb-6 leading-relaxed">
+                    Generate AI-powered insights for your current team selection.
+                  </p>
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 font-mono shadow-lg relative overflow-hidden">
+                      {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
+                    </button>
+                  </form>
+                </div>
+
+                {error && (
+                  <div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <AnalysisResult data={result} />
+              </div>
+            )}
+
+            {/* Persistent League Table */}
+            <LeagueTable />
+
+          </div>
+
+        </div>
       </main>
     </div>
   );

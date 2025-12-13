@@ -66,3 +66,15 @@ export const getPolymarketData = async () => {
 	}
 };
 
+export const getFixtures = async (gw = null) => {
+	let url = `${API_BASE_URL}/fixtures`;
+	if (gw) {
+		url += `?event=${gw}`;
+	}
+	const response = await fetch(url);
+	if (!response.ok) {
+		return [];
+	}
+	return response.json();
+};
+
