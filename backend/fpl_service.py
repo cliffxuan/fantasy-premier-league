@@ -929,7 +929,7 @@ class FPLService:
 
     async def get_polymarket_data(self) -> list:
         # Cache check
-        cache_key = "polymarket_premier_league_v4"  # Bump version
+        cache_key = "polymarket_premier_league_v6"  # Bump version
         now = time.time()
         # Cache for 10 minutes
         if (
@@ -947,6 +947,39 @@ class FPLService:
             "order": "volume",
             "ascending": "false",
         }
+
+        # Ensure we have static data for team mapping
+        try:
+            static_data = await self.get_bootstrap_static()
+            fpl_teams = static_data.get("teams", [])
+        except Exception:
+            fpl_teams = []
+
+        # Create Name Mapping
+        team_map = {}
+        for t in fpl_teams:
+            # Map full name
+            team_map[t["name"].lower()] = t
+            # Map short name
+            if t.get("short_name"):
+                team_map[t["short_name"].lower()] = t
+            # Manual Mappings for variances
+            if t["name"] == "Man City":
+                team_map["manchester city"] = t
+            if t["name"] == "Man Utd":
+                team_map["manchester united"] = t
+            if t["name"] == "Nott'm Forest":
+                team_map["nottingham forest"] = t
+            if t["name"] == "Spurs":
+                team_map["tottenham"] = t
+            if t["name"] == "Wolves":
+                team_map["wolverhampton"] = t
+            if t["name"] == "Brighton":
+                team_map["brighton & hove albion"] = t
+            if t["name"] == "Newcastle":
+                team_map["newcastle united"] = t
+            if t["name"] == "West Ham":
+                team_map["west ham united"] = t
 
         async with httpx.AsyncClient() as client:
             try:
@@ -974,23 +1007,90 @@ class FPLService:
                         # Helper to clean names
                         def clean_name(n):
                             n = n.strip()
-                            # Remove common suffixes
-                            for suffix in [
-                                " FC",
-                                " AFC",
-                                " & Hove Albion",
-                                " Hotspur",
-                                " United",
-                                " City",
-                                " Town",
-                                " & District",
-                            ]:
+                            # 1. Remove noise suffixes first
+                            for suffix in [" FC", " AFC", " & District"]:
                                 if n.endswith(suffix):
                                     n = n[: -len(suffix)]
+
+                            n = n.strip()
+
+                            # 2. Handle Special Cases (Man City, Man Utd) to prevent over-cleaning
+                            if n == "Manchester City":
+                                return "Man City"
+                            if n == "Manchester United":
+                                return "Man Utd"
+                            if n == "Wolverhampton Wanderers":
+                                return "Wolves"
+                            if n == "Nottingham Forest":
+                                return "Nott'm Forest"
+                            if n == "Brighton & Hove Albion":
+                                return "Brighton"
+                            if n == "Tottenham Hotspur":
+                                return "Tottenham"
+                            if n == "West Bromwich Albion":
+                                return "West Brom"
+                            if n == "AFC Bournemouth":
+                                return "Bournemouth"
+
+                            # 3. Remove generic suffixes for others (City, United, Town)
+                            for suffix in [" United", " City", " Town"]:
+                                if n.endswith(suffix):
+                                    n = n[: -len(suffix)]
+
                             return n.strip()
 
                         home_clean = clean_name(home_raw)
                         away_clean = clean_name(away_raw)
+
+                        # Match with FPL Data
+                        home_fpl = team_map.get(home_clean.lower()) or team_map.get(
+                            home_raw.lower()
+                        )
+                        away_fpl = team_map.get(away_clean.lower()) or team_map.get(
+                            away_raw.lower()
+                        )
+
+                        # Fallback for some common polymarket names if not caught by cleaner/map
+                        if (
+                            not home_fpl
+                            and "manchester" in home_raw.lower()
+                            and "city" in home_raw.lower()
+                        ):
+                            home_fpl = team_map.get("man city")
+                        if (
+                            not home_fpl
+                            and "manchester" in home_raw.lower()
+                            and "united" in home_raw.lower()
+                        ):
+                            home_fpl = team_map.get("man utd")
+
+                        if (
+                            not away_fpl
+                            and "manchester" in away_raw.lower()
+                            and "city" in away_raw.lower()
+                        ):
+                            away_fpl = team_map.get("man city")
+                        if (
+                            not away_fpl
+                            and "manchester" in away_raw.lower()
+                            and "united" in away_raw.lower()
+                        ):
+                            away_fpl = team_map.get("man utd")
+
+                        home_data = {
+                            "name": home_clean,
+                            "short_name": home_fpl["short_name"]
+                            if home_fpl
+                            else home_clean[:3].upper(),
+                            "code": home_fpl["code"] if home_fpl else None,
+                        }
+                        away_data = {
+                            "name": away_clean,
+                            "short_name": away_fpl["short_name"]
+                            if away_fpl
+                            else away_clean[:3].upper(),
+                            "code": away_fpl["code"] if away_fpl else None,
+                        }
 
                         # Keep full names for matching if needed, but display clean
                         home_name = home_raw.strip()
@@ -1051,12 +1151,14 @@ class FPLService:
                     ]
 
                     # Construct clean title
-                    clean_title = f"{home_clean} vs {away_clean}"
+                    # clean_title = f"{home_clean} vs {away_clean}"
 
                     markets.append(
                         {
                             "id": item.get("id"),
-                            "question": clean_title,
+                            "question": item.get("title")
+                            or item.get("question")
+                            or f"{home_clean} vs {away_clean}",
                             "slug": item.get("slug"),
                             "outcomes": market_outcomes,
                             "volume": float(item.get("volume"))
@@ -1065,11 +1167,14 @@ class FPLService:
                             "endDate": item.get("endDate"),
                             "image": item.get("image") or item.get("icon"),
                             "group": item.get("group"),
+                            "home_team": home_data,
+                            "away_team": away_data,
                         }
                     )
+                # Sort by Date ascending (soonest first)
+                markets.sort(key=lambda x: x["endDate"])
 
-                markets.sort(key=lambda x: x["volume"], reverse=True)
-
+                # Cache top 20 (though usually there are fewer than 20 active matches)
                 final_list = markets[:20]
                 self._cache[cache_key] = final_list
                 self._last_updated[cache_key] = now

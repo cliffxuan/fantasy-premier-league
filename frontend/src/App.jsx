@@ -217,6 +217,12 @@ function Dashboard() {
               >
                 AI Solver
               </button>
+              <button
+                className={`pb-4 px-2 font-bold text-lg transition-colors border-b-2 ${activeTab === 'market' ? 'text-ds-primary border-ds-primary' : 'text-ds-text-muted border-transparent hover:text-ds-text'}`}
+                onClick={() => handleTabChange('market')}
+              >
+                Market Insights
+              </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-start">
@@ -253,6 +259,9 @@ function Dashboard() {
                     <FixtureTicker />
                   </div>
                 </div>
+                <div style={{ display: activeTab === 'market' ? 'block' : 'none' }}>
+                  <PolymarketWidget />
+                </div>
                 <LeagueTable />
               </div>
 
@@ -272,7 +281,6 @@ function Dashboard() {
                   </div>
                 )}
                 <AnalysisResult data={result} />
-                <PolymarketWidget />
               </div>
             </div>
           </>
