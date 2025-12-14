@@ -42,6 +42,28 @@ async def get_squad(team_id: int, gw: int | None = None):
         raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")
 
 
+@app.get("/api/teams", tags=["FPL Data"])
+async def get_teams():
+    service = FPLService()
+    try:
+        data = await service.get_teams()
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch teams: {str(e)}")
+
+
+@app.get("/api/club/{club_id}/squad", tags=["FPL Team"])
+async def get_club_squad(club_id: int, gw: int | None = None):
+    service = FPLService()
+    try:
+        data = await service.get_club_squad(club_id, gw)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch club squad: {str(e)}"
+        )
+
+
 @app.get("/api/team/{team_id}/my-team", tags=["FPL Team"])
 async def get_my_team(team_id: int, authorization: str = Header(None)):
     if not authorization:

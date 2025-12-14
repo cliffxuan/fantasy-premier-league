@@ -24,6 +24,22 @@ export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersR
 	return response.json();
 };
 
+export const getTeams = async () => {
+	const response = await fetch(`${API_BASE_URL}/teams`);
+	if (!response.ok) return [];
+	return response.json();
+};
+
+export const getClubSquad = async (clubId, gw = null) => {
+	let url = `${API_BASE_URL}/club/${clubId}/squad`;
+	if (gw !== null && gw !== undefined) {
+		url += `?gw=${gw}`;
+	}
+	const response = await fetch(url);
+	if (!response.ok) return null;
+	return response.json();
+};
+
 export const getSquad = async (teamId, gw = null) => {
 	let url = `${API_BASE_URL}/team/${teamId}/squad`;
 	if (gw !== null && gw !== undefined) {

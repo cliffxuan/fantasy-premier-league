@@ -478,6 +478,107 @@ class FPLService:
 
         return fixtures
 
+    async def get_teams(self) -> list:
+        bootstrap = await self.get_bootstrap_static()
+        return bootstrap["teams"]
+
+    async def get_club_squad(
+        self, club_id: int, gw: int | None = None
+    ) -> Dict[str, Any]:
+        print(f"DEBUG: get_club_squad called for club {club_id} with gw={gw}")
+        bootstrap = await self.get_bootstrap_static()
+        current_gw = await self.get_current_gameweek()
+        if gw is None:
+            gw = current_gw
+        else:
+            gw = int(gw)
+
+        teams_map = {t["id"]: t for t in bootstrap["teams"]}
+
+        # Get all players for this club
+        club_players = [e for e in bootstrap["elements"] if e["team"] == club_id]
+
+        if not club_players:
+            return {"squad": [], "team": teams_map.get(club_id, {}), "gameweek": gw}
+
+        try:
+            live_data = await self.get_event_live(gw)
+            live_elements = {e["id"]: e["stats"] for e in live_data["elements"]}
+        except Exception:
+            live_elements = {}
+
+        # Fetch fixtures for this GW
+        fixtures = await self.get_fixtures()
+        club_fixtures = [
+            f
+            for f in fixtures
+            if f["event"] == gw and (f["team_h"] == club_id or f["team_a"] == club_id)
+        ]
+
+        fixture_strs = []
+        max_difficulty = 0
+        started = False
+        finished = False
+
+        for f in club_fixtures:
+            is_home = f["team_h"] == club_id
+            opponent_id = f["team_a"] if is_home else f["team_h"]
+            opp_short = teams_map.get(opponent_id, {}).get("short_name", "UNK")
+            char = "(H)" if is_home else "(A)"
+            fixture_strs.append(f"{opp_short} {char}")
+            diff = f["team_h_difficulty"] if is_home else f["team_a_difficulty"]
+            if diff > max_difficulty:
+                max_difficulty = diff
+
+            if f.get("started"):
+                started = True
+            if f.get("finished"):
+                finished = True
+
+        fixture_str = ", ".join(fixture_strs) if fixture_strs else "No Fixture"
+        if not fixture_strs:
+            max_difficulty = 0
+
+        squad = []
+        for player in club_players:
+            stats = live_elements.get(player["id"], {})
+            event_points = stats.get("total_points", 0)
+            minutes = stats.get("minutes", 0)
+
+            squad.append(
+                {
+                    "id": player["id"],
+                    "name": player["web_name"],
+                    "full_name": f"{player['first_name']} {player['second_name']}",
+                    "position": player["element_type"],
+                    "team": teams_map.get(club_id, {}).get("name", "Unknown"),
+                    "team_short": teams_map.get(club_id, {}).get("short_name", "UNK"),
+                    "team_code": teams_map.get(club_id, {}).get("code", 0),
+                    "cost": player["now_cost"] / 10,
+                    "status": player["status"],
+                    "news": player["news"],
+                    "form": player["form"],
+                    "event_points": event_points,
+                    "minutes": minutes,
+                    "total_points": player["total_points"],
+                    "fixture": fixture_str,
+                    "fixture_difficulty": max_difficulty,
+                    "match_started": started,
+                    "match_finished": finished,
+                    "chance_of_playing": player["chance_of_playing_next_round"],
+                    "code": player["code"],
+                    "is_captain": False,
+                    "is_vice_captain": False,
+                    "purchase_price": player["now_cost"] / 10,
+                    "selling_price": player["now_cost"] / 10,
+                }
+            )
+
+        # Sort by total points descending
+        squad.sort(key=lambda x: x["total_points"], reverse=True)
+
+        return {"squad": squad, "team": teams_map.get(club_id, {}), "gameweek": gw}
+
     async def get_current_gameweek(self) -> int:
         data = await self.get_bootstrap_static()
         for event in data["events"]:

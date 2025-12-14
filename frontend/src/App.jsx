@@ -11,6 +11,7 @@ import TopManagersAnalysis from './components/TopManagersAnalysis';
 import Solver from './components/Solver';
 import FixtureTicker from './components/FixtureTicker';
 import MarketOverview from './components/MarketOverview';
+import ClubViewer from './components/ClubViewer';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -194,6 +195,7 @@ function Dashboard() {
             { id: 'solver', label: 'AI Solver' },
             { id: 'analysis', label: 'Rank Analysis' },
             { id: 'dream_team', label: 'Team of the Week' },
+            { id: 'club_viewer', label: 'Club Viewer' },
             { id: 'squad', label: 'My Squad' }
           ].map(tab => (
             <button
@@ -269,6 +271,10 @@ function Dashboard() {
                 onGwChange={handleGwChange}
                 onTabSwitch={() => handleTabChange('squad')}
               />
+            </div>
+
+            <div style={{ display: activeTab === 'club_viewer' ? 'block' : 'none' }}>
+              <ClubViewer />
             </div>
 
             <div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
