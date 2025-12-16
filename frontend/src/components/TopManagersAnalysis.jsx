@@ -161,7 +161,8 @@ const TopManagersAnalysis = () => {
 														cost: player.cost,
 														// Approximations as we don't have user-specific purchase data
 														purchase_price: player.cost,
-														selling_price: player.cost
+														selling_price: player.cost,
+														news: player.news
 													}}>
 														<div className="flex flex-col cursor-pointer hover:text-ds-primary transition-colors">
 															<span>{player.web_name}</span>

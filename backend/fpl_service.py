@@ -817,6 +817,7 @@ class FPLService:
                     "fixture": fixture_str,
                     "code": player["code"],
                     "status": player["status"],
+                    "news": player["news"],
                     "is_captain": False,
                     "is_vice_captain": False,
                     "fixture_difficulty": 3,  # Default, not really needed for dream team
@@ -1027,6 +1028,7 @@ class FPLService:
                     "cost": player["now_cost"] / 10,
                     "total_points": player["total_points"],
                     "code": player["code"],
+                    "news": player["news"],
                     "ownership_top_1000": round(ownership, 1),
                     "captain_top_1000": round(cap_ownership, 1),
                     "global_ownership": float(player["selected_by_percent"]),
@@ -1423,6 +1425,7 @@ class FPLService:
                     "points": points,
                     "form": float(p["form"]),
                     "status": p["status"],
+                    "news": p["news"],
                     "code": p["code"],
                 }
             )

@@ -306,7 +306,8 @@ const Solver = () => {
 												total_points: p.points,
 												cost: p.cost,
 												purchase_price: p.cost,
-												selling_price: p.cost
+												selling_price: p.cost,
+												news: p.news
 											}}>
 												{p.name}
 											</PlayerPopover>

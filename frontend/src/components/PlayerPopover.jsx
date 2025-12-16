@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getPlayerSummary } from '../api';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
@@ -71,10 +72,10 @@ const PlayerPopover = ({ player, children }) => {
 			onClick={handleClick}
 		>
 			{children}
-			{isVisible && (
+			{isVisible && createPortal(
 				<div
 					ref={popoverRef}
-					className={`fixed z-50 w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text transform pointer-events-none ${position.transform}`}
+					className={`fixed z-[100] w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text transform pointer-events-none ${position.transform}`}
 					style={{ top: position.top, left: position.left }}
 				>
 					<div className="flex items-center gap-3 mb-3 border-b border-ds-border pb-3">
@@ -164,7 +165,8 @@ const PlayerPopover = ({ player, children }) => {
 							<span className="text-xs font-mono">{player.selling_price ? `£${player.selling_price}m` : 'N/A'}</span>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body
 			)}
 		</div>
 	);
