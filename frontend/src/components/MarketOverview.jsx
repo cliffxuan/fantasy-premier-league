@@ -17,11 +17,26 @@ const MarketOverview = () => {
 				const gwRes = await fetch('/api/gameweek/current');
 				const gwData = await gwRes.json();
 				const nowGw = gwData.gameweek;
-				setGw(nowGw);
-				setCurrentGw(nowGw);
+
+				// Check if current gameweek is finished
+				// We need to fetch fixtures for current week to check status
+				let targetGw = nowGw;
+				try {
+					const currentFixtures = await getFixtures(nowGw);
+					const allFinished = currentFixtures.length > 0 && currentFixtures.every(f => f.finished || f.finished_provisional);
+
+					if (allFinished && nowGw < 38) {
+						targetGw = nowGw + 1;
+					}
+				} catch (err) {
+					console.warn("Failed to check fixture status", err);
+				}
+
+				setGw(targetGw);
+				setCurrentGw(nowGw); // Keep track of actual current GW
 
 				// Fetch Initial Data
-				await fetchData(nowGw);
+				await fetchData(targetGw);
 			} catch (e) {
 				console.error("Failed to init market overview", e);
 			}
