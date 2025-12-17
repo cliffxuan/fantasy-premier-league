@@ -577,7 +577,67 @@ class FPLService:
         # Sort by total points descending
         squad.sort(key=lambda x: x["total_points"], reverse=True)
 
-        return {"squad": squad, "team": teams_map.get(club_id, {}), "gameweek": gw}
+        # Process all fixtures for the club (Season Schedule)
+        club_schedule = []
+        all_fixtures = await self.get_fixtures()
+        relevant_fixtures = [
+            f for f in all_fixtures if f["team_h"] == club_id or f["team_a"] == club_id
+        ]
+        # Sort by event/kickoff
+        relevant_fixtures.sort(key=lambda x: x.get("event") or 999)
+
+        for f in relevant_fixtures:
+            is_home = f["team_h"] == club_id
+            opponent_id = f["team_a"] if is_home else f["team_h"]
+            opp_team = teams_map.get(opponent_id, {})
+
+            # Calculate result if finished
+            result = None
+            score = None
+            if f.get("finished"):
+                h_score = f.get("team_h_score")
+                a_score = f.get("team_a_score")
+                score = f"{h_score}-{a_score}"
+
+                if h_score is not None and a_score is not None:
+                    if is_home:
+                        if h_score > a_score:
+                            result = "W"
+                        elif h_score < a_score:
+                            result = "L"
+                        else:
+                            result = "D"
+                    else:
+                        if a_score > h_score:
+                            result = "W"
+                        elif a_score < h_score:
+                            result = "L"
+                        else:
+                            result = "D"
+
+            club_schedule.append(
+                {
+                    "event": f.get("event"),
+                    "opponent_name": opp_team.get("name", "Unknown"),
+                    "opponent_short": opp_team.get("short_name", "UNK"),
+                    "opponent_code": opp_team.get("code"),
+                    "is_home": is_home,
+                    "difficulty": f["team_h_difficulty"]
+                    if is_home
+                    else f["team_a_difficulty"],
+                    "finished": f.get("finished"),
+                    "score": score,
+                    "result": result,
+                    "kickoff_time": f.get("kickoff_time"),
+                }
+            )
+
+        return {
+            "squad": squad,
+            "team": teams_map.get(club_id, {}),
+            "gameweek": gw,
+            "fixtures": club_schedule,
+        }
 
     async def get_current_gameweek(self) -> int:
         data = await self.get_bootstrap_static()

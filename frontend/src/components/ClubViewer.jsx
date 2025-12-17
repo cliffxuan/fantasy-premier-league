@@ -61,6 +61,109 @@ const ClubViewer = () => {
 		handleFetch(selectedClub, newGw);
 	};
 
+	// Helper for FDR colors
+	const getFdrColor = (difficulty) => {
+		switch (difficulty) {
+			case 1: return 'bg-[#375523] text-white border-[#375523]';
+			case 2: return 'bg-[#01fc7a] text-black border-[#01fc7a]';
+			case 3: return 'bg-[#e7e7e7] text-black border-[#e7e7e7]';
+			case 4: return 'bg-[#ff1751] text-white border-[#ff1751]';
+			case 5: return 'bg-[#80072d] text-white border-[#80072d]';
+			default: return 'bg-ds-surface border-ds-border text-ds-text-muted';
+		}
+	};
+
+	// Helper for Result colors
+	const getResultColor = (result) => {
+		switch (result) {
+			case 'W': return 'text-green-500 bg-green-500/10 border-green-500/20';
+			case 'D': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
+			case 'L': return 'text-ds-danger bg-ds-danger/10 border-ds-danger/20';
+			default: return 'text-ds-text-muted';
+		}
+	};
+
+	const ClubFixtures = ({ fixtures, teams }) => {
+		if (!fixtures || fixtures.length === 0) return null;
+
+		return (
+			<div className="bg-ds-card rounded-xl border border-ds-border overflow-hidden flex flex-col h-full bg-ds-card/60 backdrop-blur-sm">
+				<div className="p-4 border-b border-ds-border bg-ds-surface/50 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between">
+					<h3 className="font-bold text-lg flex items-center gap-2">
+						<span>🗓️</span> Fixtures & Results
+					</h3>
+					<span className="text-xs text-ds-text-muted font-mono">{fixtures.length} Games</span>
+				</div>
+				<div className="overflow-y-auto custom-scrollbar max-h-[800px]">
+					<table className="w-full text-sm text-left relative collapse-separate">
+						<thead className="bg-ds-surface text-ds-text-muted font-medium border-b border-ds-border sticky top-0 z-10 shadow-sm">
+							<tr>
+								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface">GW</th>
+								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface">Date</th>
+								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface">Opponent</th>
+								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface text-center">FDR</th>
+								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface text-center">Result</th>
+							</tr>
+						</thead>
+						<tbody className="divide-y divide-ds-border/50">
+							{fixtures.map((fix, idx) => {
+								const date = new Date(fix.kickoff_time).toLocaleDateString(undefined, {
+									month: 'short', day: 'numeric'
+								});
+								const oppTeam = teams.find(t => t.id === fix.opponent_code) || {}; /* Note: backend returns opponent_code as team code, not team id. 
+                                Actually backend returns `opponent_code` as `team.code`. My `teams` prop likely has `id` and `code`.
+                                Let's check `teams` state usage. `teams` comes from `getTeams()`. Usually has `id`, `code`, `name`.
+                            */
+								// Wait, `fixtures` has `opponent_code`. Is that `team.code` or `team.id`?
+								// In backend: `opponent_code: opp_team.get("code")` -> This is the FPL specific photo code (usually).
+								// `teams` list from `getTeams` has `code` which is that sane photo code.
+
+								return (
+									<tr key={idx} className="hover:bg-ds-primary/5 transition-colors group">
+										<td className="px-4 py-3 font-mono text-ds-text-muted text-xs border-r border-ds-border/30">{fix.event}</td>
+										<td className="px-4 py-3 text-ds-text-muted text-xs">{date}</td>
+										<td className="px-4 py-3">
+											<div className="flex items-center gap-3">
+												<span className={`text-[10px] font-bold w-6 text-center ${fix.is_home ? 'text-ds-text bg-ds-surface px-1 py-0.5 rounded border border-ds-border' : 'text-ds-text-muted'}`}>
+													{fix.is_home ? 'H' : 'A'}
+												</span>
+												<div className="flex items-center gap-2">
+													<img
+														src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
+														alt={fix.opponent_short}
+														className="w-5 h-5 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
+														onError={(e) => e.target.style.display = 'none'}
+													/>
+													<span className="font-semibold text-sm">{fix.opponent_name}</span>
+												</div>
+											</div>
+										</td>
+										<td className="px-4 py-3 text-center">
+											<span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold border shadow-sm ${getFdrColor(fix.difficulty)}`}>
+												{fix.difficulty}
+											</span>
+										</td>
+										<td className="px-4 py-3 text-center">
+											{fix.finished ? (
+												<div className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold gap-1 shadow-sm ${getResultColor(fix.result)}`}>
+													<span>{fix.result}</span>
+													<span className="opacity-40 mx-1">|</span>
+													<span>{fix.score}</span>
+												</div>
+											) : (
+												<span className="text-ds-text-muted opacity-20">-</span>
+											)}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		);
+	};
+
 	return (
 		<div className="flex flex-col gap-6 animate-in fade-in duration-300">
 			{/* Search / Controls Section */}
@@ -193,7 +296,14 @@ const ClubViewer = () => {
 				<div className="flex flex-col gap-6">
 					<div className="bg-ds-card p-6 rounded-xl border border-ds-border flex items-center justify-between">
 						<div className="flex items-center gap-4">
-							{/* Club Badge - we can try to guess it or use standard logos based on code */}
+							{/* Club Badge */}
+							{squadData.team?.code && (
+								<img
+									src={`https://resources.premierleague.com/premierleague/badges/50/t${squadData.team.code}.png`}
+									alt="Badge"
+									className="w-12 h-12 object-contain"
+								/>
+							)}
 							<h2 className="text-2xl font-bold">{squadData.team?.name}</h2>
 						</div>
 						<div className="bg-ds-bg px-4 py-2 rounded-lg border border-ds-border">
@@ -202,20 +312,26 @@ const ClubViewer = () => {
 						</div>
 					</div>
 
-
-					<SquadDisplay
-						squad={squadData.squad}
-						chips={[]}
-						gameweek={gameweek}
-						transfers={[]}
-						onGwChange={handleGwChange}
-						loading={loading}
-						currentGw={currentGw}
-						history={[{
-							event: gameweek,
-							points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
-						}]}
-					/>
+					<div className="flex flex-col gap-8">
+						<div>
+							<SquadDisplay
+								squad={squadData.squad}
+								chips={[]}
+								gameweek={gameweek}
+								transfers={[]}
+								onGwChange={handleGwChange}
+								loading={loading}
+								currentGw={currentGw}
+								history={[{
+									event: gameweek,
+									points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
+								}]}
+							/>
+						</div>
+						<div>
+							<ClubFixtures fixtures={squadData.fixtures} teams={teams} />
+						</div>
+					</div>
 				</div>
 			)}
 		</div>
