@@ -16,8 +16,14 @@ const ClubViewer = () => {
 		const fetchTeams = async () => {
 			const data = await getTeams();
 			setTeams(data);
+			if (data && data.length > 0) {
+				const firstTeam = data[0];
+				setSelectedClub(firstTeam.id);
+				handleFetch(firstTeam.id, null);
+			}
 		};
 		fetchTeams();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const handleFetch = async (clubId, gw) => {
