@@ -1,29 +1,93 @@
-import os
+import asyncio
+import datetime
 import json
-from openai import AsyncOpenAI
+import logging
+import os
+import traceback
+from typing import Any, Dict, List
+
+import dspy
+
 from .fpl_service import FPLService
 from .models import AnalysisRequest, AnalysisResponse
+
+# --- DSPy Signatures ---
+
+
+class FPLTeamAnalysis(dspy.Signature):
+    """
+    Analyze a Fantasy Premier League team state and provide strategic advice.
+    Synthesize insights from:
+    1. The user's specific team context (squad, budget).
+    2. Market Intelligence (what top managers are doing).
+    3. Performance Data (recent Dream Team high flyers).
+    4. AI Solver (optimal path recommendations).
+
+    Goal: output a concrete plan to improve rank.
+    """
+
+    team_context = dspy.InputField(
+        desc="User's current squad, budget, chips, and next 3 fixtures."
+    )
+    market_insights = dspy.InputField(
+        desc="Top 50 managers' ownership stats and key differentials."
+    )
+    dream_team_stats = dspy.InputField(
+        desc="Best performing players from the previous gameweek."
+    )
+    solver_recommendation = dspy.InputField(
+        desc="Theoretically optimal squad for the upcoming gameweek."
+    )
+
+    immediate_action = dspy.OutputField(
+        desc="Urgent action needed (e.g., injuries, deadlines)."
+    )
+    transfer_conservative = dspy.OutputField(
+        desc="A low-risk transfer move aligning with template/solver."
+    )
+    transfer_aggressive = dspy.OutputField(
+        desc="A high-risk/high-reward differential move."
+    )
+    captaincy_choice = dspy.OutputField(
+        desc="Best captaincy option with reasoning vs Solver/Market."
+    )
+    future_watch_list = dspy.OutputField(desc="Players or trends to monitor.")
+
+
+# --- Service ---
 
 
 class AnalysisService:
     def __init__(self):
         self.fpl_service = FPLService()
-        self.client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        # Configure DSPy with OpenAI
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            try:
+                lm = dspy.LM("openai/gpt-4o", api_key=api_key)
+                dspy.settings.configure(lm=lm)
+                self.predictor = dspy.ChainOfThought(FPLTeamAnalysis)
+                self.has_api_key = True
+            except Exception as e:
+                logging.error(f"Failed to initialize DSPy: {e}")
+                self.has_api_key = False
+        else:
+            self.has_api_key = False
+            logging.warning("No OPENAI_API_KEY found. Analysis will return mock data.")
 
     async def analyze_team(self, request: AnalysisRequest) -> AnalysisResponse:
-        # 1. Fetch Data
-        bootstrap = await self.fpl_service.get_bootstrap_static()
-
+        # 1. Fetch User Data
         gw = request.gameweek
         if not gw:
             gw = await self.fpl_service.get_current_gameweek()
 
         history = await self.fpl_service.get_entry_history(request.team_id)
         picks = await self.fpl_service.get_entry_picks(request.team_id, gw)
+        bootstrap = await self.fpl_service.get_bootstrap_static()
         fixtures = await self.fpl_service.get_fixtures()
 
-        # 2. Prepare Context for AI
-        # Simplify data to reduce token usage
+        # 2. Enrich User Squad
         elements = {p["id"]: p for p in bootstrap["elements"]}
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
@@ -32,8 +96,7 @@ class AnalysisService:
             player = elements.get(pick["element"])
             if player:
                 team = teams.get(player["team"])
-
-                # Feature Engineering: Value and Form
+                # Feature Engineering
                 cost = player["now_cost"] / 10
                 total_points = player["total_points"]
                 value_season = round(total_points / cost, 2) if cost > 0 else 0.0
@@ -43,7 +106,7 @@ class AnalysisService:
                     {
                         "name": player["web_name"],
                         "position": player["element_type"],
-                        "team": team["name"] if team else "Unknown",
+                        "team": team["short_name"] if team else "UNK",
                         "cost": cost,
                         "status": player["status"],
                         "news": player["news"],
@@ -51,153 +114,165 @@ class AnalysisService:
                         "is_vice_captain": pick["is_vice_captain"],
                         "points": total_points,
                         "form": form,
-                        "value": value_season,  # Points per million
-                        "selected_by_percent": player["selected_by_percent"],
+                        "value": value_season,
+                        "selected_by": f"{player['selected_by_percent']}%",
                     }
                 )
 
-        # Filter fixtures for next 3 GWs
-        upcoming_fixtures = [
-            f
-            for f in fixtures
-            if f["event"] and f["event"] >= gw and f["event"] <= gw + 3
-        ]
+        # Filter next 3 GW fixtures
+        upcoming_fixtures = []
+        for f in fixtures:
+            if f["event"] and gw <= f["event"] <= gw + 2:
+                h_team = teams.get(f["team_h"])
+                a_team = teams.get(f["team_a"])
+                upcoming_fixtures.append(
+                    {
+                        "event": f["event"],
+                        "match": f"{h_team['short_name']} vs {a_team['short_name']}",
+                        "difficulty_h": f["team_h_difficulty"],
+                        "difficulty_a": f["team_a_difficulty"],
+                    }
+                )
 
-        context = {
+        team_context = {
             "gameweek": gw,
-            "money_in_bank": request.knowledge_gap.money_in_bank,
+            "bank": request.knowledge_gap.money_in_bank,
             "free_transfers": request.knowledge_gap.free_transfers,
-            "transfers_rolled": request.knowledge_gap.transfers_rolled,
             "squad": current_squad,
-            "chips_used": history.get("chips", []),
-            "upcoming_fixtures_sample": upcoming_fixtures[:10],  # Limit size
+            "chips_used": [c["name"] for c in history.get("chips", [])],
+            "upcoming_fixtures": upcoming_fixtures,
         }
 
-        # Data Science Best Practice: Structured Logging
-        # Log the input context to build a dataset for future fine-tuning
-        import logging
-        import datetime
+        # 3. Parallel Fetch of Advanced Data (Market, Dream Team, Solver)
+        # Use previous GW for stats/market (since current/next is hidden/unplayed)
+        reference_gw = max(1, gw - 1)
 
-        # Ensure logs directory exists
+        task_top = self.fpl_service.get_top_managers_ownership(
+            gw=reference_gw, count=50
+        )
+        task_dream = self.fpl_service.get_dream_team(gw=reference_gw)
+
+        # Solver for NEXT GW (forward looking)
+        # Use a generic decent budget (100.0) just to see who the AI likes essentially
+        task_solver = self.fpl_service.get_optimized_team(
+            budget=100.0,
+            min_gw=gw,
+            max_gw=gw,
+            exclude_bench=True,  # Focus on starting XI for recommendation
+        )
+
+        results = await asyncio.gather(
+            task_top, task_dream, task_solver, return_exceptions=True
+        )
+
+        # Process Top Managers
+        top_data = results[0]
+        market_summary = "Market data unavailable."
+        if isinstance(top_data, dict) and "players" in top_data:
+            # Extract top 10 owned players by top 50 managers
+            top_owned = top_data["players"][:10]
+            market_summary = {
+                "top_10_template_players": [
+                    f"{p['web_name']} ({p['ownership_top_1000']}%)" for p in top_owned
+                ],
+                "sample_size": top_data.get("sample_size"),
+            }
+
+        # Process Dream Team
+        dream_data = results[1]
+        dream_summary = "Dream team data unavailable."
+        if isinstance(dream_data, dict) and "squad" in dream_data:
+            # Top 3 highest scorers
+            sorted_dream = sorted(
+                dream_data["squad"], key=lambda x: x["event_points"], reverse=True
+            )
+            dream_summary = {
+                "gameweek": dream_data.get("gameweek"),
+                "top_performers": [
+                    f"{p['name']} ({p['event_points']} pts)" for p in sorted_dream[:5]
+                ],
+            }
+
+        # Process Solver
+        solver_data = results[2]
+        solver_summary = "Solver data unavailable."
+        if isinstance(solver_data, dict) and "squad" in solver_data:
+            solver_summary = {
+                "optimal_xi": [p["name"] for p in solver_data["squad"]],
+                "projected_points": solver_data.get("total_points"),
+            }
+
+        context_payload = {
+            "team_context": json.dumps(team_context),
+            "market_insights": json.dumps(market_summary),
+            "dream_team_stats": json.dumps(dream_summary),
+            "solver_recommendation": json.dumps(solver_summary),
+        }
+
+        # Logging for Data Science
+        self._log_interaction(request.team_id, gw, context_payload)
+
+        # 4. DSPy Prediction
+        if not self.has_api_key:
+            return self._get_mock_response(current_squad)
+
+        try:
+            # Run the CoT pipeline
+            pred = self.predictor(**context_payload)
+
+            return AnalysisResponse(
+                immediate_action=pred.immediate_action,
+                transfer_plan={
+                    "Option A (Conservative)": pred.transfer_conservative,
+                    "Option B (Aggressive)": pred.transfer_aggressive,
+                },
+                captaincy=pred.captaincy_choice,
+                future_watch=pred.future_watch_list,
+                squad=current_squad,
+                raw_analysis=f"Reasoning:\n{pred.reasoning}",
+            )
+
+        except Exception as e:
+            logging.error(f"DSPy Analysis failed: {e}")
+
+            traceback.print_exc()
+            return AnalysisResponse(
+                immediate_action="Error during analysis.",
+                transfer_plan={"Error": "Could not generate plan."},
+                captaincy="Check manual fixtures.",
+                future_watch="N/A",
+                squad=current_squad,
+                raw_analysis=str(e),
+            )
+
+    def _get_mock_response(self, squad: List[Dict[str, Any]]) -> AnalysisResponse:
+        return AnalysisResponse(
+            immediate_action="🚨 Missing API Key. Enable OpenAI for AI insights.",
+            transfer_plan={
+                "Conservative": "Save transfer.",
+                "Aggressive": "No recommendation (Mock).",
+            },
+            captaincy="Haaland (Mock Recommendation)",
+            future_watch="Monitor injuries.",
+            squad=squad,
+            raw_analysis="This is a mock response because the OPENAI_API_KEY environment variable is not set.",
+        )
+
+    def _log_interaction(self, team_id: int, gw: int, context: Dict[str, Any]):
         os.makedirs("logs", exist_ok=True)
-
-        # Configure logger (if not already configured)
-        logger = logging.getLogger("fpl_analysis")
-        logger.setLevel(logging.INFO)
-        if not logger.handlers:
-            fh = logging.FileHandler("logs/analysis_history.jsonl")
-            fh.setFormatter(logging.Formatter("%(message)s"))
-            logger.addHandler(fh)
 
         log_entry = {
             "timestamp": datetime.datetime.now().isoformat(),
-            "team_id": request.team_id,
+            "team_id": team_id,
             "gameweek": gw,
-            "context_summary": {
-                "squad_size": len(current_squad),
-                "total_value": sum(p["cost"] for p in current_squad),
-            },
-            # We don't log the full context here to keep the log file manageable for now,
-            # but in a real ML pipeline, we would log the full feature set.
+            "context_keys": list(context.keys()),
         }
+
+        logger = logging.getLogger("fpl_analysis_data")
+        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            fh = logging.FileHandler("logs/analysis_dataset.jsonl")
+            fh.setFormatter(logging.Formatter("%(message)s"))
+            logger.addHandler(fh)
+
         logger.info(json.dumps(log_entry))
-
-        # 3. Prompt OpenAI
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            # Mock response for demo purposes
-            print("No OpenAI API Key found. Returning mock response.")
-            return AnalysisResponse(
-                immediate_action="🚨 Deadline in 24 hours! Check your vice-captain.",
-                transfer_plan={
-                    "Option A (Conservative)": "Save your free transfer. Squad looks good.",
-                    "Option B (Aggressive)": "No hits recommended this week.",
-                },
-                captaincy="Haaland (vs SHU) - High expected points.",
-                future_watch="Monitor Saka's injury status for next week.",
-                squad=[
-                    {
-                        "name": "Raya",
-                        "position": 1,
-                        "team": "Arsenal",
-                        "cost": 5.0,
-                        "status": "a",
-                        "news": "",
-                        "is_captain": False,
-                        "is_vice_captain": False,
-                    },
-                    {
-                        "name": "Gabriel",
-                        "position": 2,
-                        "team": "Arsenal",
-                        "cost": 6.0,
-                        "status": "a",
-                        "news": "",
-                        "is_captain": False,
-                        "is_vice_captain": False,
-                    },
-                    {
-                        "name": "Haaland",
-                        "position": 4,
-                        "team": "Man City",
-                        "cost": 14.0,
-                        "status": "a",
-                        "news": "",
-                        "is_captain": True,
-                        "is_vice_captain": False,
-                    },
-                ],
-                raw_analysis="Mock analysis due to missing API key.",
-            )
-
-        prompt = f"""
-        You are an expert Fantasy Premier League assistant. Analyze the following team state and provide advice.
-        
-        Context:
-        {json.dumps(context, indent=2)}
-        
-        Follow this strict logic:
-        1. Status Check: Identify deadline status.
-        2. Structural Audit: Identify "Budget Rot" or "Dead Funds".
-        3. Fixture Forecasting: Look 3 GWs ahead.
-        4. Chip Strategy: Check available chips.
-
-        Output strictly in JSON format with these keys:
-        - "immediate_action": string
-        - "transfer_plan": object with "conservative" and "aggressive" keys (strings)
-        - "captaincy": string
-        - "future_watch": string
-        """
-
-        response = await self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful FPL assistant returning JSON.",
-                },
-                {"role": "user", "content": prompt},
-            ],
-            response_format={"type": "json_object"},
-        )
-
-        content = response.choices[0].message.content
-        result = json.loads(content)
-
-        return AnalysisResponse(
-            immediate_action=result.get(
-                "immediate_action", "No immediate action detected."
-            ),
-            transfer_plan={
-                "Option A (Conservative)": result.get("transfer_plan", {}).get(
-                    "conservative", "Hold"
-                ),
-                "Option B (Aggressive)": result.get("transfer_plan", {}).get(
-                    "aggressive", "No hits recommended"
-                ),
-            },
-            captaincy=result.get("captaincy", "Check fixtures"),
-            future_watch=result.get("future_watch", "Monitor injuries"),
-            squad=current_squad,
-            raw_analysis=content,
-        )
