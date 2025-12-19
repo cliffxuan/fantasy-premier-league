@@ -27,7 +27,7 @@ class FPLTeamAnalysis(dspy.Signature):
     """
 
     team_context = dspy.InputField(
-        desc="User's current squad, budget, chips, and next 3 fixtures."
+        desc="User's current squad, budget, chips (including active ones), and next 3 fixtures."
     )
     market_insights = dspy.InputField(
         desc="Top 50 managers' ownership stats and key differentials."
@@ -153,19 +153,34 @@ class AnalysisService:
 
         # Chips used
         chips_used = [c["name"] for c in history.get("chips", [])]
-        # If we have private data, simple chips structure might be different or we might want to check 'active' chips
-        # But for 'chips_used' history is still the source of truth for past chips.
+
+        # Determine Active Chip
+        active_chip = None
+        if request.auth_token and picks and "chips" in picks:
+            # Logic for authenticated data
+            for c in picks.get("chips", []):
+                # status_for_entry='active' means it is played for this GW
+                if c.get("status_for_entry") == "active":
+                    active_chip = c.get("name")
+                    break
+        elif picks:
+            # Logic for public data
+            active_chip = picks.get("active_chip")
+
+        # Override free transfers if chip active
+        free_transfers_display = request.knowledge_gap.free_transfers
+        if active_chip in ["wildcard", "freehit"]:
+            free_transfers_display = f"Unlimited ({active_chip.capitalize()} Active)"
 
         team_context = {
             "gameweek": gw,
             "bank": request.knowledge_gap.money_in_bank,
-            "free_transfers": request.knowledge_gap.free_transfers,
+            "free_transfers": free_transfers_display,
+            "active_chip": active_chip,
             "squad": current_squad,
             "chips_used": chips_used,
             "upcoming_fixtures": upcoming_fixtures,
         }
-
-        # 3. Parallel Fetch of Advanced Data (Market, Dream Team, Solver)
         # Use previous GW for stats/market (since current/next is hidden/unplayed)
         reference_gw = max(1, gw - 1)
 
