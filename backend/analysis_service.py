@@ -83,7 +83,24 @@ class AnalysisService:
             gw = await self.fpl_service.get_current_gameweek()
 
         history = await self.fpl_service.get_entry_history(request.team_id)
-        picks = await self.fpl_service.get_entry_picks(request.team_id, gw)
+
+        picks = None
+        # Try to use authenticated data if available
+        if request.auth_token:
+            try:
+                my_team_data = await self.fpl_service.get_my_team(
+                    request.team_id, request.auth_token
+                )
+                picks = my_team_data
+                # If we have private data, it's usually for the *next* deadline or current live state.
+                # The structure is slightly different but get_my_team follows picks structure roughly?
+                # Actually get_my_team returns { "picks": [...], "chips": [...] }
+            except Exception as e:
+                logging.warning(f"Failed to fetch private team data: {e}")
+
+        if not picks:
+            picks = await self.fpl_service.get_entry_picks(request.team_id, gw)
+
         bootstrap = await self.fpl_service.get_bootstrap_static()
         fixtures = await self.fpl_service.get_fixtures()
 
@@ -134,12 +151,17 @@ class AnalysisService:
                     }
                 )
 
+        # Chips used
+        chips_used = [c["name"] for c in history.get("chips", [])]
+        # If we have private data, simple chips structure might be different or we might want to check 'active' chips
+        # But for 'chips_used' history is still the source of truth for past chips.
+
         team_context = {
             "gameweek": gw,
             "bank": request.knowledge_gap.money_in_bank,
             "free_transfers": request.knowledge_gap.free_transfers,
             "squad": current_squad,
-            "chips_used": [c["name"] for c in history.get("chips", [])],
+            "chips_used": chips_used,
             "upcoming_fixtures": upcoming_fixtures,
         }
 

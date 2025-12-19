@@ -12,6 +12,7 @@ class AnalysisRequest(BaseModel):
     team_id: int
     gameweek: Optional[int] = None
     knowledge_gap: KnowledgeGapInput
+    auth_token: Optional[str] = None
 
 
 class AnalysisResponse(BaseModel):

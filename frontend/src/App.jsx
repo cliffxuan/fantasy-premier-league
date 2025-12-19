@@ -159,7 +159,7 @@ function Dashboard() {
 
     try {
       const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
-      const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false);
+      const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken);
       setResult(data);
     } catch (err) {
       setError(err.message);
