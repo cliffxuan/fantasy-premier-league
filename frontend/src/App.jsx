@@ -46,6 +46,8 @@ function Dashboard() {
     }
   }, [authToken]);
 
+  const [isPrivate, setIsPrivate] = useState(false);
+
   // Fetch squad when URL param changes
   useEffect(() => {
     if (paramTeamId) {
@@ -66,6 +68,7 @@ function Dashboard() {
         setCalculatedFreeTransfers(1);
         setIsTeamLoaded(false);
         setResult(null);
+        setIsPrivate(false);
       }
     }
   }, [paramTeamId, gwParam, authToken]); // Added authToken to dependency
@@ -80,6 +83,7 @@ function Dashboard() {
     if (!isTeamLoaded) {
       setSquad(null);
       setResult(null);
+      setIsPrivate(false);
     }
 
     try {
@@ -94,6 +98,7 @@ function Dashboard() {
         setHistory(squadData.history || []);
         setEntry(squadData.entry || null);
         setCalculatedFreeTransfers(squadData.free_transfers !== undefined ? squadData.free_transfers : 1);
+        setIsPrivate(squadData.is_private || false);
 
         const resolvedGw = squadData.gameweek || squadData.entry?.current_event;
 
@@ -270,7 +275,7 @@ function Dashboard() {
                     <TeamInput />
                   </div>
 
-                  <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} />
+                  <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} isPrivate={isPrivate} />
                   {squad && (
                     <SquadDisplay
                       squad={squad}

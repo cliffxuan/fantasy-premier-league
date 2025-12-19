@@ -415,6 +415,7 @@ class FPLService:
             "free_transfers": free_transfers,
             "transfers": gw_transfers,
             "gameweek": gw,
+            "is_private": bool(my_team_data),
         }
 
     def calculate_free_transfers(
