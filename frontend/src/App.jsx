@@ -36,10 +36,24 @@ function Dashboard() {
 
   const [squadLoading, setSquadLoading] = useState(false);
 
+  const [authToken, setAuthToken] = useState(sessionStorage.getItem('fpl_auth_token') || '');
+
+  useEffect(() => {
+    if (authToken) {
+      sessionStorage.setItem('fpl_auth_token', authToken);
+    } else {
+      sessionStorage.removeItem('fpl_auth_token');
+    }
+  }, [authToken]);
+
   // Fetch squad when URL param changes
   useEffect(() => {
     if (paramTeamId) {
       setTeamId(paramTeamId);
+      // Pass authToken to fetchSquad. 
+      // Note: authToken might not be updated in closure if this effect runs before authToken state update?
+      // Actually fetchSquad reads authToken from state if we define it inside Dashboard.
+      // But fetchSquad is defined below. It accesses `authToken` variable from scope.
       fetchSquad(paramTeamId, gwParam);
     } else {
       // If no teamId in URL, reset data
@@ -54,7 +68,7 @@ function Dashboard() {
         setResult(null);
       }
     }
-  }, [paramTeamId, gwParam]);
+  }, [paramTeamId, gwParam, authToken]); // Added authToken to dependency
 
   const fetchSquad = async (id, gw) => {
     if (!isTeamLoaded) {
@@ -69,9 +83,12 @@ function Dashboard() {
     }
 
     try {
-      const squadData = await getSquad(id, gw);
-      if (squadData && squadData.squad) {
-        setSquad(squadData.squad);
+      const squadData = await getSquad(id, gw, authToken);
+      if (squadData && (squadData.squad || squadData.picks)) { // Modified check
+        setSquad(squadData.squad || squadData.picks); // Handle if backend returns picks as root or similar? No, backend returns structured format.
+        // Backend returns: { "squad": [...], "chips": ... }
+        // get_enriched_squad always returns this structure.
+
         setTransfers(squadData.transfers || []);
         setChips(squadData.chips || []);
         setHistory(squadData.history || []);
@@ -232,8 +249,15 @@ function Dashboard() {
                     <span className="text-3xl">⚽️</span>
                   </div>
                   <h2 className="text-2xl font-bold text-ds-text mb-6">My Squad</h2>
-                  <div className="flex justify-center w-full">
+                  <div className="flex flex-col gap-3 justify-center w-full max-w-[400px] items-center">
                     <TeamInput centered={true} />
+                    <input
+                      type="text"
+                      placeholder="Auth Token (Optional)"
+                      value={authToken}
+                      onChange={(e) => setAuthToken(e.target.value)}
+                      className="bg-ds-surface border border-ds-border rounded-md px-4 py-2 text-sm outline-none w-full placeholder-ds-text-muted/50 font-mono focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all"
+                    />
                   </div>
                   <p className="text-ds-text-muted max-w-md mx-auto mt-4 text-sm">
                     Enter your Team ID to unlock detailed analysis, point history, and AI insights.

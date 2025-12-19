@@ -90,9 +90,11 @@ class FPLService:
             return response.json()
 
     async def get_enriched_squad(
-        self, team_id: int, gw: int | None = None
+        self, team_id: int, gw: int | None = None, auth_token: str | None = None
     ) -> Dict[str, Any]:
-        print(f"DEBUG: get_enriched_squad called for team {team_id} with gw={gw}")
+        print(
+            f"DEBUG: get_enriched_squad called for team {team_id} with gw={gw} auth={bool(auth_token)}"
+        )
         bootstrap = await self.get_bootstrap_static()
 
         current_gw = await self.get_current_gameweek()
@@ -103,23 +105,15 @@ class FPLService:
 
         print(f"DEBUG: Using gw={gw} (current_gw={current_gw})")
 
-        # For fixtures, we usually want to see the fixtures for the *next* deadline relative to the squad we are viewing.
-        # If we are viewing a past GW, we probably want to see the fixtures/results for THAT GW.
-        # If we are viewing the current/active GW, we want to see the upcoming fixtures.
-        # Let's assume if gw < current_gw, we show the results/fixtures for that GW.
-        # If gw == current_gw, we show the upcoming fixtures (or current live ones).
-
         target_fixture_gw = gw
         if gw > current_gw:
-            # Viewing a future team? (e.g. transfers made for next week)
             target_fixture_gw = gw
 
         try:
             entry = await self.get_entry(team_id)
-            # Enrich entry with favourite team details for badge
             if "favourite_team" in entry and entry["favourite_team"]:
                 fav_team_id = entry["favourite_team"]
-                bootstrap = await self.get_bootstrap_static()
+                # bootstrap already fetched
                 teams = {t["id"]: t for t in bootstrap["teams"]}
                 if fav_team_id in teams:
                     entry["favourite_team_code"] = teams[fav_team_id]["code"]
@@ -132,20 +126,33 @@ class FPLService:
         except Exception:
             history = {"chips": [], "current": []}
 
-        # Determine which GW to fetch picks from
-        # If querying for a future GW, we use the current GW's squad as a base
         picks_gw = gw
         if gw > current_gw:
             picks_gw = current_gw
 
-        try:
-            picks = await self.get_entry_picks(team_id, picks_gw)
-        except Exception:
-            # Fallback for future weeks if exact fetch fails?
-            # If we are already pointing to current_gw, then maybe the team doesn't exist yet.
-            return {"squad": [], "chips": [], "entry": entry}
+        picks = None
+        my_team_data = None
 
-        logger.info(f"gw={gw} picks={picks}")
+        if auth_token:
+            try:
+                my_team_data = await self.get_my_team(team_id, auth_token)
+                picks = my_team_data
+                # If using auth token, we are likely looking at the most up to date team (possibly next GW)
+                # But we keep gw as requested or default current
+            except Exception as e:
+                print(f"DEBUG: Failed to fetch my team with token: {e}")
+                # Fallback to public picks if auth fails? Or just fail?
+                # Let's fallback for now, or just leave picks as None to be handled below
+                pass
+
+        if not picks:
+            try:
+                picks = await self.get_entry_picks(team_id, picks_gw)
+            except Exception:
+                # If basic fetch fails too, return empty
+                return {"squad": [], "chips": [], "entry": entry}
+
+        logger.info(f"gw={gw} picks_count={len(picks.get('picks', []))}")
         try:
             all_transfers = await self.get_transfers(team_id)
         except Exception:
@@ -321,26 +328,57 @@ class FPLService:
             "freehit": "Free Hit",
         }
 
-        used_chips = {c["name"]: c["event"] for c in history.get("chips", [])}
-        active_chip = picks.get("active_chip")
-
         chips_status = []
         target_chips = ["bboost", "3xc", "wildcard", "freehit"]
 
-        for name in target_chips:
-            label = chip_labels.get(name, name)
-            status = "available"
-            event = None
+        if my_team_data and "chips" in my_team_data:
+            # Use authenticated chips data
+            # Structure: [{"name": "bboost", "status_for_entry": "played", ...}, ...]
+            my_chips = {c["name"]: c for c in my_team_data["chips"]}
 
-            if name == active_chip:
-                status = "active"
-            elif name in used_chips:
-                status = "played"
-                event = used_chips[name]
+            for name in target_chips:
+                label = chip_labels.get(name, name)
+                status = "available"
+                event = None
 
-            chips_status.append(
-                {"name": name, "label": label, "status": status, "event": event}
-            )
+                if name in my_chips:
+                    c_data = my_chips[name]
+                    status = c_data.get("status_for_entry", "available")
+                    # Map status if needed? 'played', 'active', 'available' seems common
+                    # If active, it matches 'is_pending' or just status 'active'
+
+                    # Try to find event
+                    if "played_by_entry" in c_data and c_data["played_by_entry"]:
+                        # This is a list of events? or entry IDs?
+                        # User example: "played_by_entry": [15] -> looks like event number
+                        event = c_data["played_by_entry"][0]
+                    elif "start_event" in c_data:
+                        # Use start event if active?
+                        pass
+
+                chips_status.append(
+                    {"name": name, "label": label, "status": status, "event": event}
+                )
+
+        else:
+            # Fallback to public history
+            used_chips = {c["name"]: c["event"] for c in history.get("chips", [])}
+            active_chip = picks.get("active_chip")
+
+            for name in target_chips:
+                label = chip_labels.get(name, name)
+                status = "available"
+                event = None
+
+                if name == active_chip:
+                    status = "active"
+                elif name in used_chips:
+                    status = "played"
+                    event = used_chips[name]
+
+                chips_status.append(
+                    {"name": name, "label": label, "status": status, "event": event}
+                )
 
         # Update history with live points from picks for the current gameweek
         current_history = history.get("current", [])

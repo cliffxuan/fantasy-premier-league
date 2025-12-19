@@ -40,13 +40,19 @@ export const getClubSquad = async (clubId, gw = null) => {
 	return response.json();
 };
 
-export const getSquad = async (teamId, gw = null) => {
+export const getSquad = async (teamId, gw = null, authToken = null) => {
 	let url = `${API_BASE_URL}/team/${teamId}/squad`;
 	if (gw !== null && gw !== undefined) {
 		url += `?gw=${gw}`;
 	}
 	console.log("Fetching squad from:", url);
-	const response = await fetch(url);
+
+	const headers = {};
+	if (authToken) {
+		headers['Authorization'] = authToken;
+	}
+
+	const response = await fetch(url, { headers });
 	if (!response.ok) {
 		// It's okay if squad is not found immediately (e.g. invalid ID), just return null
 		return null;
