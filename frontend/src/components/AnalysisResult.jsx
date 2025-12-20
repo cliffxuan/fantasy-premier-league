@@ -1,6 +1,7 @@
 import React from 'react';
+import { FileText } from 'lucide-react';
 
-const AnalysisResult = ({ data }) => {
+const AnalysisResult = ({ data, onShowPrompt }) => {
 	if (!data) return null;
 
 	return (
@@ -39,6 +40,18 @@ const AnalysisResult = ({ data }) => {
 				</h2>
 				<p className="text-ds-text font-mono text-sm leading-relaxed">{data.future_watch}</p>
 			</div>
+
+			{data.generated_prompt && (
+				<div className="flex justify-center mt-2">
+					<button
+						onClick={onShowPrompt}
+						className="flex items-center gap-2 text-xs text-ds-text-muted hover:text-ds-primary transition-colors uppercase tracking-wider font-bold"
+					>
+						<FileText size={14} />
+						View Analysis Prompt Used
+					</button>
+				</div>
+			)}
 		</div>
 	);
 };

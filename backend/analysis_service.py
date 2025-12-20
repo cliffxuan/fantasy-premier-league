@@ -240,14 +240,38 @@ class AnalysisService:
             }
 
         context_payload = {
-            "team_context": json.dumps(team_context),
-            "market_insights": json.dumps(market_summary),
-            "dream_team_stats": json.dumps(dream_summary),
-            "solver_recommendation": json.dumps(solver_summary),
+            "team_context": json.dumps(team_context, indent=2),
+            "market_insights": json.dumps(market_summary, indent=2),
+            "dream_team_stats": json.dumps(dream_summary, indent=2),
+            "solver_recommendation": json.dumps(solver_summary, indent=2),
         }
 
         # Logging for Data Science
         self._log_interaction(request.team_id, gw, context_payload)
+
+        prompt_content = f"""You are an expert FPL Assistant.
+Task: {FPLTeamAnalysis.__doc__}
+
+Input Data:
+1. Team Context:
+{context_payload["team_context"]}
+
+2. Market Insights:
+{context_payload["market_insights"]}
+
+3. Dream Team Stats:
+{context_payload["dream_team_stats"]}
+
+4. Solver Recommendation:
+{context_payload["solver_recommendation"]}
+
+Please provide the output in the specified format logic.
+"""
+
+        if request.return_prompt:
+            return AnalysisResponse(
+                squad=current_squad, generated_prompt=prompt_content
+            )
 
         # 4. DSPy Prediction
         if not self.has_api_key:
@@ -267,6 +291,7 @@ class AnalysisService:
                 future_watch=pred.future_watch_list,
                 squad=current_squad,
                 raw_analysis=f"Reasoning:\n{pred.reasoning}",
+                generated_prompt=prompt_content,
             )
 
         except Exception as e:

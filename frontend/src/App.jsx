@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Copy, X, FileText } from 'lucide-react';
 import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
@@ -29,6 +30,9 @@ function Dashboard() {
   const [entry, setEntry] = useState(null);
   const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
+
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState('');
 
   const activeTab = searchParams.get('tab') || 'matches';
   const gwParam = searchParams.get('gw');
@@ -161,6 +165,27 @@ function Dashboard() {
       const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
       const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken);
       setResult(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGeneratePrompt = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
+      const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken, true);
+      if (data.generated_prompt) {
+        setGeneratedPrompt(data.generated_prompt);
+        setShowPromptModal(true);
+      } else {
+        setError("Failed to generate prompt.");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -357,9 +382,22 @@ function Dashboard() {
                   <p className="text-sm text-ds-text-muted mb-6 leading-relaxed">
                     Generate AI-powered insights for your current team selection.
                   </p>
-                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 font-mono shadow-lg relative overflow-hidden">
-                      {loading ? 'PROCESSING...' : 'RUN ANALYSIS'}
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                    <button type="submit" disabled={loading} className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 font-mono shadow-lg relative overflow-hidden flex items-center justify-center gap-2 group">
+                      {loading ? 'PROCESSING...' : (
+                        <>
+                          <span>RUN ANALYSIS</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGeneratePrompt}
+                      disabled={loading}
+                      className="w-full p-2.5 rounded-md border border-ds-border bg-ds-surface text-ds-text text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-ds-card-hover hover:border-ds-primary/50 transition-all disabled:opacity-50 flex items-center justify-center gap-2 group"
+                    >
+                      <FileText size={14} className="group-hover:text-ds-primary transition-colors" />
+                      Generate Prompt
                     </button>
                   </form>
                 </div>
@@ -370,7 +408,15 @@ function Dashboard() {
                   </div>
                 )}
 
-                <AnalysisResult data={result} />
+                <AnalysisResult
+                  data={result}
+                  onShowPrompt={() => {
+                    if (result?.generated_prompt) {
+                      setGeneratedPrompt(result.generated_prompt);
+                      setShowPromptModal(true);
+                    }
+                  }}
+                />
               </div>
             )}
 
@@ -381,6 +427,59 @@ function Dashboard() {
 
         </div>
       </main>
+      {/* Prompt Modal */}
+      {showPromptModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-ds-card w-full max-w-3xl rounded-xl border border-ds-border shadow-2xl flex flex-col max-h-[85vh] min-h-[500px] animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-ds-border bg-ds-card/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-ds-primary/10 rounded-lg text-ds-primary">
+                  <FileText size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-ds-text">Analysis Prompt</h3>
+                  <p className="text-xs text-ds-text-muted">Generated context for LLM Analysis</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPromptModal(false)}
+                className="p-2 hover:bg-ds-surface rounded-full text-ds-text-muted hover:text-ds-text transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-hidden relative">
+              <div className="absolute inset-0 overflow-auto p-6 bg-ds-surface/50">
+                <textarea
+                  className="w-full h-full font-mono text-xs leading-relaxed text-ds-text bg-ds-bg p-4 rounded-lg border border-ds-border focus:border-ds-primary focus:ring-1 focus:ring-ds-primary outline-none resize-none"
+                  readOnly
+                  value={generatedPrompt}
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-ds-border bg-ds-card/50 flex justify-end gap-3">
+              <button
+                onClick={() => setShowPromptModal(false)}
+                className="px-4 py-2 text-sm font-bold text-ds-text-muted hover:text-ds-text transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generatedPrompt);
+                  // Optional: Show a toast? For now just visual feedback could be nice but keeping it simple.
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-ds-primary text-white rounded-md font-bold text-sm hover:bg-ds-primary-hover active:scale-95 transition-all shadow-lg hover:shadow-ds-primary/25"
+              >
+                <Copy size={16} />
+                Copy to Clipboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

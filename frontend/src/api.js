@@ -1,6 +1,6 @@
 const API_BASE_URL = '/api';
 
-export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersRolled, authToken = null) => {
+export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersRolled, authToken = null, returnPrompt = false) => {
 	const response = await fetch(`${API_BASE_URL}/analyze`, {
 		method: 'POST',
 		headers: {
@@ -14,6 +14,7 @@ export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersR
 				transfers_rolled: transfersRolled,
 			},
 			auth_token: authToken,
+			return_prompt: returnPrompt,
 		}),
 	});
 

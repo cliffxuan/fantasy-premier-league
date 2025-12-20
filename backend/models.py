@@ -13,12 +13,14 @@ class AnalysisRequest(BaseModel):
     gameweek: Optional[int] = None
     knowledge_gap: KnowledgeGapInput
     auth_token: Optional[str] = None
+    return_prompt: bool = False
 
 
 class AnalysisResponse(BaseModel):
-    immediate_action: str
-    transfer_plan: Dict[str, str]
-    captaincy: str
-    future_watch: str
+    immediate_action: Optional[str] = None
+    transfer_plan: Optional[Dict[str, str]] = None
+    captaincy: Optional[str] = None
+    future_watch: Optional[str] = None
     squad: List[Dict[str, Any]]
     raw_analysis: Optional[str] = None
+    generated_prompt: Optional[str] = None
