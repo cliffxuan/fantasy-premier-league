@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 import dspy
 
 from .fpl_service import FPLService
+from .ml_service import MLService
 from .models import AnalysisRequest, AnalysisResponse
 
 # --- DSPy Signatures ---
@@ -60,6 +61,7 @@ class FPLTeamAnalysis(dspy.Signature):
 class AnalysisService:
     def __init__(self):
         self.fpl_service = FPLService()
+        self.ml_service = MLService()
 
         # Configure DSPy with OpenAI
         api_key = os.getenv("OPENAI_API_KEY")
@@ -189,6 +191,9 @@ class AnalysisService:
         )
         task_dream = self.fpl_service.get_dream_team(gw=reference_gw)
 
+        # Get ML Predictions for upcoming GW
+        predictions = await self.ml_service.predict_next_gw(gw)
+
         # Solver for NEXT GW (forward looking)
         # Use a generic decent budget (100.0) just to see who the AI likes essentially
         task_solver = self.fpl_service.get_optimized_team(
@@ -196,6 +201,7 @@ class AnalysisService:
             min_gw=gw,
             max_gw=gw,
             exclude_bench=True,  # Focus on starting XI for recommendation
+            predictions=predictions,  # Pass ML predictions
         )
 
         results = await asyncio.gather(

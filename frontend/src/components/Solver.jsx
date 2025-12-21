@@ -8,6 +8,7 @@ const Solver = () => {
 	const [sliderMax, setSliderMax] = useState(38);
 	const [excludeBench, setExcludeBench] = useState(false);
 	const [excludeUnavailable, setExcludeUnavailable] = useState(false);
+	const [useAI, setUseAI] = useState(false);
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
@@ -53,7 +54,7 @@ const Solver = () => {
 		setResult(null);
 
 		try {
-			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}`);
+			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}&use_ml=${useAI}`);
 			if (!response.ok) {
 				const err = await response.json();
 				throw new Error(err.detail || 'Solver failed');
@@ -118,6 +119,22 @@ const Solver = () => {
 					</label>
 					<span className="text-[10px] text-ds-text-muted leading-tight ml-6">
 						Exclude injured (0%), suspended, or unavailable players.
+					</span>
+				</div>
+				<div className="flex flex-col gap-2 w-full max-w-xs">
+					<label className="flex items-center gap-2 cursor-pointer">
+						<input
+							type="checkbox"
+							checked={useAI}
+							onChange={(e) => setUseAI(e.target.checked)}
+							className="w-4 h-4 rounded border-ds-border bg-ds-surface text-purple-500 focus:ring-purple-500"
+						/>
+						<span className="text-sm text-ds-text font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
+							Use AI Prediction 🤖
+						</span>
+					</label>
+					<span className="text-[10px] text-ds-text-muted leading-tight ml-6">
+						Optimize using Machine Learning projected points for the next game.
 					</span>
 				</div>
 				<div className="flex flex-col gap-3 w-full max-w-sm">

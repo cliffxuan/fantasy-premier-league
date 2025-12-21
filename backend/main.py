@@ -143,11 +143,31 @@ async def solve_optimization(
     max_gw: int | None = None,
     exclude_bench: bool = False,
     exclude_unavailable: bool = False,
+    use_ml: bool = False,
 ):
     service = FPLService()
     try:
+        predictions = None
+        if use_ml:
+            # Predict for the target gameweek
+            # If min_gw is not set, use next GW?
+            target_gw = min_gw
+            if not target_gw:
+                target_gw = await service.get_next_gameweek_id()
+
+            # Lazy load ML Service to avoid startup delay if not used
+            from .ml_service import MLService
+
+            ml_service = MLService()
+            predictions = await ml_service.predict_next_gw(target_gw)
+
         data = await service.get_optimized_team(
-            budget, min_gw, max_gw, exclude_bench, exclude_unavailable
+            budget,
+            min_gw,
+            max_gw,
+            exclude_bench,
+            exclude_unavailable,
+            predictions=predictions,
         )
         return data
     except Exception as e:

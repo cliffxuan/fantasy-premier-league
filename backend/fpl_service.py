@@ -1372,6 +1372,7 @@ class FPLService:
         max_gw: int | None = None,
         exclude_bench: bool = False,
         exclude_unavailable: bool = False,
+        predictions: Dict[int, float] | None = None,
     ) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = bootstrap["elements"]
@@ -1391,7 +1392,7 @@ class FPLService:
             use_history = True
 
         logger.info(
-            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}, Exclude Bench={exclude_bench}, Exclude Unavailable={exclude_unavailable}"
+            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}, Exclude Bench={exclude_bench}, Exclude Unavailable={exclude_unavailable}, Use Predictions={bool(predictions)}"
         )
 
         players = []
@@ -1459,7 +1460,10 @@ class FPLService:
 
         player_period_points = {}  # pid -> adjusted points
 
-        if use_history:
+        if predictions:
+            # Use provided predictions
+            player_period_points = predictions
+        elif use_history:
             # Batch fetch histories
             # We need to fetch element-summary for each candidate
             sem = asyncio.Semaphore(20)  # Concurrency limit
@@ -1510,6 +1514,7 @@ class FPLService:
 
             # Skip players with 0 points in the period to reduce problem size
             # BUT if exclude_bench is True, we need them for fodder.
+            # AND if explicit predictions are used, we might trust 0?
             if not exclude_bench and points <= 0:
                 continue
 
