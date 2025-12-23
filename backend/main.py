@@ -117,6 +117,28 @@ async def get_player_summary(player_id: int):
         )
 
 
+@app.get("/api/players/aggregated", tags=["FPL Data"])
+async def get_aggregated_players(
+    min_gw: int = 1, max_gw: int = 38, venue: str = "both"
+):
+    service = FPLService()
+    try:
+        # Validate venue
+        if venue not in ["both", "home", "away"]:
+            raise HTTPException(status_code=400, detail="Invalid venue parameter")
+
+        # Adjust max_gw if it exceeds current?
+        # Service handles it gracefully by catching exceptions on future GWs, but we can clamp it.
+        # Let service handle it.
+
+        data = await service.get_aggregated_player_stats(min_gw, max_gw, venue)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch aggregated player stats: {str(e)}"
+        )
+
+
 @app.get("/api/dream-team/{gw}", tags=["FPL Data"])
 async def get_dream_team(gw: int):
     service = FPLService()

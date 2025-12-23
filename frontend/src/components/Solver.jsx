@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PlayerPopover from './PlayerPopover';
+import GameweekRangeSlider from './GameweekRangeSlider';
 
 const Solver = () => {
 	const [budget, setBudget] = useState(100.0);
@@ -138,126 +139,19 @@ const Solver = () => {
 					</span>
 				</div>
 				<div className="flex flex-col gap-3 w-full max-w-sm">
-					<div className="flex justify-between items-end">
-						<label className="text-xs uppercase font-bold text-ds-text-muted">Gameweek Range</label>
-						{!maxGw ? (
-							<span className="text-[10px] text-ds-primary animate-pulse">Loading...</span>
-						) : (
-							<span className="text-sm font-mono font-bold text-ds-primary">
-								GW {minGw} - GW {maxGw}
-							</span>
-						)}
-					</div>
-
-					<div className="relative h-6 w-full flex items-center">
-						<div className="absolute w-full h-1.5 bg-ds-card-hover rounded-full"></div>
-						{maxGw && (
-							<>
-								<div
-									className="absolute h-1.5 bg-ds-primary rounded-full z-10"
-									style={{
-										left: `${((minGw - 1) / Math.max(1, sliderMax - 1)) * 100}%`,
-										right: `${100 - ((maxGw - 1) / Math.max(1, sliderMax - 1)) * 100}%`
-									}}
-								></div>
-								<input
-									type="range"
-									min="1"
-									max={sliderMax}
-									value={minGw}
-									onChange={(e) => {
-										const val = Math.min(parseInt(e.target.value), maxGw);
-										setMinGw(Math.max(1, val));
-									}}
-									className="absolute w-full h-full opacity-0 cursor-pointer z-30 pointer-events-auto [&::-webkit-slider-thumb]:pointer-events-auto"
-									style={{
-										// This is tricky with single slider logic, standard double slider needs pointer events manipulation
-										// Let's use the standard overlapping method
-										pointerEvents: 'none',
-										appearance: 'none',
-										background: 'transparent',
-										zIndex: minGw > (sliderMax * 0.8) ? 50 : 30 // Bring to front if overlapping near end
-									}}
-								/>
-								<input
-									type="range"
-									min="1"
-									max={sliderMax}
-									value={maxGw}
-									onChange={(e) => {
-										const val = Math.max(parseInt(e.target.value), minGw);
-										setMaxGw(val);
-									}}
-									className="absolute w-full h-full opacity-0 cursor-pointer z-40 pointer-events-auto"
-									style={{
-										pointerEvents: 'none',
-										appearance: 'none',
-										background: 'transparent',
-									}}
-								/>
-
-								{/* Custom Thumbs (Visual Only - mapped to positions) */}
-								{/* Basic CSS thumb styling via style block in component for cleaner robust rendering provided we can't easily use arbitrary group variants for slider thumbs across browsers */}
-								<style>{`
-									input[type=range]::-webkit-slider-thumb {
-										pointer-events: auto;
-										appearance: none;
-										width: 16px;
-										height: 16px;
-										border-radius: 50%;
-										background: white;
-										border: 2px solid #3b82f6;
-										cursor: pointer;
-										margin-top: -6px; /* center vertically if track is custom */
-										box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-									}
-									input[type=range]::-moz-range-thumb {
-										pointer-events: auto;
-										width: 16px;
-										height: 16px;
-										border-radius: 50%;
-										background: white;
-										border: 2px solid #3b82f6;
-										cursor: pointer;
-										box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-										transform: translateY(2px);
-									}
-								`}</style>
-
-								{/* Re-render inputs with correct classes for the style tag to target? 
-								    Actually the style tag targets all input[type=range] inside the component scope if scoped, but here it's global.
-									To avoid affecting other sliders, let's use a specific class name.
-								*/}
-							</>
-						)}
-						{/* Active Inputs */}
-						{maxGw && (
-							<>
-								<input
-									type="range"
-									min="1"
-									max={sliderMax}
-									value={minGw}
-									onChange={(e) => {
-										const val = Math.min(Number(e.target.value), maxGw);
-										setMinGw(val);
-									}}
-									className="absolute w-full h-2 bg-transparent appearance-none top-1/2 -translate-y-1/2 pointer-events-none z-20 slider-thumb-custom"
-								/>
-								<input
-									type="range"
-									min="1"
-									max={sliderMax}
-									value={maxGw}
-									onChange={(e) => {
-										const val = Math.max(Number(e.target.value), minGw);
-										setMaxGw(val);
-									}}
-									className="absolute w-full h-2 bg-transparent appearance-none top-1/2 -translate-y-1/2 pointer-events-none z-30 slider-thumb-custom"
-								/>
-							</>
-						)}
-					</div>
+					{/* Label rendered inside slider or separately? Slider has internal label. Let's hide Solver label or use Slider's. */}
+					{/* Slider component has its own label. Let's just use it instead of the complex inline UI. */}
+					{!maxGw ? (
+						<span className="text-[10px] text-ds-primary animate-pulse">Loading Gameweeks...</span>
+					) : (
+						<GameweekRangeSlider
+							start={minGw}
+							end={maxGw}
+							min={1}
+							max={sliderMax}
+							onChange={({ start, end }) => { setMinGw(start); setMaxGw(end); }}
+						/>
+					)}
 				</div>
 				<button
 					type="submit"

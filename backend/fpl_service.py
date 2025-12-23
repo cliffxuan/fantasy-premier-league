@@ -1155,6 +1155,183 @@ class FPLService:
 
         return result
 
+    async def get_aggregated_player_stats(
+        self, min_gw: int, max_gw: int, venue: str = "both"
+    ) -> list[dict]:
+        """
+        Aggregates player stats (points) over a range of gameweeks, optionally filtering by venue.
+        venue: 'both', 'home', 'away'
+        """
+        # 1. Fetch base data
+        bootstrap = await self.get_bootstrap_static()
+        elements = {p["id"]: p for p in bootstrap["elements"]}
+        teams = {t["id"]: t for t in bootstrap["teams"]}
+
+        # 2. Fetch fixtures for the season (cached) to determine H/A status
+        all_fixtures = await self.get_fixtures()
+        # Index fixtures by (gw, team_id) -> is_home?
+        # Actually, a fixture has team_h and team_a.
+        # We need a quick lookup: map[gw][team_id] -> 'home' or 'away'
+        venue_map = {}  # {gw: {team_id: 'home'|'away'}}
+        for fix in all_fixtures:
+            event = fix["event"]
+            if event is None:
+                continue
+            if event not in venue_map:
+                venue_map[event] = {}
+            venue_map[event][fix["team_h"]] = "home"
+            venue_map[event][fix["team_a"]] = "away"
+
+        # Helper map for fixtures to support DGWs and precise points attribution
+        fixture_lookup = {f["id"]: f for f in all_fixtures}
+
+        # 3. Fetch live data for each GW in range in parallel
+        tasks = []
+        # If range is invalid, default to current GW only? Or return empty?
+        # Assuming caller safeguards.
+        # Check against available GWs
+
+        # Check if ranges are reasonable
+        if min_gw < 1:
+            min_gw = 1
+        if max_gw < min_gw:
+            max_gw = min_gw
+
+        for gw in range(min_gw, max_gw + 1):
+            tasks.append(self.get_event_live(gw))
+
+        gw_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        player_stats = {}  # pid -> {total_points: 0, games: 0, etc}
+
+        for i, result in enumerate(gw_results):
+            gw = min_gw + i
+            if isinstance(result, Exception):
+                # GW might not have happened yet or API error
+                continue
+
+            # result is the live data struct: { elements: [ {id, stats: {total_points, ...}, explain: []}, ... ] }
+            live_elements = result.get("elements", [])
+
+            for el in live_elements:
+                pid = el["id"]
+                points = el["stats"].get("total_points", 0)
+
+                # Check venue filter
+                player = elements.get(pid)
+                if not player:
+                    continue
+
+                team_id = player["team"]
+
+                # If filter is 'both', we take the total points for this GW directly (easiest)
+                # UNLESS we want to support 'home' or 'away'
+                # If venue != 'both', we must inspect 'explain' to separate points from Home vs Away games in this GW (DGW support)
+
+                points_to_add = 0
+                matches_to_add = 0
+
+                if venue == "both":
+                    points_to_add = points
+                    # matches logic
+                    explains = el.get("explain", [])
+                    for expl in explains:
+                        mins = next(
+                            (
+                                s["value"]
+                                for s in expl.get("stats", [])
+                                if s["identifier"] == "minutes"
+                            ),
+                            0,
+                        )
+                        if mins > 0:
+                            matches_to_add += 1
+                else:
+                    # Filter by venue
+                    explains = el.get("explain", [])
+                    for expl in explains:
+                        fixture_id = expl["fixture"]
+                        fix_info = fixture_lookup.get(fixture_id)
+                        if not fix_info:
+                            continue
+
+                        is_home = fix_info["team_h"] == team_id
+
+                        target_venue = venue.lower()
+                        should_include = False
+
+                        if target_venue == "home" and is_home:
+                            should_include = True
+                        elif target_venue == "away" and not is_home:
+                            should_include = True
+
+                        if should_include:
+                            fix_points = sum(s["points"] for s in expl.get("stats", []))
+                            points_to_add += fix_points
+                            mins = next(
+                                (
+                                    s["value"]
+                                    for s in expl.get("stats", [])
+                                    if s["identifier"] == "minutes"
+                                ),
+                                0,
+                            )
+                            if mins > 0:
+                                matches_to_add += 1
+
+                if points_to_add == 0 and venue != "both":
+                    # If we filtered out all points, do we still count it?
+                    # Yes, but value is 0.
+                    pass
+
+                if pid not in player_stats:
+                    player_stats[pid] = {
+                        "id": pid,
+                        "points_in_range": 0,
+                        "matches_in_range": 0,
+                    }
+
+                player_stats[pid]["points_in_range"] += points_to_add
+                player_stats[pid]["matches_in_range"] += matches_to_add
+
+        # Format result
+        results = []
+
+        # We iterate over ALL elements to ensure full list is returned (even those with 0 points)
+        # Or do we only return those with points?
+        # User usually wants to see the table of all players often.
+        # But if we return 700 players, it's fine.
+
+        for pid, p in elements.items():
+            stats = player_stats.get(pid, {"points_in_range": 0})
+
+            # Simple derived stats
+
+            # Avoid sending huge data if not needed? frontend truncates usually.
+
+            summary = {
+                "id": pid,
+                "web_name": p["web_name"],
+                "full_name": f"{p['first_name']} {p['second_name']}",
+                "team_code": teams[p["team"]]["code"] if p["team"] in teams else 0,
+                "team_short": teams[p["team"]]["short_name"]
+                if p["team"] in teams
+                else "UNK",
+                "element_type": p["element_type"],  # Position
+                "now_cost": p["now_cost"] / 10.0,
+                "total_points": p["total_points"],  # Season total
+                "points_in_range": stats["points_in_range"],
+                "news": p["news"],
+                "status": p["status"],
+                "photo": p["photo"].replace(".jpg", ""),
+                "chance_of_playing_next_round": p["chance_of_playing_next_round"],
+            }
+            results.append(summary)
+
+        # Sort by points in range desc
+        results.sort(key=lambda x: x["points_in_range"], reverse=True)
+        return results
+
     async def get_polymarket_data(self) -> list:
         # Cache check
         cache_key = "polymarket_premier_league_v10"  # Bump version

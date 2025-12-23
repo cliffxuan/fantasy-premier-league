@@ -14,6 +14,7 @@ import FixtureTicker from './components/FixtureTicker';
 import MarketOverview from './components/MarketOverview';
 import ClubViewer from './components/ClubViewer';
 import FormAnalysis from './components/FormAnalysis';
+import PlayerExplorer from './components/PlayerExplorer';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -246,7 +247,8 @@ function Dashboard() {
             { id: 'solver', label: 'AI Solver' },
             { id: 'analysis', label: 'Rank Analysis' },
             { id: 'dream_team', label: 'Team of the Week' },
-            { id: 'club_viewer', label: 'Club Viewer' }
+            { id: 'club_viewer', label: 'Club Viewer' },
+            { id: 'players', label: 'Player Explorer' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -351,6 +353,10 @@ function Dashboard() {
 
             <div style={{ display: activeTab === 'form' ? 'block' : 'none' }}>
               <FormAnalysis />
+            </div>
+
+            <div style={{ display: activeTab === 'players' ? 'block' : 'none' }}>
+              <PlayerExplorer />
             </div>
 
           </div>
