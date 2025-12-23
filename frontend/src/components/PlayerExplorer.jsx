@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import PlayerPopover from './PlayerPopover';
@@ -19,6 +19,8 @@ const PlayerExplorer = () => {
 		position: [], // Default none selected (implies all)
 		team: [] // Empty means all
 	});
+	const [teamInput, setTeamInput] = useState('');
+	const inputRef = useRef(null);
 
 	const [selectedPlayers, setSelectedPlayers] = useState([]); // List of IDs
 	const [showComparison, setShowComparison] = useState(false);
@@ -224,19 +226,79 @@ const PlayerExplorer = () => {
 					</div>
 
 					{/* Team Selector (Multi-select) */}
-					<div className="relative">
+					<div className="relative h-fit group">
 						<label className="text-xs text-ds-text-muted font-bold uppercase mb-1 block">Club</label>
-						<button
-							onClick={() => setIsTeamDropdownOpen(!isTeamDropdownOpen)}
-							className="w-full bg-ds-bg border border-ds-border rounded p-2 text-ds-text flex items-center justify-between text-sm hover:border-ds-primary transition-colors focus:outline-none focus:border-ds-primary"
+						<div
+							className={`w-full bg-ds-bg border border-ds-border rounded p-1.5 flex flex-wrap items-center gap-1.5 min-h-[38px] transition-colors ${isTeamDropdownOpen ? 'border-ds-primary ring-1 ring-ds-primary' : 'hover:border-ds-primary'}`}
+							onClick={() => {
+								if (!isTeamDropdownOpen) setIsTeamDropdownOpen(true);
+								// document.getElementById('club-search-input')?.focus();
+								setTimeout(() => inputRef.current?.focus(), 0);
+							}}
 						>
-							<span className="truncate">
-								{filters.team.length === 0
-									? 'All Clubs'
-									: `${filters.team.length} Selected`}
-							</span>
-							<ChevronDown size={14} className={`transform transition-transform ${isTeamDropdownOpen ? 'rotate-180' : ''}`} />
-						</button>
+							{filters.team.map(teamCode => {
+								const t = teams.find(x => x.code === teamCode);
+								if (!t) return null;
+								return (
+									<span key={teamCode} className="bg-ds-primary/20 text-ds-primary border border-ds-primary/30 rounded px-1.5 py-0.5 text-xs flex items-center gap-1 animate-in zoom-in-90 duration-100">
+										{t.name}
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												setFilters(prev => ({
+													...prev,
+													team: prev.team.filter(c => c !== teamCode)
+												}));
+											}}
+											className="hover:text-ds-text focus:outline-none"
+										>
+											<span className="leading-none text-[10px] font-bold">×</span>
+										</button>
+									</span>
+								);
+							})}
+							<input
+								ref={inputRef}
+								id="club-search-input"
+								type="text"
+								value={teamInput}
+								onChange={(e) => {
+									setTeamInput(e.target.value);
+									if (!isTeamDropdownOpen) setIsTeamDropdownOpen(true);
+								}}
+								onFocus={() => setIsTeamDropdownOpen(true)}
+								placeholder={filters.team.length === 0 ? "Select Clubs..." : ""}
+								className="bg-transparent border-none outline-none text-sm text-ds-text flex-1 min-w-[60px] placeholder:text-ds-text-muted/50"
+							/>
+							<div className="flex items-center gap-1 ml-auto pr-1">
+								{filters.team.length > 0 && (
+									<button
+										onClick={(e) => {
+											e.stopPropagation();
+											setFilters(prev => ({ ...prev, team: [] }));
+											setTeamInput('');
+										}}
+										className="text-ds-text-muted hover:text-ds-text transition-colors p-0.5"
+									>
+										<span className="text-xs font-bold leading-none">×</span>
+									</button>
+								)}
+								<div
+									className="cursor-pointer p-0.5"
+									onClick={(e) => {
+										e.stopPropagation();
+										if (isTeamDropdownOpen) {
+											setIsTeamDropdownOpen(false);
+										} else {
+											setIsTeamDropdownOpen(true);
+											setTimeout(() => inputRef.current?.focus(), 50);
+										}
+									}}
+								>
+									<ChevronDown size={14} className={`text-ds-text-muted transform transition-transform pointer-events-none ${isTeamDropdownOpen ? 'rotate-180' : ''}`} />
+								</div>
+							</div>
+						</div>
 
 						{isTeamDropdownOpen && (
 							<>
@@ -244,29 +306,16 @@ const PlayerExplorer = () => {
 									className="fixed inset-0 z-10"
 									onClick={() => setIsTeamDropdownOpen(false)}
 								/>
-								<div className="absolute top-full left-0 right-0 mt-2 bg-ds-card border border-ds-border rounded-lg shadow-xl z-20 max-h-[300px] flex flex-col w-64 md:w-full">
-									<div className="p-2 border-b border-ds-border flex justify-between items-center bg-ds-surface rounded-t-lg">
-										<span className="text-xs font-bold text-ds-text-muted">Select Clubs</span>
-										{filters.team.length > 0 && (
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													setFilters(prev => ({ ...prev, team: [] }));
-												}}
-												className="text-xs text-ds-primary hover:underline"
-											>
-												Reset
-											</button>
-										)}
-									</div>
+								<div className="absolute top-full left-0 right-0 mt-0 bg-ds-card border border-ds-border rounded-lg shadow-xl z-20 max-h-[300px] flex flex-col w-full overflow-hidden">
 									<div className="overflow-y-auto custom-scrollbar p-1">
-										{teams.map(t => {
+										{teams.filter(t => t.name.toLowerCase().includes(teamInput.toLowerCase())).map(t => {
 											const isSelected = filters.team.includes(t.code);
 											return (
 												<div
 													key={t.id}
 													onClick={(e) => {
 														e.stopPropagation();
+														setTeamInput(''); // Clear input on selection
 														setFilters(prev => {
 															const current = prev.team;
 															return {
@@ -277,7 +326,7 @@ const PlayerExplorer = () => {
 															};
 														});
 													}}
-													className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors text-sm ${isSelected ? 'bg-ds-primary/10 text-ds-text' : 'text-ds-text-muted hover:bg-ds-bg hover:text-ds-text'
+													className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors text-sm ${isSelected ? 'bg-ds-primary/10 text-ds-text font-medium' : 'text-ds-text-muted hover:bg-ds-surface hover:text-ds-text'
 														}`}
 												>
 													<div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-ds-primary border-ds-primary' : 'border-ds-border'
@@ -288,6 +337,11 @@ const PlayerExplorer = () => {
 												</div>
 											);
 										})}
+										{teams.filter(t => t.name.toLowerCase().includes(teamInput.toLowerCase())).length === 0 && (
+											<div className="p-3 text-center text-xs text-ds-text-muted">
+												No clubs found.
+											</div>
+										)}
 									</div>
 								</div>
 							</>
