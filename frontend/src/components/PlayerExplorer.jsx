@@ -239,9 +239,11 @@ const PlayerExplorer = () => {
 							{filters.team.map(teamCode => {
 								const t = teams.find(x => x.code === teamCode);
 								if (!t) return null;
+								const logoUrl = `https://resources.premierleague.com/premierleague/badges/70/t${t.code}.png`;
 								return (
-									<span key={teamCode} className="bg-ds-primary/20 text-ds-primary border border-ds-primary/30 rounded px-1.5 py-0.5 text-xs flex items-center gap-1 animate-in zoom-in-90 duration-100">
-										{t.name}
+									<span key={teamCode} className="bg-ds-primary/20 text-ds-primary border border-ds-primary/30 rounded px-1.5 py-0.5 text-xs flex items-center gap-1.5 animate-in zoom-in-90 duration-100">
+										<img src={logoUrl} alt={t.short_name} className="w-4 h-4 object-contain" />
+										<span className="font-bold">{t.short_name}</span>
 										<button
 											onClick={(e) => {
 												e.stopPropagation();
@@ -250,7 +252,7 @@ const PlayerExplorer = () => {
 													team: prev.team.filter(c => c !== teamCode)
 												}));
 											}}
-											className="hover:text-ds-text focus:outline-none"
+											className="hover:text-ds-text focus:outline-none flex items-center"
 										>
 											<span className="leading-none text-[10px] font-bold">×</span>
 										</button>
@@ -306,10 +308,11 @@ const PlayerExplorer = () => {
 									className="fixed inset-0 z-10"
 									onClick={() => setIsTeamDropdownOpen(false)}
 								/>
-								<div className="absolute top-full left-0 right-0 mt-0 bg-ds-card border border-ds-border rounded-lg shadow-xl z-20 max-h-[300px] flex flex-col w-full overflow-hidden">
+								<div className="absolute top-full left-0 mt-0 bg-ds-card border border-ds-border rounded-lg shadow-xl z-20 max-h-[300px] flex flex-col min-w-full w-80 overflow-hidden">
 									<div className="overflow-y-auto custom-scrollbar p-1">
 										{teams.filter(t => t.name.toLowerCase().includes(teamInput.toLowerCase())).map(t => {
 											const isSelected = filters.team.includes(t.code);
+											const logoUrl = `https://resources.premierleague.com/premierleague/badges/70/t${t.code}.png`;
 											return (
 												<div
 													key={t.id}
@@ -329,11 +332,13 @@ const PlayerExplorer = () => {
 													className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors text-sm ${isSelected ? 'bg-ds-primary/10 text-ds-text font-medium' : 'text-ds-text-muted hover:bg-ds-surface hover:text-ds-text'
 														}`}
 												>
-													<div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-ds-primary border-ds-primary' : 'border-ds-border'
+													<div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${isSelected ? 'bg-ds-primary border-ds-primary' : 'border-ds-border'
 														}`}>
 														{isSelected && <Check size={10} className="text-white" />}
 													</div>
-													<span className="truncate">{t.name}</span>
+													<img src={logoUrl} alt={t.short_name} className="w-5 h-5 object-contain" />
+													<span className="truncate flex-1">{t.name}</span>
+													<span className="text-xs text-ds-text-muted/50 font-mono">{t.short_name}</span>
 												</div>
 											);
 										})}
