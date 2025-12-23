@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import PlayerPopover from './PlayerPopover';
 import ComparisonChart from './ComparisonChart';
-import { getPlayerSummary } from '../api';
+import { getPlayerSummary, getTeams } from '../api';
 
 const PlayerExplorer = () => {
 	const [players, setPlayers] = useState([]);
+	const [teams, setTeams] = useState([]);
+	const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [currentGw, setCurrentGw] = useState(38);
 	const [filters, setFilters] = useState({
@@ -14,7 +17,7 @@ const PlayerExplorer = () => {
 		venue: ['home', 'away'], // Default all selected
 		search: '',
 		position: [1, 2, 3, 4], // Default to all explicit positions
-		team: 'all'
+		team: [] // Empty means all
 	});
 
 	const [selectedPlayers, setSelectedPlayers] = useState([]); // List of IDs
@@ -25,22 +28,27 @@ const PlayerExplorer = () => {
 	const [comparisonData, setComparisonData] = useState({}); // { pid: history[] }
 	const [loadingComparison, setLoadingComparison] = useState(false);
 
-	// Fetch Current Gameweek on Mount
+	// Fetch Initial Data (GW and Teams)
 	useEffect(() => {
-		const fetchGw = async () => {
+		const init = async () => {
 			try {
-				const res = await fetch('/api/gameweek/current');
-				if (res.ok) {
-					const data = await res.json();
+				// Fetch GW
+				const gwRes = await fetch('/api/gameweek/current');
+				if (gwRes.ok) {
+					const data = await gwRes.json();
 					const gw = data.gameweek || 38;
 					setCurrentGw(gw);
 					setFilters(prev => ({ ...prev, maxGw: gw }));
 				}
+
+				// Fetch Teams
+				const teamsData = await getTeams();
+				setTeams(teamsData);
 			} catch (e) {
-				console.error("Failed to fetch current GW", e);
+				console.error("Failed to fetch initial data", e);
 			}
 		};
-		fetchGw();
+		init();
 	}, []);
 
 	// Fetch Players when filters (range/venue) change
@@ -126,8 +134,8 @@ const PlayerExplorer = () => {
 			}
 		}
 
-		if (filters.team !== 'all') {
-			result = result.filter(p => p.team_code === parseInt(filters.team));
+		if (filters.team.length > 0) {
+			result = result.filter(p => filters.team.includes(p.team_code));
 		}
 
 		// Sort
@@ -213,6 +221,77 @@ const PlayerExplorer = () => {
 							onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
 							className="w-full bg-ds-bg border border-ds-border rounded p-2 text-ds-text focus:border-ds-primary outline-none"
 						/>
+					</div>
+
+					{/* Team Selector (Multi-select) */}
+					<div className="relative">
+						<label className="text-xs text-ds-text-muted font-bold uppercase mb-1 block">Club</label>
+						<button
+							onClick={() => setIsTeamDropdownOpen(!isTeamDropdownOpen)}
+							className="w-full bg-ds-bg border border-ds-border rounded p-2 text-ds-text flex items-center justify-between text-sm hover:border-ds-primary transition-colors focus:outline-none focus:border-ds-primary"
+						>
+							<span className="truncate">
+								{filters.team.length === 0
+									? 'All Clubs'
+									: `${filters.team.length} Selected`}
+							</span>
+							<ChevronDown size={14} className={`transform transition-transform ${isTeamDropdownOpen ? 'rotate-180' : ''}`} />
+						</button>
+
+						{isTeamDropdownOpen && (
+							<>
+								<div
+									className="fixed inset-0 z-10"
+									onClick={() => setIsTeamDropdownOpen(false)}
+								/>
+								<div className="absolute top-full left-0 right-0 mt-2 bg-ds-card border border-ds-border rounded-lg shadow-xl z-20 max-h-[300px] flex flex-col w-64 md:w-full">
+									<div className="p-2 border-b border-ds-border flex justify-between items-center bg-ds-surface rounded-t-lg">
+										<span className="text-xs font-bold text-ds-text-muted">Select Clubs</span>
+										{filters.team.length > 0 && (
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													setFilters(prev => ({ ...prev, team: [] }));
+												}}
+												className="text-xs text-ds-primary hover:underline"
+											>
+												Reset
+											</button>
+										)}
+									</div>
+									<div className="overflow-y-auto custom-scrollbar p-1">
+										{teams.map(t => {
+											const isSelected = filters.team.includes(t.code);
+											return (
+												<div
+													key={t.id}
+													onClick={(e) => {
+														e.stopPropagation();
+														setFilters(prev => {
+															const current = prev.team;
+															return {
+																...prev,
+																team: isSelected
+																	? current.filter(c => c !== t.code)
+																	: [...current, t.code]
+															};
+														});
+													}}
+													className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors text-sm ${isSelected ? 'bg-ds-primary/10 text-ds-text' : 'text-ds-text-muted hover:bg-ds-bg hover:text-ds-text'
+														}`}
+												>
+													<div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-ds-primary border-ds-primary' : 'border-ds-border'
+														}`}>
+														{isSelected && <Check size={10} className="text-white" />}
+													</div>
+													<span className="truncate">{t.name}</span>
+												</div>
+											);
+										})}
+									</div>
+								</div>
+							</>
+						)}
 					</div>
 
 					{/* Gameweek Slider */}
@@ -342,7 +421,7 @@ const PlayerExplorer = () => {
 								</th>
 								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('web_name')}>Player</th>
 								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('element_type')}>Pos</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('team_short')}>Team</th>
+								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('team_short')}>Club</th>
 								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('now_cost')}>Price</th>
 								<th className="p-3 cursor-pointer hover:text-ds-primary text-right text-ds-primary" onClick={() => handleSort('points_in_range')}>
 									Pts (Range) {sortConfig.key === 'points_in_range' && (sortConfig.direction === 'desc' ? '▼' : '▲')}

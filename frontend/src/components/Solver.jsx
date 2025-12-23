@@ -80,8 +80,8 @@ const Solver = () => {
 				</p>
 			</div>
 
-			<form onSubmit={handleSolve} className="flex items-end gap-4 bg-ds-bg p-4 rounded-lg border border-ds-border">
-				<div className="flex flex-col gap-1 w-full max-w-xs">
+			<form onSubmit={handleSolve} className="flex flex-wrap items-end gap-4 bg-ds-bg p-4 rounded-lg border border-ds-border">
+				<div className="flex flex-col gap-1 w-full sm:flex-1 min-w-[150px] max-w-xs">
 					<label htmlFor="budget" className="text-xs uppercase font-bold text-ds-text-muted">Budget (£m)</label>
 					<input
 						type="number"
@@ -94,7 +94,7 @@ const Solver = () => {
 						className="bg-ds-surface border border-ds-border text-ds-text p-2 rounded focus:border-ds-primary outline-none font-mono"
 					/>
 				</div>
-				<div className="flex flex-col gap-2 w-full max-w-xs">
+				<div className="flex flex-col gap-2 w-full sm:flex-1 min-w-[200px] max-w-xs">
 					<label className="flex items-center gap-2 cursor-pointer mt-6">
 						<input
 							type="checkbox"
@@ -108,7 +108,7 @@ const Solver = () => {
 						Optimize for Starting XI only (Free Hit style). Bench will be fodder.
 					</span>
 				</div>
-				<div className="flex flex-col gap-2 w-full max-w-xs">
+				<div className="flex flex-col gap-2 w-full sm:flex-1 min-w-[200px] max-w-xs">
 					<label className="flex items-center gap-2 cursor-pointer">
 						<input
 							type="checkbox"
@@ -122,7 +122,7 @@ const Solver = () => {
 						Exclude injured (0%), suspended, or unavailable players.
 					</span>
 				</div>
-				<div className="flex flex-col gap-2 w-full max-w-xs">
+				<div className="flex flex-col gap-2 w-full sm:flex-1 min-w-[200px] max-w-xs">
 					<label className="flex items-center gap-2 cursor-pointer">
 						<input
 							type="checkbox"
@@ -138,9 +138,7 @@ const Solver = () => {
 						Optimize using Machine Learning projected points for the next game.
 					</span>
 				</div>
-				<div className="flex flex-col gap-3 w-full max-w-sm">
-					{/* Label rendered inside slider or separately? Slider has internal label. Let's hide Solver label or use Slider's. */}
-					{/* Slider component has its own label. Let's just use it instead of the complex inline UI. */}
+				<div className="flex flex-col gap-3 w-full sm:flex-1 min-w-[280px] max-w-sm">
 					{!maxGw ? (
 						<span className="text-[10px] text-ds-primary animate-pulse">Loading Gameweeks...</span>
 					) : (
@@ -156,7 +154,7 @@ const Solver = () => {
 				<button
 					type="submit"
 					disabled={loading}
-					className="bg-ds-primary text-white font-bold px-6 py-2 rounded shadow-lg hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 h-[42px]"
+					className="bg-ds-primary text-white font-bold px-6 py-2 rounded shadow-lg hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 h-[42px] w-full sm:w-auto"
 				>
 					{loading ? 'SOLVING...' : 'OPTIMIZE'}
 				</button>
