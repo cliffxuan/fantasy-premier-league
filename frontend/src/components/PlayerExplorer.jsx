@@ -508,8 +508,21 @@ const PlayerExplorer = () => {
 										</td>
 										<td className="p-3 font-medium">
 											<div className="group relative">
-												{player.web_name}
-												{/* Hover info could go here or use PlayerPopover separately */}
+												<PlayerPopover
+													player={{
+														...player,
+														name: player.web_name,
+														full_name: player.full_name,
+														team: player.team_short || player.team_name, // Fallback
+														position: player.element_type,
+														cost: player.now_cost,
+														// Ensure code is present for image
+													}}
+												>
+													<span className="cursor-help decoration-ds-text-muted/50 underline-offset-2 hover:underline hover:text-ds-primary transition-colors">
+														{player.web_name}
+													</span>
+												</PlayerPopover>
 											</div>
 										</td>
 										<td className="p-3 text-xs text-ds-text-muted">{positionMap[player.element_type]}</td>
