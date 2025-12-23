@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .analysis_service import AnalysisService
 from .fpl_service import FPLService
+from .form_service import FormService
 from .models import AnalysisRequest, AnalysisResponse
 
 app = FastAPI(title="FPL Alpha API")
@@ -21,12 +22,21 @@ app.add_middleware(
 )
 
 analysis_service = AnalysisService()
+form_service = FormService()
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse, tags=["Analysis"])
 async def analyze_team(request: AnalysisRequest):
     try:
         return await analysis_service.analyze_team(request)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analysis/form", tags=["Analysis"])
+async def get_form_analysis():
+    try:
+        return await form_service.get_form_analysis_data()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

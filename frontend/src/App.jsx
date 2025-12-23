@@ -13,6 +13,7 @@ import Solver from './components/Solver';
 import FixtureTicker from './components/FixtureTicker';
 import MarketOverview from './components/MarketOverview';
 import ClubViewer from './components/ClubViewer';
+import FormAnalysis from './components/FormAnalysis';
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -148,7 +149,8 @@ function Dashboard() {
     setSearchParams(prev => {
       const newP = new URLSearchParams(prev);
       newP.set('tab', tab);
-      if (['analysis', 'solver', 'matches', 'standings'].includes(tab)) {
+      newP.set('tab', tab);
+      if (['analysis', 'solver', 'matches', 'standings', 'form'].includes(tab)) {
         newP.delete('gw');
       }
       return newP;
@@ -238,12 +240,13 @@ function Dashboard() {
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-6">
         <nav className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar">
           {[
+            { id: 'squad', label: 'My Squad' },
             { id: 'matches', label: 'Match Center' },
+            { id: 'form', label: 'Form Lab' },
             { id: 'solver', label: 'AI Solver' },
             { id: 'analysis', label: 'Rank Analysis' },
             { id: 'dream_team', label: 'Team of the Week' },
-            { id: 'club_viewer', label: 'Club Viewer' },
-            { id: 'squad', label: 'My Squad' }
+            { id: 'club_viewer', label: 'Club Viewer' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -344,6 +347,10 @@ function Dashboard() {
 
             <div style={{ display: activeTab === 'matches' ? 'block' : 'none' }}>
               <MarketOverview />
+            </div>
+
+            <div style={{ display: activeTab === 'form' ? 'block' : 'none' }}>
+              <FormAnalysis />
             </div>
 
           </div>
