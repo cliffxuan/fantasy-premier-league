@@ -11,9 +11,9 @@ const PlayerExplorer = () => {
 	const [filters, setFilters] = useState({
 		minGw: 1,
 		maxGw: 38,
-		venue: 'both', // 'both', 'home', 'away'
+		venue: ['home', 'away'], // Default all selected
 		search: '',
-		position: 'all', // 'all', 1, 2, 3, 4
+		position: [1, 2, 3, 4], // Default to all explicit positions
 		team: 'all'
 	});
 
@@ -48,10 +48,11 @@ const PlayerExplorer = () => {
 		const fetchPlayers = async () => {
 			setLoading(true);
 			try {
+				const venueParam = filters.venue.length === 2 ? 'both' : (filters.venue[0] || 'both');
 				const query = new URLSearchParams({
 					min_gw: filters.minGw,
 					max_gw: filters.maxGw,
-					venue: filters.venue
+					venue: venueParam
 				});
 
 				const res = await fetch(`/api/players/aggregated?${query.toString()}`);
@@ -117,8 +118,12 @@ const PlayerExplorer = () => {
 			);
 		}
 
-		if (filters.position !== 'all') {
-			result = result.filter(p => p.element_type === parseInt(filters.position));
+		if (Array.isArray(filters.position) ? filters.position.length > 0 : filters.position !== 'all') {
+			if (Array.isArray(filters.position)) {
+				result = result.filter(p => filters.position.includes(p.element_type));
+			} else {
+				result = result.filter(p => p.element_type === parseInt(filters.position));
+			}
 		}
 
 		if (filters.team !== 'all') {
@@ -226,12 +231,25 @@ const PlayerExplorer = () => {
 						{/* Venue */}
 						<div>
 							<label className="text-xs text-ds-text-muted font-bold uppercase mb-2 block">Venue</label>
-							<div className="flex bg-ds-bg rounded p-1 border border-ds-border">
-								{['both', 'home', 'away'].map(v => (
+							<div className="flex flex-wrap gap-2">
+								{['home', 'away'].map(v => (
 									<button
 										key={v}
-										onClick={() => setFilters(prev => ({ ...prev, venue: v }))}
-										className={`flex-1 capitalize text-sm py-1 rounded transition-colors ${filters.venue === v ? 'bg-ds-primary text-white font-bold shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+										onClick={() => {
+											setFilters(prev => {
+												const current = Array.isArray(prev.venue) ? prev.venue : [];
+												return {
+													...prev,
+													venue: current.includes(v)
+														? current.filter(x => x !== v)
+														: [...current, v]
+												};
+											});
+										}}
+										className={`px-3 py-1 rounded border text-sm transition-all capitalize ${filters.venue.includes(v)
+											? 'bg-ds-primary border-ds-primary text-white'
+											: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
+											}`}
 									>
 										{v}
 									</button>
@@ -245,11 +263,29 @@ const PlayerExplorer = () => {
 						<div>
 							<label className="text-xs text-ds-text-muted font-bold uppercase mb-2 block">Position</label>
 							<div className="flex flex-wrap gap-2">
-								{['all', 1, 2, 3, 4].map(p => (
+								{[1, 2, 3, 4].map(p => (
 									<button
 										key={p}
-										onClick={() => setFilters(prev => ({ ...prev, position: p }))}
-										className={`px-3 py-1 rounded border text-sm transition-all ${filters.position == p ? 'bg-ds-primary border-ds-primary text-white' : 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'}`}
+										onClick={() => {
+											if (p === 'all') {
+												setFilters(prev => ({ ...prev, position: [] }));
+											} else {
+												setFilters(prev => {
+													const current = Array.isArray(prev.position) ? prev.position : [];
+													return {
+														...prev,
+														position: current.includes(p)
+															? current.filter(x => x !== p)
+															: [...current, p]
+													};
+												});
+											}
+										}}
+										className={`px-3 py-1 rounded border text-sm transition-all ${(p === 'all' && (!filters.position || filters.position.length === 0 || filters.position === 'all')) ||
+											(Array.isArray(filters.position) && filters.position.includes(p))
+											? 'bg-ds-primary border-ds-primary text-white'
+											: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
+											}`}
 									>
 										{p === 'all' ? 'All' : positionMap[p]}
 									</button>
