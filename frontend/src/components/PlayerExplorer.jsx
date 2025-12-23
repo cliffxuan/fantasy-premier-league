@@ -14,9 +14,9 @@ const PlayerExplorer = () => {
 	const [filters, setFilters] = useState({
 		minGw: 1,
 		maxGw: 38,
-		venue: ['home', 'away'], // Default all selected
+		venue: [], // Default none selected (implies all/both in logic usually)
 		search: '',
-		position: [1, 2, 3, 4], // Default to all explicit positions
+		position: [], // Default none selected (implies all)
 		team: [] // Empty means all
 	});
 
@@ -56,7 +56,7 @@ const PlayerExplorer = () => {
 		const fetchPlayers = async () => {
 			setLoading(true);
 			try {
-				const venueParam = filters.venue.length === 2 ? 'both' : (filters.venue[0] || 'both');
+				const venueParam = (filters.venue.length === 0 || filters.venue.length === 2) ? 'both' : filters.venue[0];
 				const query = new URLSearchParams({
 					min_gw: filters.minGw,
 					max_gw: filters.maxGw,
@@ -335,9 +335,7 @@ const PlayerExplorer = () => {
 								))}
 							</div>
 						</div>
-					</div>
 
-					<div className="space-y-4">
 						{/* Position */}
 						<div>
 							<label className="text-xs text-ds-text-muted font-bold uppercase mb-2 block">Position</label>
