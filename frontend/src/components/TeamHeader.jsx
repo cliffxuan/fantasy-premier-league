@@ -1,7 +1,7 @@
 
 import React from 'react';
 
-const TeamHeader = ({ entry, freeTransfers, isPrivate }) => {
+const TeamHeader = ({ entry, freeTransfers, isPrivate, transferDetails }) => {
 	if (!entry || !entry.name) return null;
 
 	const {
@@ -15,8 +15,17 @@ const TeamHeader = ({ entry, freeTransfers, isPrivate }) => {
 		club_badge_src
 	} = entry;
 
-	const value = (last_deadline_value / 10).toFixed(1);
-	const bank = (last_deadline_bank / 10).toFixed(1);
+	let teamValue = last_deadline_value;
+	if (transferDetails && transferDetails.value !== undefined) {
+		teamValue = transferDetails.value;
+	}
+	const value = (teamValue / 10).toFixed(1);
+
+	let bankValue = last_deadline_bank;
+	if (transferDetails && transferDetails.bank !== undefined) {
+		bankValue = transferDetails.bank;
+	}
+	const bank = (bankValue / 10).toFixed(1);
 
 	return (
 		<div className="bg-ds-card rounded-xl p-6 border border-ds-border shadow-sm mb-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">

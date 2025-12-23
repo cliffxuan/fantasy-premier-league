@@ -31,6 +31,7 @@ function Dashboard() {
   const [history, setHistory] = useState([]);
   const [entry, setEntry] = useState(null);
   const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
+  const [transferDetails, setTransferDetails] = useState(null);
   const [isTeamLoaded, setIsTeamLoaded] = useState(false);
 
   const [showPromptModal, setShowPromptModal] = useState(false);
@@ -104,6 +105,7 @@ function Dashboard() {
         setHistory(squadData.history || []);
         setEntry(squadData.entry || null);
         setCalculatedFreeTransfers(squadData.free_transfers !== undefined ? squadData.free_transfers : 1);
+        setTransferDetails(squadData.transfer_details || null);
         setIsPrivate(squadData.is_private || false);
 
         const resolvedGw = squadData.gameweek || squadData.entry?.current_event;
@@ -165,7 +167,12 @@ function Dashboard() {
     setResult(null);
 
     try {
-      const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
+      let bank = '0.5';
+      if (transferDetails && transferDetails.bank !== undefined) {
+        bank = (transferDetails.bank / 10).toFixed(1);
+      } else if (entry) {
+        bank = (entry.last_deadline_bank / 10).toFixed(1);
+      }
       const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken);
       setResult(data);
     } catch (err) {
@@ -181,7 +188,12 @@ function Dashboard() {
     setError(null);
 
     try {
-      const bank = entry ? (entry.last_deadline_bank / 10).toFixed(1) : '0.5';
+      let bank = '0.5';
+      if (transferDetails && transferDetails.bank !== undefined) {
+        bank = (transferDetails.bank / 10).toFixed(1);
+      } else if (entry) {
+        bank = (entry.last_deadline_bank / 10).toFixed(1);
+      }
       const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken, true);
       if (data.generated_prompt) {
         setGeneratedPrompt(data.generated_prompt);
@@ -305,7 +317,7 @@ function Dashboard() {
                     <TeamInput />
                   </div>
 
-                  <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} isPrivate={isPrivate} />
+                  <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} isPrivate={isPrivate} transferDetails={transferDetails} />
                   {squad && (
                     <SquadDisplay
                       squad={squad}

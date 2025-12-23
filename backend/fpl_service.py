@@ -407,6 +407,22 @@ class FPLService:
             history, all_transfers, next_gw_for_calc
         )
 
+        if my_team_data and "transfers" in my_team_data:
+            transfer_details = my_team_data["transfers"]
+            # Use official free transfer limit if available
+            # Logic: limit is the max transfers available for this team at the start of the window/state.
+            # 'made' is the number of transfers made.
+            # So remaining is limit - made.
+            # 'cost' is handled by FPL (points deduction).
+            # If cost > 0, free transfers should be 0.
+            # But strictly: max(0, limit - made) covers it.
+            if "limit" in transfer_details:
+                limit = transfer_details["limit"]
+                made = transfer_details.get("made", 0)
+                free_transfers = max(0, limit - made)
+        else:
+            transfer_details = None
+
         return {
             "squad": squad,
             "chips": chips_status,
@@ -414,6 +430,7 @@ class FPLService:
             "entry": entry,
             "free_transfers": free_transfers,
             "transfers": gw_transfers,
+            "transfer_details": transfer_details,
             "gameweek": gw,
             "is_private": bool(my_team_data),
         }
