@@ -1341,6 +1341,7 @@ class FPLService:
                 "news": p["news"],
                 "status": p["status"],
                 "photo": p["photo"].replace(".jpg", ""),
+                "code": p["code"],
                 "chance_of_playing_next_round": p["chance_of_playing_next_round"],
             }
             results.append(summary)
