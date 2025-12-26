@@ -739,7 +739,7 @@ class FPLService:
                 return event["id"]
         return 38
 
-    async def get_league_table(self) -> list:
+    async def get_league_table(self, min_gw: int = 1, max_gw: int = 38) -> list:
         bootstrap = await self.get_bootstrap_static()
         fixtures = await self.get_fixtures()
 
@@ -768,6 +768,13 @@ class FPLService:
 
         for f in fixtures:
             if not f["finished"] and not f["finished_provisional"]:
+                continue
+
+            # Filtering by Gameweek Range
+            if f["event"] is None:
+                continue
+
+            if not (min_gw <= f["event"] <= max_gw):
                 continue
 
             h_id = f["team_h"]

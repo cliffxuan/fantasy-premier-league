@@ -94,10 +94,10 @@ async def get_my_team(team_id: int, authorization: str = Header(None)):
 
 
 @app.get("/api/league-table", tags=["FPL Data"])
-async def get_league_table():
+async def get_league_table(min_gw: int = 1, max_gw: int = 38):
     service = FPLService()
     try:
-        data = await service.get_league_table()
+        data = await service.get_league_table(min_gw, max_gw)
         return data
     except Exception as e:
         raise HTTPException(
