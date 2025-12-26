@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GameweekRangeSlider from './GameweekRangeSlider';
+import TeamPopover from './TeamPopover';
 
 const LeagueTable = () => {
 	const [table, setTable] = useState([]);
@@ -84,15 +85,19 @@ const LeagueTable = () => {
 						{table.map((team) => (
 							<tr key={team.id} className="border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none">
 								<td className="px-1 py-2 md:px-4 md:py-3 font-bold">{team.position}</td>
-								<td className="px-1 py-2 md:px-4 md:py-3 flex items-center gap-2">
-									<img
-										src={`https://resources.premierleague.com/premierleague/badges/25/t${team.code}.png`}
-										alt={team.short_name}
-										className="w-6 h-6 object-contain"
-										onError={(e) => { e.target.style.display = 'none' }}
-									/>
-									<span className="hidden sm:inline font-sans">{team.name}</span>
-									<span className="sm:hidden font-sans">{team.short_name}</span>
+								<td className="px-1 py-2 md:px-4 md:py-3">
+									<TeamPopover team={team}>
+										<div className="flex items-center gap-2 cursor-pointer">
+											<img
+												src={`https://resources.premierleague.com/premierleague/badges/25/t${team.code}.png`}
+												alt={team.short_name}
+												className="w-6 h-6 object-contain"
+												onError={(e) => { e.target.style.display = 'none' }}
+											/>
+											<span className="hidden sm:inline font-sans font-medium hover:text-ds-primary transition-colors">{team.name}</span>
+											<span className="sm:hidden font-sans font-medium hover:text-ds-primary transition-colors">{team.short_name}</span>
+										</div>
+									</TeamPopover>
 								</td>
 								<td className="px-1 py-2 md:px-4 md:py-3 text-center text-ds-text-muted">{team.played}</td>
 								<td className="px-1 py-2 md:px-4 md:py-3 text-center text-ds-text-muted">{team.won}</td>

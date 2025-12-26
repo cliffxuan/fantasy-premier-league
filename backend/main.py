@@ -78,6 +78,18 @@ async def get_club_squad(club_id: int, gw: int | None = None):
         )
 
 
+@app.get("/api/club/{club_id}/summary", tags=["FPL Team"])
+async def get_club_summary(club_id: int):
+    service = FPLService()
+    try:
+        data = await service.get_club_summary(club_id)
+        return data
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch club summary: {str(e)}"
+        )
+
+
 @app.get("/api/team/{team_id}/my-team", tags=["FPL Team"])
 async def get_my_team(team_id: int, authorization: str = Header(None)):
     if not authorization:

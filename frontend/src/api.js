@@ -42,6 +42,12 @@ export const getClubSquad = async (clubId, gw = null) => {
 	return response.json();
 };
 
+export const getClubSummary = async (clubId) => {
+	const response = await fetch(`${API_BASE_URL}/club/${clubId}/summary`);
+	if (!response.ok) return null;
+	return response.json();
+};
+
 export const getSquad = async (teamId, gw = null, authToken = null) => {
 	let url = `${API_BASE_URL}/team/${teamId}/squad`;
 	if (gw !== null && gw !== undefined) {

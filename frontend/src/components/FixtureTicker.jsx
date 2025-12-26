@@ -139,7 +139,10 @@ const FixtureTicker = () => {
 										<td key={i} className="p-1">
 											<div className={`w-full h-8 flex flex-col items-center justify-center rounded text-[10px] leading-tight ${getFDRColor(difficulty)} relative group cursor-help`}>
 												<span className="font-bold">{f.opponent}</span>
-												<span className="opacity-75 transform scale-75">{f.is_home ? '(H)' : '(A)'}</span>
+												<div className="flex items-center gap-0.5 transform scale-75 opacity-90">
+													<span>{f.is_home ? 'H' : 'A'}</span>
+													{mode !== 'market' && <span className="font-extrabold ml-1">{difficulty}</span>}
+												</div>
 												{/* Tooltip for Win % in Market Mode */}
 												{mode === 'market' && f.win_prob !== null && f.win_prob !== undefined && (
 													<div className="absolute bottom-full mb-1 hidden group-hover:block bg-black/90 text-white text-[9px] p-1 rounded whitespace-nowrap z-10">

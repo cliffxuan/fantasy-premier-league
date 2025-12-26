@@ -695,6 +695,131 @@ class FPLService:
             "fixtures": club_schedule,
         }
 
+    async def get_club_summary(self, club_id: int) -> Dict[str, Any]:
+        bootstrap = await self.get_bootstrap_static()
+        teams_map = {t["id"]: t for t in bootstrap["teams"]}
+        team = teams_map.get(club_id)
+        if not team:
+            return {}
+
+        # Get top 5 players
+        club_players = [p for p in bootstrap["elements"] if p["team"] == club_id]
+        club_players.sort(key=lambda x: x["total_points"], reverse=True)
+        top_players = club_players[:5]
+
+        # Simple format for top players
+        top_players_data = []
+        for p in top_players:
+            top_players_data.append(
+                {
+                    "id": p["id"],
+                    "web_name": p["web_name"],
+                    "total_points": p["total_points"],
+                    "element_type": p["element_type"],
+                    "cost": p["now_cost"] / 10,
+                    "photo": p["photo"].replace(
+                        ".jpg", ".png"
+                    ),  # Ensure .png for consistent URL usage if needed, though usually .png is ID based
+                }
+            )
+
+        # Get next 3 fixtures
+        fixtures = await self.get_fixtures()
+
+        # Find next fixtures & recent results
+        upcoming = []
+        recent = []
+
+        # Sort by event
+        fixtures.sort(key=lambda x: x.get("event") or 999)
+
+        # Separate fixtures into past and future
+        # Note: fixtures are sorted by event ascending (1, 2, 3...)
+
+        # 1. Collect all club fixtures
+        club_fixtures = [
+            f for f in fixtures if f["team_h"] == club_id or f["team_a"] == club_id
+        ]
+
+        # 2. Upcoming (first 3 that are not finished)
+        future_fixtures = [
+            f
+            for f in club_fixtures
+            if not f.get("finished") and not f.get("finished_provisional")
+        ][:5]
+
+        # 3. Recent (last 3 that ARE finished or provisionally finished)
+        past_fixtures = [
+            f
+            for f in club_fixtures
+            if (f.get("finished") or f.get("finished_provisional"))
+            and f.get("team_h_score") is not None
+            and f.get("team_a_score") is not None
+        ]
+        past_fixtures.sort(key=lambda x: x.get("event") or 0, reverse=True)  # Sort desc
+        recent_fixtures = past_fixtures[:5]
+
+        for f in future_fixtures:
+            is_home = f["team_h"] == club_id
+            opponent_id = f["team_a"] if is_home else f["team_h"]
+            opp_team = teams_map.get(opponent_id, {})
+            upcoming.append(
+                {
+                    "id": f["id"],
+                    "event": f["event"],
+                    "opponent_name": opp_team.get("name", "Unknown"),
+                    "opponent_short": opp_team.get("short_name", "UNK"),
+                    "is_home": is_home,
+                    "difficulty": f["team_h_difficulty"]
+                    if is_home
+                    else f["team_a_difficulty"],
+                    "kickoff_time": f["kickoff_time"],
+                }
+            )
+
+        for f in recent_fixtures:
+            is_home = f["team_h"] == club_id
+            opponent_id = f["team_a"] if is_home else f["team_h"]
+            opp_team = teams_map.get(opponent_id, {})
+
+            h_score = f["team_h_score"]
+            a_score = f["team_a_score"]
+            score = f"{h_score}-{a_score}"
+
+            result = "D"
+            if is_home:
+                if h_score > a_score:
+                    result = "W"
+                elif h_score < a_score:
+                    result = "L"
+            else:
+                if a_score > h_score:
+                    result = "W"
+                elif a_score < h_score:
+                    result = "L"
+
+            recent.append(
+                {
+                    "id": f["id"],
+                    "event": f["event"],
+                    "opponent_name": opp_team.get("name", "Unknown"),
+                    "opponent_short": opp_team.get("short_name", "UNK"),
+                    "is_home": is_home,
+                    "score": score,
+                    "result": result,
+                    "difficulty": f["team_h_difficulty"]
+                    if is_home
+                    else f["team_a_difficulty"],
+                }
+            )
+
+        return {
+            "team": team,
+            "top_players": top_players_data,
+            "upcoming_fixtures": upcoming,
+            "recent_results": recent,
+        }
+
     async def get_current_gameweek(self) -> int:
         data = await self.get_bootstrap_static()
         for event in data["events"]:
