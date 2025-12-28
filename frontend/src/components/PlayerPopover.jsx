@@ -131,15 +131,44 @@ const PlayerPopover = ({ player, children }) => {
 							<div>
 								<h4 className="text-xs font-bold text-ds-text-muted uppercase mb-2">Recent Form</h4>
 								<div className="grid grid-cols-5 gap-1">
-									{summary.history.slice(-5).reverse().map((fixture) => (
-										<div key={fixture.id} className="flex flex-col items-center bg-ds-bg/50 rounded p-1 border border-ds-border">
-											<span className="text-[10px] font-mono text-ds-text-muted">GW{fixture.round}</span>
-											<span className={`text-sm font-bold ${fixture.total_points >= 6 ? 'text-ds-accent' : fixture.total_points >= 3 ? 'text-ds-text' : 'text-ds-text-muted'}`}>
-												{fixture.total_points}
-											</span>
-											<span className="text-[9px] text-ds-text-muted/70">{fixture.opponent_short_name} ({fixture.was_home ? 'H' : 'A'})</span>
-										</div>
-									))}
+									{summary.history.slice(-5).reverse().map((fixture) => {
+										const isHome = fixture.was_home;
+										const teamScore = isHome ? fixture.team_h_score : fixture.team_a_score;
+										const oppScore = isHome ? fixture.team_a_score : fixture.team_h_score;
+										let resultChar = 'D';
+										let resultColor = 'text-gray-400';
+										if (teamScore > oppScore) { resultChar = 'W'; resultColor = 'text-green-500'; }
+										else if (teamScore < oppScore) { resultChar = 'L'; resultColor = 'text-red-500'; }
+
+										return (
+											<div key={fixture.id} className="group relative flex flex-col items-center bg-ds-bg/50 rounded p-1 border border-ds-border hover:bg-ds-surface transition-colors cursor-help">
+												<span className="text-[10px] font-mono text-ds-text-muted">GW{fixture.round}</span>
+												<span className={`text-sm font-bold ${fixture.total_points >= 6 ? 'text-ds-accent' : fixture.total_points >= 3 ? 'text-ds-text' : 'text-ds-text-muted'}`}>
+													{fixture.total_points}
+												</span>
+												<span className="text-[9px] text-ds-text-muted/70">{fixture.opponent_short_name} ({fixture.was_home ? 'H' : 'A'})</span>
+
+												{/* Tooltip */}
+												<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-ds-card border border-ds-border shadow-xl rounded-lg p-3 z-50 hidden group-hover:block pointer-events-none">
+													<div className="text-xs font-bold text-ds-text border-b border-ds-border pb-1 mb-2 whitespace-nowrap flex justify-between">
+														<span>vs {fixture.opponent_short_name} ({fixture.was_home ? 'H' : 'A'})</span>
+														<span className={resultColor}>{resultChar} {teamScore}-{oppScore}</span>
+													</div>
+													<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-ds-text-muted">
+														<div className="flex justify-between"><span>Points:</span> <span className="text-ds-primary font-bold">{fixture.total_points}</span></div>
+														<div className="flex justify-between"><span>Mins:</span> <span>{fixture.minutes}</span></div>
+														{fixture.goals_scored > 0 && <div className="flex justify-between"><span className="text-green-400">Goals:</span> <span className="font-bold text-ds-text">{fixture.goals_scored}</span></div>}
+														{fixture.assists > 0 && <div className="flex justify-between"><span className="text-blue-400">Assists:</span> <span className="font-bold text-ds-text">{fixture.assists}</span></div>}
+														{fixture.bonus > 0 && <div className="flex justify-between"><span className="text-yellow-400">Bonus:</span> <span className="font-bold text-ds-text">{fixture.bonus}</span></div>}
+														{fixture.saves > 0 && <div className="flex justify-between"><span className="text-orange-400">Saves:</span> <span className="font-bold text-ds-text">{fixture.saves}</span></div>}
+														<div className="flex justify-between"><span>BPS:</span> <span>{fixture.bps}</span></div>
+														{fixture.expected_goals && <div className="flex justify-between"><span>xG:</span> <span>{fixture.expected_goals}</span></div>}
+														{fixture.expected_assists && <div className="flex justify-between"><span>xA:</span> <span>{fixture.expected_assists}</span></div>}
+													</div>
+												</div>
+											</div>
+										);
+									})}
 								</div>
 							</div>
 
