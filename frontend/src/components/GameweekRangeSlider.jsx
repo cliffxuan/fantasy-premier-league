@@ -38,7 +38,7 @@ const GameweekRangeSlider = ({
 					max={max}
 					value={start}
 					onChange={(event) => {
-						const value = Math.min(Number(event.target.value), end - 1);
+						const value = Math.min(Number(event.target.value), end);
 						onChange({ start: value, end });
 					}}
 					className="thumb thumb--left absolute z-20 w-full h-0 outline-none -top-[5px]"
@@ -54,7 +54,7 @@ const GameweekRangeSlider = ({
 					max={max}
 					value={end}
 					onChange={(event) => {
-						const value = Math.max(Number(event.target.value), start + 1);
+						const value = Math.max(Number(event.target.value), start);
 						onChange({ start, end: value });
 					}}
 					className="thumb thumb--right absolute z-20 w-full h-0 outline-none -top-[5px]"
