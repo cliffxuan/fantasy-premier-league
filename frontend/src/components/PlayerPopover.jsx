@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPlayerSummary } from '../api';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
@@ -9,6 +10,13 @@ const PlayerPopover = ({ player, children }) => {
 	const [loading, setLoading] = useState(false);
 	const [position, setPosition] = useState({ top: 0, left: 0, transform: '-translate-x-1/2 -translate-y-full' });
 	const [activeFixtureId, setActiveFixtureId] = useState(null);
+	const [historyOffset, setHistoryOffset] = useState(0); // For pagination
+
+	// Reset offset when player changes
+	useEffect(() => {
+		setHistoryOffset(0);
+	}, [player.id]);
+
 	const triggerRef = useRef(null);
 	const popoverRef = useRef(null);
 	const timerRef = useRef(null);
@@ -131,9 +139,35 @@ const PlayerPopover = ({ player, children }) => {
 
 							{/* Recent Form */}
 							<div>
-								<h4 className="text-xs font-bold text-ds-text-muted uppercase mb-2">Recent Form</h4>
+								<div className="flex justify-between items-center mb-2">
+									<h4 className="text-xs font-bold text-ds-text-muted uppercase">Recent Form</h4>
+									<div className="flex gap-1">
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												setHistoryOffset(prev => Math.max(0, prev - 5));
+											}}
+											disabled={historyOffset === 0}
+											className="p-0.5 rounded hover:bg-ds-surface disabled:opacity-30 disabled:hover:bg-transparent text-ds-text-muted transition-colors"
+										>
+											<ChevronLeft size={14} />
+										</button>
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												const maxOffset = Math.max(0, summary.history.length - 5);
+												setHistoryOffset(prev => Math.min(maxOffset, prev + 5));
+											}}
+											disabled={historyOffset >= summary.history.length - 5}
+											className="p-0.5 rounded hover:bg-ds-surface disabled:opacity-30 disabled:hover:bg-transparent text-ds-text-muted transition-colors"
+										>
+											<ChevronRight size={14} />
+										</button>
+									</div>
+								</div>
+
 								<div className="grid grid-cols-5 gap-1">
-									{summary.history.slice(-5).reverse().map((fixture) => {
+									{summary.history.slice().reverse().slice(historyOffset, historyOffset + 5).map((fixture) => {
 										const isHome = fixture.was_home;
 										const teamScore = isHome ? fixture.team_h_score : fixture.team_a_score;
 										const oppScore = isHome ? fixture.team_a_score : fixture.team_h_score;
