@@ -137,7 +137,7 @@ const TeamPopover = ({ team, children }) => {
 												</span>
 												<span className="text-[9px] font-mono text-ds-text leading-tight">{fixture.score}</span>
 												<span className="text-[8px] text-ds-text-muted/70 truncate w-full text-center mt-0.5" title={`${fixture.opponent_name} (${fixture.is_home ? 'H' : 'A'})`}>
-													{fixture.opponent_short}
+													{fixture.opponent_short} <span className="text-[8px] text-ds-text-muted/50 font-mono">({fixture.is_home ? 'H' : 'A'})</span>
 												</span>
 											</div>
 										))
@@ -205,8 +205,9 @@ const TeamPopover = ({ team, children }) => {
 					)}
 				</div>,
 				document.body
-			)}
-		</div>
+			)
+			}
+		</div >
 	);
 };
 
