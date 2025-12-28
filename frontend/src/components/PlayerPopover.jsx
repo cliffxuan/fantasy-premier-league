@@ -8,6 +8,7 @@ const PlayerPopover = ({ player, children }) => {
 	const [summary, setSummary] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [position, setPosition] = useState({ top: 0, left: 0, transform: '-translate-x-1/2 -translate-y-full' });
+	const [activeFixtureId, setActiveFixtureId] = useState(null);
 	const triggerRef = useRef(null);
 	const popoverRef = useRef(null);
 	const timerRef = useRef(null);
@@ -87,6 +88,7 @@ const PlayerPopover = ({ player, children }) => {
 					ref={popoverRef}
 					className={`fixed z-[100] w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text transform ${position.transform}`}
 					style={{ top: position.top, left: position.left }}
+					onClick={(e) => e.stopPropagation()}
 					onMouseEnter={() => {
 						if (timerRef.current) {
 							clearTimeout(timerRef.current);
@@ -140,8 +142,17 @@ const PlayerPopover = ({ player, children }) => {
 										if (teamScore > oppScore) { resultChar = 'W'; resultColor = 'text-green-500'; }
 										else if (teamScore < oppScore) { resultChar = 'L'; resultColor = 'text-red-500'; }
 
+										const isActive = activeFixtureId === fixture.id;
+
 										return (
-											<div key={fixture.id} className="group relative flex flex-col items-center bg-ds-bg/50 rounded p-1 border border-ds-border hover:bg-ds-surface transition-colors cursor-help">
+											<div
+												key={fixture.id}
+												onClick={(e) => {
+													e.stopPropagation();
+													setActiveFixtureId(isActive ? null : fixture.id);
+												}}
+												className="group relative flex flex-col items-center bg-ds-bg/50 rounded p-1 border border-ds-border hover:bg-ds-surface transition-colors cursor-help"
+											>
 												<span className="text-[10px] font-mono text-ds-text-muted">GW{fixture.round}</span>
 												<span className={`text-sm font-bold ${fixture.total_points >= 6 ? 'text-ds-accent' : fixture.total_points >= 3 ? 'text-ds-text' : 'text-ds-text-muted'}`}>
 													{fixture.total_points}
@@ -149,7 +160,7 @@ const PlayerPopover = ({ player, children }) => {
 												<span className="text-[9px] text-ds-text-muted/70">{fixture.opponent_short_name} ({fixture.was_home ? 'H' : 'A'})</span>
 
 												{/* Tooltip */}
-												<div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-ds-card border border-ds-border shadow-xl rounded-lg p-3 z-50 hidden group-hover:block pointer-events-none">
+												<div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-ds-card border border-ds-border shadow-xl rounded-lg p-3 z-50 ${isActive ? 'block' : 'hidden md:group-hover:block'} pointer-events-none`}>
 													<div className="text-xs font-bold text-ds-text border-b border-ds-border pb-1 mb-2 whitespace-nowrap flex justify-between">
 														<span>vs {fixture.opponent_short_name} ({fixture.was_home ? 'H' : 'A'})</span>
 														<span className={resultColor}>{resultChar} {teamScore}-{oppScore}</span>
