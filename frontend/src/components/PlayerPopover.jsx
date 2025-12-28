@@ -10,8 +10,15 @@ const PlayerPopover = ({ player, children }) => {
 	const [position, setPosition] = useState({ top: 0, left: 0, transform: '-translate-x-1/2 -translate-y-full' });
 	const triggerRef = useRef(null);
 	const popoverRef = useRef(null);
+	const timerRef = useRef(null);
 
 	const handleMouseEnter = async () => {
+		// Clear any closing timer
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+			timerRef.current = null;
+		}
+
 		setIsVisible(true);
 		updatePosition();
 
@@ -29,7 +36,10 @@ const PlayerPopover = ({ player, children }) => {
 	};
 
 	const handleMouseLeave = () => {
-		setIsVisible(false);
+		// Add delay to check if moving to popover
+		timerRef.current = setTimeout(() => {
+			setIsVisible(false);
+		}, 100);
 	};
 
 	const updatePosition = () => {
@@ -75,8 +85,17 @@ const PlayerPopover = ({ player, children }) => {
 			{isVisible && createPortal(
 				<div
 					ref={popoverRef}
-					className={`fixed z-[100] w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text transform pointer-events-none ${position.transform}`}
+					className={`fixed z-[100] w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text transform ${position.transform}`}
 					style={{ top: position.top, left: position.left }}
+					onMouseEnter={() => {
+						if (timerRef.current) {
+							clearTimeout(timerRef.current);
+							timerRef.current = null;
+						}
+					}}
+					onMouseLeave={() => {
+						setIsVisible(false);
+					}}
 				>
 					<div className="flex items-center gap-3 mb-3 border-b border-ds-border pb-3">
 						<div className="w-12 h-12 rounded-full overflow-hidden bg-ds-bg border border-ds-border">
