@@ -184,7 +184,7 @@ const TeamPopover = ({ team, children }) => {
 										<div key={player.id} className="flex items-center gap-2 p-1 rounded hover:bg-ds-card-hover transition-colors">
 											<div className="w-8 h-8 rounded-full overflow-hidden bg-ds-bg border border-ds-border">
 												<img
-													src={`https://resources.premierleague.com/premierleague/photos/players/110x140/p${player.photo.replace('.png', '').replace('.jpg', '')}.png`}
+													src={`https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.photo.replace('.png', '').replace('.jpg', '')}.png`}
 													alt={player.web_name}
 													className="w-full h-full object-cover"
 													onError={(e) => { e.target.src = 'https://resources.premierleague.com/premierleague/photos/players/110x140/Photo-Missing.png' }}
