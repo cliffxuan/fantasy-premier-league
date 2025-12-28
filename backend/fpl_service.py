@@ -757,7 +757,7 @@ class FPLService:
             and f.get("team_a_score") is not None
         ]
         past_fixtures.sort(key=lambda x: x.get("event") or 0, reverse=True)  # Sort desc
-        recent_fixtures = past_fixtures[:5]
+        recent_fixtures = past_fixtures
 
         for f in future_fixtures:
             is_home = f["team_h"] == club_id
