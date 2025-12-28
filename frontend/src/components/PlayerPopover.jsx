@@ -142,14 +142,14 @@ const PlayerPopover = ({ player, children }) => {
 										if (teamScore > oppScore) { resultChar = 'W'; resultColor = 'text-green-500'; }
 										else if (teamScore < oppScore) { resultChar = 'L'; resultColor = 'text-red-500'; }
 
-										const isActive = activeFixtureId === fixture.id;
+										const isActive = activeFixtureId === fixture.fixture;
 
 										return (
 											<div
-												key={fixture.id}
+												key={fixture.fixture}
 												onClick={(e) => {
 													e.stopPropagation();
-													setActiveFixtureId(isActive ? null : fixture.id);
+													setActiveFixtureId(isActive ? null : fixture.fixture);
 												}}
 												className="group relative flex flex-col items-center bg-ds-bg/50 rounded p-1 border border-ds-border hover:bg-ds-surface transition-colors cursor-help"
 											>
