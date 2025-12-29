@@ -78,6 +78,33 @@ function Dashboard() {
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
+    // Check if the touch is inside a horizontally scrollable container
+    let target = e.target;
+    let isInsideScrollable = false;
+
+    // Traverse up the DOM tree from the target element to the current target (the main container)
+    // to check if any ancestor is horizontally scrollable.
+    while (target && target !== e.currentTarget) {
+      if (target instanceof HTMLElement) {
+        const style = window.getComputedStyle(target);
+        const overflowX = style.overflowX;
+
+        // If the element has horizontal scrolling enabled and its content exceeds its width
+        if ((overflowX === 'auto' || overflowX === 'scroll') && target.scrollWidth > target.clientWidth) {
+          isInsideScrollable = true;
+          break;
+        }
+      }
+      target = target.parentElement;
+    }
+
+    // If inside a scrollable container, don't initiate the swipe logic (treat as normal scroll)
+    if (isInsideScrollable) {
+      touchStartX.current = null;
+      touchStartY.current = null;
+      return;
+    }
+
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
   };
