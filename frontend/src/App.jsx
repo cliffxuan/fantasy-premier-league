@@ -286,8 +286,6 @@ function Dashboard() {
   return (
     <div
       className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
     >
       {/* Header Section */}
       <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm sticky top-0 z-50 transition-all duration-300">
@@ -322,7 +320,11 @@ function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <main className="w-full max-w-[1400px] mx-auto p-4 md:p-8 box-border flex-1">
+      <main
+        className="w-full max-w-[1400px] mx-auto p-4 md:p-8 box-border flex-1"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         {error && !isTeamLoaded && activeTab === 'squad' && (
           <div className="mb-6 bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg font-mono text-sm max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-top-2">
             {error}
