@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, X, FileText } from 'lucide-react';
 import { analyzeTeam, getSquad } from './api';
@@ -15,6 +15,17 @@ import MarketOverview from './components/MarketOverview';
 import ClubViewer from './components/ClubViewer';
 import FormAnalysis from './components/FormAnalysis';
 import PlayerExplorer from './components/PlayerExplorer';
+
+const TABS = [
+  { id: 'squad', label: 'My Squad' },
+  { id: 'matches', label: 'Match Center' },
+  { id: 'form', label: 'Form Lab' },
+  { id: 'solver', label: 'AI Solver' },
+  { id: 'analysis', label: 'Rank Analysis' },
+  { id: 'dream_team', label: 'Team of the Week' },
+  { id: 'club_viewer', label: 'Club Viewer' },
+  { id: 'players', label: 'Player Explorer' }
+];
 
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
@@ -44,6 +55,44 @@ function Dashboard() {
   const [squadLoading, setSquadLoading] = useState(false);
 
   const [authToken, setAuthToken] = useState(sessionStorage.getItem('fpl_auth_token') || '');
+
+  // Swipe state
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+  };
+
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const distanceX = touchStartX.current - touchEndX;
+    const distanceY = touchStartY.current - touchEndY;
+    const isLeftSwipe = distanceX > minSwipeDistance;
+    const isRightSwipe = distanceX < -minSwipeDistance;
+
+    // Check if it's mostly a horizontal swipe
+    if (Math.abs(distanceX) > Math.abs(distanceY)) {
+      const currentIndex = TABS.findIndex(tab => tab.id === activeTab);
+      if (isLeftSwipe && currentIndex < TABS.length - 1) {
+        handleTabChange(TABS[currentIndex + 1].id);
+      } else if (isRightSwipe && currentIndex > 0) {
+        handleTabChange(TABS[currentIndex - 1].id);
+      }
+    }
+
+    // Reset
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   useEffect(() => {
     if (authToken) {
@@ -186,6 +235,7 @@ function Dashboard() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResult(null);
 
     try {
       let bank = '0.5';
@@ -234,7 +284,11 @@ function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white">
+    <div
+      className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Header Section */}
       <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm sticky top-0 z-50 transition-all duration-300">
         <div className="w-full max-w-[1400px] mx-auto py-3 px-3 md:py-4 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -252,16 +306,7 @@ function Dashboard() {
       {/* Tab Navigation */}
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-6">
         <nav className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar">
-          {[
-            { id: 'squad', label: 'My Squad' },
-            { id: 'matches', label: 'Match Center' },
-            { id: 'form', label: 'Form Lab' },
-            { id: 'solver', label: 'AI Solver' },
-            { id: 'analysis', label: 'Rank Analysis' },
-            { id: 'dream_team', label: 'Team of the Week' },
-            { id: 'club_viewer', label: 'Club Viewer' },
-            { id: 'players', label: 'Player Explorer' }
-          ].map(tab => (
+          {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
