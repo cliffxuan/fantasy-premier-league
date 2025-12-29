@@ -57,7 +57,6 @@ function Dashboard() {
   const [authToken, setAuthToken] = useState(sessionStorage.getItem('fpl_auth_token') || '');
 
   // Swipe state
-  // Swipe state
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
 

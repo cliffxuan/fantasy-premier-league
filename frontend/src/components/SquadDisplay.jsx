@@ -162,25 +162,25 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 	const PlayerCard = ({ player, isBench = false }) => (
 		<PlayerPopover player={player}>
-			<div className={`relative flex flex-col items-center justify-center w-[90px] ${isBench ? 'opacity-90' : ''}`}>
+			<div className={`relative flex flex-col items-center justify-center w-[64px] md:w-[90px] ${isBench ? 'opacity-90' : ''}`}>
 				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
 					{/* Player Photo */}
 					<img
 						src={getPlayerImage(player.code)}
 						alt={player.name}
-						className="w-[60px] h-[75px] object-cover drop-shadow-lg"
+						className="w-[45px] h-[56px] md:w-[60px] md:h-[75px] object-cover drop-shadow-lg"
 						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 
 					{/* Form/Points Badge */}
 					{gameweek <= (currentGw || 38) ? (
 						(player.event_points !== 0 || player.minutes > 0 || player.match_finished) && (
-							<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white">
+							<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white">
 								{player.event_points}
 							</div>
 						)
 					) : (
-						<div className={`absolute -top-1 -left-2 text-[10px] font-bold w-6 h-5 flex items-center justify-center rounded-full border border-white
+						<div className={`absolute -top-1 -left-2 text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white
 							${parseFloat(player.form) >= 6.0 ? 'bg-ds-accent text-black' :
 								parseFloat(player.form) >= 3.0 ? 'bg-gray-600 text-white' :
 									'bg-ds-card text-ds-text-muted'}`}>
@@ -190,12 +190,12 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 					{/* Captain/Vice-Captain Badges */}
 					{player.is_captain && (
-						<div className="absolute -top-1 -right-2 bg-black text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
+						<div className="absolute -top-1 -right-2 bg-black text-white text-[8px] md:text-[10px] font-bold w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-white">
 							C
 						</div>
 					)}
 					{player.is_vice_captain && (
-						<div className="absolute -top-1 -right-2 bg-gray-700 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border border-white">
+						<div className="absolute -top-1 -right-2 bg-gray-700 text-white text-[8px] md:text-[10px] font-bold w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-white">
 							V
 						</div>
 					)}
@@ -213,7 +213,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 				</div>
 
 				<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
-					<div className="text-xs font-bold truncate px-1 font-sans">{player.name}</div>
+					<div className="text-[10px] md:text-xs font-bold truncate px-1 font-sans">{player.name}</div>
 					<div className="flex justify-center items-center gap-1 mt-0.5">
 						<span className={`text-[9px] px-1 rounded font-bold ${player.fixture_difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
 							player.fixture_difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
@@ -334,7 +334,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 			{!loading && (viewMode === 'pitch' ? (
 				<>
-					<div className="bg-ds-card rounded-xl p-8 relative border border-ds-border min-h-[600px] flex flex-col justify-between overflow-hidden">
+					<div className="bg-ds-card rounded-xl p-2 md:p-8 relative border border-ds-border min-h-[500px] md:min-h-[600px] flex flex-col justify-between overflow-hidden">
 						{/* Pitch Pattern Overlay */}
 						<div className="absolute inset-0 opacity-5 pointer-events-none"
 							style={{
@@ -347,23 +347,23 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 						{/* Halfway Line */}
 						<div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/5 pointer-events-none"></div>
 
-						<div className="flex justify-center gap-4 z-10">
+						<div className="flex justify-center gap-1 md:gap-4 z-10">
 							{gkp.map((p, i) => <PlayerCard key={`gkp-${i}`} player={p} />)}
 						</div>
-						<div className="flex justify-center gap-4 z-10">
+						<div className="flex justify-center gap-1 md:gap-4 z-10">
 							{def.map((p, i) => <PlayerCard key={`def-${i}`} player={p} />)}
 						</div>
-						<div className="flex justify-center gap-4 z-10">
+						<div className="flex justify-center gap-1 md:gap-4 z-10">
 							{mid.map((p, i) => <PlayerCard key={`mid-${i}`} player={p} />)}
 						</div>
-						<div className="flex justify-center gap-4 z-10">
+						<div className="flex justify-center gap-1 md:gap-4 z-10">
 							{fwd.map((p, i) => <PlayerCard key={`fwd-${i}`} player={p} />)}
 						</div>
 					</div>
 
 					<div className="bg-ds-card p-4 rounded-xl border border-ds-border mt-6">
 						<h3 className="text-gray-400 text-base mb-4 font-normal">Bench</h3>
-						<div className="flex justify-center gap-4 flex-wrap">
+						<div className="flex justify-center gap-2 md:gap-4 flex-wrap">
 							{bench.map((p, i) => <PlayerCard key={`bench-${i}`} player={p} isBench={true} />)}
 						</div>
 					</div>
