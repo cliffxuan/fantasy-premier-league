@@ -301,8 +301,10 @@ function Dashboard() {
     <div
       className="min-h-screen flex flex-col bg-ds-bg text-ds-text font-sans selection:bg-ds-primary selection:text-white"
     >
-      {/* Header Section */}
-      <div className="border-b border-ds-border bg-ds-card/50 backdrop-blur-sm sticky top-0 z-50 transition-all duration-300">
+      {/* Sticky Header & Tabs Container */}
+      <div className="sticky top-0 z-50 bg-ds-bg/95 backdrop-blur-md border-b border-ds-border transition-all duration-300">
+
+        {/* Header Section */}
         <div className="w-full max-w-[1400px] mx-auto py-3 px-3 md:py-4 md:px-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
             <h1 className="text-2xl font-bold tracking-tight text-ds-text leading-tight">
@@ -313,28 +315,28 @@ function Dashboard() {
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Tab Navigation */}
-      <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-6">
-        <nav
-          ref={tabsContainerRef}
-          className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar"
-        >
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              ref={el => tabRefs.current[tab.id] = el}
-              onClick={() => handleTabChange(tab.id)}
-              className={`pb-3 px-1 font-bold text-sm md:text-base whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
-                ? 'text-ds-primary border-ds-primary'
-                : 'text-ds-text-muted border-transparent hover:text-ds-text hover:border-ds-border'
-                }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
+        {/* Tab Navigation */}
+        <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-2">
+          <nav
+            ref={tabsContainerRef}
+            className="flex overflow-x-auto gap-6 custom-scrollbar -mb-[1px]"
+          >
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                ref={el => tabRefs.current[tab.id] = el}
+                onClick={() => handleTabChange(tab.id)}
+                className={`pb-3 px-1 font-bold text-sm md:text-base whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
+                  ? 'text-ds-primary border-ds-primary'
+                  : 'text-ds-text-muted border-transparent hover:text-ds-text hover:border-ds-border'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -439,7 +441,7 @@ function Dashboard() {
           </div>
 
           {/* RIGHT COLUMN: Sidebar */}
-          <div className="flex flex-col gap-6 sticky top-24">
+          <div className="flex flex-col gap-6 sticky top-32">
 
             {/* Team Analysis Promo - Call To Action */}
             {!isTeamLoaded && activeTab !== 'squad' && (
