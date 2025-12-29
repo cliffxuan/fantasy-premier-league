@@ -810,6 +810,7 @@ class FPLService:
                     "difficulty": f["team_h_difficulty"]
                     if is_home
                     else f["team_a_difficulty"],
+                    "kickoff_time": f["kickoff_time"],
                 }
             )
 
