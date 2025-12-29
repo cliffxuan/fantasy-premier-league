@@ -17,7 +17,7 @@ const FormAnalysis = () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const response = await fetch("http://localhost:8000/api/analysis/form");
+			const response = await fetch("/api/analysis/form");
 			if (!response.ok) {
 				throw new Error("Failed to fetch form analysis");
 			}
