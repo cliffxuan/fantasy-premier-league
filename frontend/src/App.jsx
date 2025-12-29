@@ -57,8 +57,23 @@ function Dashboard() {
   const [authToken, setAuthToken] = useState(sessionStorage.getItem('fpl_auth_token') || '');
 
   // Swipe state
+  // Swipe state
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
+
+  // Tab refs for auto-scrolling
+  const tabsContainerRef = useRef(null);
+  const tabRefs = useRef({});
+
+  useEffect(() => {
+    if (activeTab && tabRefs.current[activeTab]) {
+      tabRefs.current[activeTab].scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [activeTab]);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -303,10 +318,14 @@ function Dashboard() {
 
       {/* Tab Navigation */}
       <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-6">
-        <nav className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar">
+        <nav
+          ref={tabsContainerRef}
+          className="flex overflow-x-auto pb-2 gap-6 border-b border-ds-border custom-scrollbar"
+        >
           {TABS.map(tab => (
             <button
               key={tab.id}
+              ref={el => tabRefs.current[tab.id] = el}
               onClick={() => handleTabChange(tab.id)}
               className={`pb-3 px-1 font-bold text-sm md:text-base whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
                 ? 'text-ds-primary border-ds-primary'
