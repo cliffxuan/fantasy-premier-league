@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getFixtures, getPolymarketData } from '../api';
 import { ArrowUpRight, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import TeamPopover from './TeamPopover';
 
 const MarketOverview = () => {
 	const [fixtures, setFixtures] = useState([]);
@@ -158,11 +159,16 @@ const MarketOverview = () => {
 					{/* Left: Match Score/Vs */}
 					<div className="flex items-center justify-between gap-4">
 						{/* Home */}
-						<div className="flex items-center gap-3 flex-1 justify-end">
-							<span className="font-bold text-lg hidden sm:block text-right">{f.team_h_name}</span>
-							<span className="font-bold text-lg sm:hidden text-right">{f.team_h_short}</span>
-							<TeamBadge code={f.team_h_code} />
-						</div>
+						<TeamPopover
+							team={{ id: f.team_h, code: f.team_h_code, name: f.team_h_name, short_name: f.team_h_short }}
+							className="flex-1 min-w-0"
+						>
+							<div className="flex items-center gap-3 justify-end w-full cursor-pointer hover:opacity-80 transition-opacity">
+								<span className="font-bold text-lg hidden sm:block text-right">{f.team_h_name}</span>
+								<span className="font-bold text-lg sm:hidden text-right">{f.team_h_short}</span>
+								<TeamBadge code={f.team_h_code} />
+							</div>
+						</TeamPopover>
 
 						{/* Middle Score */}
 						<div className="flex flex-col items-center min-w-[60px]">
@@ -178,11 +184,16 @@ const MarketOverview = () => {
 						</div>
 
 						{/* Away */}
-						<div className="flex items-center gap-3 flex-1 justify-start">
-							<TeamBadge code={f.team_a_code} />
-							<span className="font-bold text-lg hidden sm:block text-left">{f.team_a_name}</span>
-							<span className="font-bold text-lg sm:hidden text-left">{f.team_a_short}</span>
-						</div>
+						<TeamPopover
+							team={{ id: f.team_a, code: f.team_a_code, name: f.team_a_name, short_name: f.team_a_short }}
+							className="flex-1 min-w-0"
+						>
+							<div className="flex items-center gap-3 justify-start w-full cursor-pointer hover:opacity-80 transition-opacity">
+								<TeamBadge code={f.team_a_code} />
+								<span className="font-bold text-lg hidden sm:block text-left">{f.team_a_name}</span>
+								<span className="font-bold text-lg sm:hidden text-left">{f.team_a_short}</span>
+							</div>
+						</TeamPopover>
 					</div>
 
 					{/* Right: Odds Buttons */}

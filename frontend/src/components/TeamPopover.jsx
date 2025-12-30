@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getClubSummary } from '../api';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
-const TeamPopover = ({ team, children }) => {
+const TeamPopover = ({ team, children, className = "" }) => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [summary, setSummary] = useState(null);
 	const [loading, setLoading] = useState(false);
@@ -88,7 +88,7 @@ const TeamPopover = ({ team, children }) => {
 
 	return (
 		<div
-			className="relative inline-block"
+			className={`relative inline-block ${className}`}
 			ref={triggerRef}
 			onMouseEnter={handleMouseEnter}
 			onMouseLeave={handleMouseLeave}
@@ -124,10 +124,12 @@ const TeamPopover = ({ team, children }) => {
 							<h3 className="font-bold text-lg leading-tight">{team.name}</h3>
 							<div className="text-xs text-ds-text-muted font-mono">{team.short_name}</div>
 						</div>
-						<div className="ml-auto text-right">
-							<div className={`text-xl font-bold ${team.position <= 4 ? 'text-ds-primary' : team.position >= 18 ? 'text-ds-danger' : 'text-ds-text'}`}>#{team.position}</div>
-							<div className="text-[10px] text-ds-text-muted uppercase">Pos</div>
-						</div>
+						{team.position && (
+							<div className="ml-auto text-right">
+								<div className={`text-xl font-bold ${team.position <= 4 ? 'text-ds-primary' : team.position >= 18 ? 'text-ds-danger' : 'text-ds-text'}`}>#{team.position}</div>
+								<div className="text-[10px] text-ds-text-muted uppercase">Pos</div>
+							</div>
+						)}
 					</div>
 
 					{loading ? (
