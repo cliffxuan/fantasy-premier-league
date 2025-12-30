@@ -351,7 +351,7 @@ const ClubViewer = () => {
 
 			{squadData && (
 				<div className="flex flex-col gap-6">
-					<div className="bg-ds-card p-6 rounded-xl border border-ds-border flex items-center justify-between">
+					<div className="bg-ds-card p-6 rounded-xl border border-ds-border flex flex-col lg:flex-row items-center justify-between gap-4">
 						<div className="flex flex-col gap-1">
 							{/* Current Gameweek Fixture Widget - Home vs Away */}
 							{(squadData?.fixtures?.filter(f => f.event === gameweek) || []).map((fix, idx) => {
@@ -410,7 +410,7 @@ const ClubViewer = () => {
 								);
 							})}
 						</div>
-						<div className="bg-ds-bg px-2 py-2 rounded-lg border border-ds-border flex items-center gap-2">
+						<div className="bg-ds-bg px-2 py-2 rounded-lg border border-ds-border flex items-center gap-2 max-w-full overflow-x-auto">
 							{/* Gameweek Controls */}
 							<div className="flex items-center gap-2">
 								<button
@@ -440,7 +440,7 @@ const ClubViewer = () => {
 								{showOpponentFirst ? 'Opponent First' : 'Club First'}
 							</button>
 							<div className="h-4 w-px bg-ds-border"></div>
-							<span className="text-xs text-ds-text-muted uppercase font-bold mr-2">Players</span>
+							<span className="text-xs text-ds-text-muted uppercase font-bold mr-2 hidden sm:inline">Players</span>
 							<span className="font-mono font-bold text-ds-primary">{squadData.squad.length}</span>
 						</div>
 					</div>
