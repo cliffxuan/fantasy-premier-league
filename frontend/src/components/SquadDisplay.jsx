@@ -131,7 +131,7 @@ const ListView = ({ squad }) => {
 	);
 };
 
-const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, currentGw, onTabSwitch, history }) => {
+const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, currentGw, onTabSwitch, history, extraHeaderContent, customMainHeader }) => {
 	const [viewMode, setViewMode] = useState('pitch'); // 'pitch' or 'list'
 
 	const handlePrev = () => {
@@ -233,33 +233,44 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 			{/* Header with Navigation and Toggle */}
 			<div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-ds-card p-4 rounded-xl border border-ds-border">
 				<div className="flex items-center gap-4">
-					<button
-						onClick={handlePrev}
-						disabled={gameweek <= 1 || loading}
-						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-					>
-						<ChevronLeft size={24} />
-					</button>
-					<div className="flex flex-col items-center min-w-[200px]">
-						<h2 className="text-2xl font-bold text-center">
-							Gameweek {gameweek}
-						</h2>
-						{onTabSwitch && gameweek <= (currentGw || 38) && (
-							<button
-								onClick={onTabSwitch}
-								className="text-xs text-ds-primary hover:text-ds-primary-hover hover:underline mt-1 font-mono uppercase tracking-wide"
-							>
-								View Team of the Week
-							</button>
-						)}
-					</div>
-					<button
-						onClick={handleNext}
-						disabled={gameweek >= 38 || loading}
-						className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-					>
-						<ChevronRight size={24} />
-					</button>
+					{customMainHeader ? (
+						customMainHeader
+					) : (
+						<>
+							{onGwChange && (
+								<button
+									onClick={handlePrev}
+									disabled={gameweek <= 1 || loading}
+									className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+								>
+									<ChevronLeft size={24} />
+								</button>
+							)}
+							<div className="flex flex-col items-center min-w-[200px]">
+								<h2 className="text-2xl font-bold text-center">
+									Gameweek {gameweek}
+								</h2>
+								{extraHeaderContent}
+								{onTabSwitch && gameweek <= (currentGw || 38) && (
+									<button
+										onClick={onTabSwitch}
+										className="text-xs text-ds-primary hover:text-ds-primary-hover hover:underline mt-1 font-mono uppercase tracking-wide"
+									>
+										View Team of the Week
+									</button>
+								)}
+							</div>
+							{onGwChange && (
+								<button
+									onClick={handleNext}
+									disabled={gameweek >= 38 || loading}
+									className="p-2 rounded-full hover:bg-ds-bg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+								>
+									<ChevronRight size={24} />
+								</button>
+							)}
+						</>
+					)}
 				</div>
 
 				<div className="flex items-center gap-8">

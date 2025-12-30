@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getClubSquad, getTeams } from '../api';
 import SquadDisplay from './SquadDisplay';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ClubViewer = () => {
 	const [teams, setTeams] = useState([]);
@@ -11,6 +11,9 @@ const ClubViewer = () => {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [currentGw, setCurrentGw] = useState(null);
+	const [opponentData, setOpponentData] = useState([]);
+	const [oppLoading, setOppLoading] = useState(false);
+	const [showOpponentFirst, setShowOpponentFirst] = useState(false);
 
 	useEffect(() => {
 		const fetchTeams = async () => {
@@ -78,6 +81,54 @@ const ClubViewer = () => {
 			default: return 'bg-ds-surface border-ds-border text-ds-text-muted';
 		}
 	};
+
+	useEffect(() => {
+		const fetchOpponents = async () => {
+			if (!squadData || !squadData.fixtures || !gameweek || teams.length === 0) {
+				setOpponentData([]);
+				return;
+			}
+
+			// Don't fetch if loading main squad
+			if (loading) {
+				setOpponentData([]);
+				return;
+			}
+
+			const currentFixtures = squadData.fixtures.filter(f => f.event === gameweek);
+			if (currentFixtures.length === 0) {
+				setOpponentData([]);
+				return;
+			}
+
+			setOppLoading(true);
+
+			// Use Promise.all for parallel fetching
+			const promises = currentFixtures.map(async (fix) => {
+				// fix.opponent_code is the team Code. Map to Team ID.
+				// Note: In some contexts opponent_code might be ID, but based on badge usage 't{code}.png', it's likely code.
+				// We check both just in case, preferring Code match.
+				const oppTeam = teams.find(t => t.code === fix.opponent_code);
+				if (oppTeam) {
+					try {
+						const data = await getClubSquad(oppTeam.id, gameweek);
+						if (data && data.squad) {
+							return data;
+						}
+					} catch (e) {
+						console.error("Failed to fetch opponent squad", e);
+					}
+				}
+				return null;
+			});
+
+			const results = await Promise.all(promises);
+			setOpponentData(results.filter(r => r !== null));
+			setOppLoading(false);
+		};
+
+		fetchOpponents();
+	}, [squadData, gameweek, teams, loading]);
 
 	// Helper for Result colors
 	const getResultColor = (result) => {
@@ -301,39 +352,171 @@ const ClubViewer = () => {
 			{squadData && (
 				<div className="flex flex-col gap-6">
 					<div className="bg-ds-card p-6 rounded-xl border border-ds-border flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							{/* Club Badge */}
-							{squadData.team?.code && (
-								<img
-									src={`https://resources.premierleague.com/premierleague/badges/50/t${squadData.team.code}.png`}
-									alt="Badge"
-									className="w-12 h-12 object-contain"
-								/>
-							)}
-							<h2 className="text-2xl font-bold">{squadData.team?.name}</h2>
+						<div className="flex flex-col gap-1">
+							<div className="flex items-center gap-4">
+								{/* Club Badge */}
+								{squadData.team?.code && (
+									<img
+										src={`https://resources.premierleague.com/premierleague/badges/50/t${squadData.team.code}.png`}
+										alt="Badge"
+										className="w-12 h-12 object-contain"
+									/>
+								)}
+								<h2 className="text-2xl font-bold">{squadData.team?.name}</h2>
+							</div>
+
+							{/* Current Gameweek Fixture Widget */}
+							{(squadData?.fixtures?.filter(f => f.event === gameweek) || []).map((fix, idx) => (
+								<div key={idx} className="flex items-center gap-2 text-sm bg-ds-surface px-3 py-1.5 rounded-full border border-ds-border shadow-sm animate-in fade-in slide-in-from-top-1 ml-16 w-fit">
+									<span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${fix.is_home ? 'bg-ds-primary/10 text-ds-primary border border-ds-primary/20' : 'bg-ds-accent/10 text-ds-accent border border-ds-accent/20'}`}>
+										{fix.is_home ? 'H' : 'A'}
+									</span>
+									<span className="text-ds-text-muted text-xs">vs</span>
+									<div className="flex items-center gap-2">
+										<img
+											src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
+											alt={fix.opponent_name}
+											className="w-5 h-5 object-contain"
+											onError={(e) => e.target.style.display = 'none'}
+										/>
+										<span className="font-bold">{fix.opponent_name}</span>
+									</div>
+									{fix.finished && (
+										<div className="flex items-center gap-1 ml-2 pl-2 border-l border-ds-border/50">
+											<div className={`text-xs font-bold px-1.5 py-0.5 rounded ${fix.result === 'W' ? 'bg-green-500/10 text-green-500' : fix.result === 'L' ? 'bg-ds-danger/10 text-ds-danger' : 'bg-yellow-500/10 text-yellow-500'}`}>
+												{fix.score}
+											</div>
+										</div>
+									)}
+								</div>
+							))}
 						</div>
-						<div className="bg-ds-bg px-4 py-2 rounded-lg border border-ds-border">
+						<div className="bg-ds-bg px-4 py-2 rounded-lg border border-ds-border flex items-center gap-4">
+							{/* Gameweek Controls */}
+							<div className="flex items-center gap-2">
+								<button
+									onClick={() => handleGwChange(gameweek - 1)}
+									disabled={gameweek <= 1 || loading}
+									className="p-1 rounded hover:bg-ds-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+								>
+									<ChevronLeft size={16} />
+								</button>
+								<span className="text-sm font-mono font-bold w-12 text-center">GW {gameweek}</span>
+								<button
+									onClick={() => handleGwChange(gameweek + 1)}
+									disabled={gameweek >= 38 || loading}
+									className="p-1 rounded hover:bg-ds-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+								>
+									<ChevronRight size={16} />
+								</button>
+							</div>
+							<div className="h-4 w-px bg-ds-border"></div>
+
+							<button
+								onClick={() => setShowOpponentFirst(!showOpponentFirst)}
+								className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded transition-all ${showOpponentFirst ? 'bg-ds-primary text-white shadow-sm' : 'hover:bg-ds-surface text-ds-text-muted hover:text-ds-text'}`}
+								title="Toggle Display Order"
+							>
+								<ArrowUpDown size={14} />
+								{showOpponentFirst ? 'Opponent First' : 'Club First'}
+							</button>
+							<div className="h-4 w-px bg-ds-border"></div>
 							<span className="text-xs text-ds-text-muted uppercase font-bold mr-2">Players</span>
 							<span className="font-mono font-bold text-ds-primary">{squadData.squad.length}</span>
 						</div>
 					</div>
 
 					<div className="flex flex-col gap-8">
-						<div>
-							<SquadDisplay
-								squad={squadData.squad}
-								chips={[]}
-								gameweek={gameweek}
-								transfers={[]}
-								onGwChange={handleGwChange}
-								loading={loading}
-								currentGw={currentGw}
-								history={[{
-									event: gameweek,
-									points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
-								}]}
-							/>
-						</div>
+						{/* Dynamic Order Rendering */}
+						{(() => {
+							const ClubSection = (
+								<div>
+									<SquadDisplay
+										squad={squadData.squad}
+										chips={[]}
+										gameweek={gameweek}
+										transfers={[]}
+										loading={loading}
+										currentGw={currentGw}
+										history={[{
+											event: gameweek,
+											points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
+										}]}
+									/>
+								</div>
+							);
+
+							const OpponentSection = opponentData.length > 0 && (
+								<div className="flex flex-col gap-8">
+									{opponentData.map((data, idx) => (
+										<div key={idx} className="animate-in fade-in slide-in-from-bottom-8 duration-500">
+											<SquadDisplay
+												squad={data.squad}
+												chips={[]}
+												gameweek={gameweek}
+												transfers={[]}
+												loading={oppLoading}
+												currentGw={currentGw}
+												history={[{
+													event: gameweek,
+													points: data.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
+												}]}
+												customMainHeader={
+													<div className="flex items-center gap-4">
+														<div className="flex flex-col">
+															<span className="text-xs text-ds-text-muted font-mono uppercase tracking-widest mb-1 text-left">Opponent</span>
+															<div className="flex items-center gap-3">
+																{data.team?.code && (
+																	<img
+																		src={`https://resources.premierleague.com/premierleague/badges/50/t${data.team.code}.png`}
+																		className="w-10 h-10 object-contain drop-shadow-md"
+																		alt={data.team?.name}
+																	/>
+																)}
+																<h2 className="text-2xl font-bold">{data.team?.name}</h2>
+															</div>
+														</div>
+													</div>
+												}
+											/>
+										</div>
+									))}
+								</div>
+							);
+
+							// The Separator
+							const Separator = (
+								<div className="py-8 border-t-2 border-b-2 border-dashed border-ds-border/30 my-4 flex items-center justify-center">
+									<h3 className="text-xl font-bold text-ds-text-muted uppercase tracking-widest text-center flex items-center justify-center gap-4 w-full">
+										<span className="h-px bg-ds-border flex-1 max-w-[100px]"></span>
+										VS
+										<span className="h-px bg-ds-border flex-1 max-w-[100px]"></span>
+									</h3>
+								</div>
+							);
+
+							if (!OpponentSection) {
+								return ClubSection;
+							}
+
+							if (showOpponentFirst) {
+								return (
+									<>
+										{OpponentSection}
+										{Separator}
+										{ClubSection}
+									</>
+								);
+							} else {
+								return (
+									<>
+										{ClubSection}
+										{Separator}
+										{OpponentSection}
+									</>
+								);
+							}
+						})()}
 						<div>
 							<ClubFixtures fixtures={squadData.fixtures} teams={teams} />
 						</div>
