@@ -56,17 +56,25 @@ const PlayerPopover = ({ player, children }) => {
 			const rect = triggerRef.current.getBoundingClientRect();
 			const isMobile = window.innerWidth < 768; // Mobile breakpoint
 
+			let top = rect.top - 10;
+			let transform = '-translate-x-1/2 -translate-y-full';
+
+			if (rect.top < 500) {
+				top = rect.bottom + 10;
+				transform = '-translate-x-1/2';
+			}
+
 			if (isMobile) {
 				setPosition({
-					top: rect.top - 10,
+					top: top,
 					left: window.innerWidth / 2, // Center of screen
-					transform: '-translate-x-1/2 -translate-y-full'
+					transform: transform
 				});
 			} else {
 				setPosition({
-					top: rect.top - 10,
+					top: top,
 					left: rect.left + (rect.width / 2),
-					transform: '-translate-x-1/2 -translate-y-full'
+					transform: transform
 				});
 			}
 		}
