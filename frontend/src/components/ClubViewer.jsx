@@ -353,45 +353,64 @@ const ClubViewer = () => {
 				<div className="flex flex-col gap-6">
 					<div className="bg-ds-card p-6 rounded-xl border border-ds-border flex items-center justify-between">
 						<div className="flex flex-col gap-1">
-							<div className="flex items-center gap-4">
-								{/* Club Badge */}
-								{squadData.team?.code && (
-									<img
-										src={`https://resources.premierleague.com/premierleague/badges/50/t${squadData.team.code}.png`}
-										alt="Badge"
-										className="w-12 h-12 object-contain"
-									/>
-								)}
-								<h2 className="text-2xl font-bold">{squadData.team?.name}</h2>
-							</div>
+							{/* Current Gameweek Fixture Widget - Home vs Away */}
+							{(squadData?.fixtures?.filter(f => f.event === gameweek) || []).map((fix, idx) => {
+								const myTeam = teams.find(t => t.id === squadData.team.id) || squadData.team;
+								const oppTeam = {
+									code: fix.opponent_code,
+									short_name: fix.opponent_short,
+									name: fix.opponent_name
+								};
 
-							{/* Current Gameweek Fixture Widget */}
-							{(squadData?.fixtures?.filter(f => f.event === gameweek) || []).map((fix, idx) => (
-								<div key={idx} className="flex items-center gap-2 text-sm bg-ds-surface px-3 py-1.5 rounded-full border border-ds-border shadow-sm animate-in fade-in slide-in-from-top-1 ml-16 w-fit">
-									<span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${fix.is_home ? 'bg-ds-primary/10 text-ds-primary border border-ds-primary/20' : 'bg-ds-accent/10 text-ds-accent border border-ds-accent/20'}`}>
-										{fix.is_home ? 'H' : 'A'}
-									</span>
-									<span className="text-ds-text-muted text-xs">vs</span>
-									<div className="flex items-center gap-2">
-										<img
-											src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
-											alt={fix.opponent_name}
-											className="w-5 h-5 object-contain"
-											onError={(e) => e.target.style.display = 'none'}
-										/>
-										<span className="font-bold">{fix.opponent_name}</span>
-									</div>
-									{fix.finished && (
-										<div className="flex items-center gap-1 ml-2 pl-2 border-l border-ds-border/50">
-											<div className={`text-xs font-bold px-1.5 py-0.5 rounded ${fix.result === 'W' ? 'bg-green-500/10 text-green-500' : fix.result === 'L' ? 'bg-ds-danger/10 text-ds-danger' : 'bg-yellow-500/10 text-yellow-500'}`}>
-												{fix.score}
-											</div>
+								const homeTeam = fix.is_home ? myTeam : oppTeam;
+								const awayTeam = fix.is_home ? oppTeam : myTeam;
+								// Determine if we won/lost/drew for colouring result if needed, though usually just generic Score colour is fine or coloured by result.
+								// fix.result is relative to 'myTeam'.
+
+								return (
+									<div key={idx} className="flex items-center gap-3 text-sm bg-ds-surface px-4 py-3 rounded-xl border border-ds-border shadow-sm animate-in fade-in slide-in-from-top-1 w-fit">
+										{/* Home Team */}
+										<div className="flex items-center gap-3">
+											{homeTeam.code && (
+												<img
+													src={`https://resources.premierleague.com/premierleague/badges/50/t${homeTeam.code}.png`}
+													alt="Home"
+													className="w-8 h-8 object-contain"
+												/>
+											)}
+											<span className="text-xl font-bold tracking-tight">{homeTeam.short_name || homeTeam.name}</span>
 										</div>
-									)}
-								</div>
-							))}
+
+										{/* Score / Status (Center) */}
+										<div className="flex flex-col items-center px-4 min-w-[80px]">
+											{fix.finished ? (
+												<div className={`px-3 py-1 rounded-lg font-mono font-bold text-lg border ${fix.result === 'W' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+													fix.result === 'L' ? 'bg-ds-danger/10 text-ds-danger border-ds-danger/20' :
+														'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+													}`}>
+													{fix.score}
+												</div>
+											) : (
+												<span className="text-xs font-bold text-ds-text-muted opacity-50">vs</span>
+											)}
+										</div>
+
+										{/* Away Team */}
+										<div className="flex items-center gap-3">
+											<span className="text-xl font-bold tracking-tight">{awayTeam.short_name || awayTeam.name}</span>
+											{awayTeam.code && (
+												<img
+													src={`https://resources.premierleague.com/premierleague/badges/50/t${awayTeam.code}.png`}
+													alt="Away"
+													className="w-8 h-8 object-contain"
+												/>
+											)}
+										</div>
+									</div>
+								);
+							})}
 						</div>
-						<div className="bg-ds-bg px-4 py-2 rounded-lg border border-ds-border flex items-center gap-4">
+						<div className="bg-ds-bg px-2 py-2 rounded-lg border border-ds-border flex items-center gap-2">
 							{/* Gameweek Controls */}
 							<div className="flex items-center gap-2">
 								<button
@@ -414,7 +433,7 @@ const ClubViewer = () => {
 
 							<button
 								onClick={() => setShowOpponentFirst(!showOpponentFirst)}
-								className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded transition-all ${showOpponentFirst ? 'bg-ds-primary text-white shadow-sm' : 'hover:bg-ds-surface text-ds-text-muted hover:text-ds-text'}`}
+								className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider px-2 py-1.5 rounded transition-all whitespace-nowrap ${showOpponentFirst ? 'bg-ds-primary text-white shadow-sm' : 'hover:bg-ds-surface text-ds-text-muted hover:text-ds-text'}`}
 								title="Toggle Display Order"
 							>
 								<ArrowUpDown size={14} />
@@ -442,6 +461,23 @@ const ClubViewer = () => {
 											event: gameweek,
 											points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
 										}]}
+										customMainHeader={
+											<div className="flex items-center gap-4">
+												<div className="flex flex-col">
+													<span className="text-xs text-ds-text-muted font-mono uppercase tracking-widest mb-1 text-left">Club</span>
+													<div className="flex items-center gap-3">
+														{squadData.team?.code && (
+															<img
+																src={`https://resources.premierleague.com/premierleague/badges/50/t${squadData.team.code}.png`}
+																className="w-10 h-10 object-contain drop-shadow-md"
+																alt={squadData.team?.name}
+															/>
+														)}
+														<h2 className="text-2xl font-bold">{squadData.team?.name}</h2>
+													</div>
+												</div>
+											</div>
+										}
 									/>
 								</div>
 							);
