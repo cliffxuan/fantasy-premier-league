@@ -630,8 +630,9 @@ class FPLService:
                 }
             )
 
-        # Sort by total points descending
-        squad.sort(key=lambda x: x["total_points"], reverse=True)
+        # Sort by minutes played in the GW (descending), then total points (descending)
+        # This ensures that for a specific GW, the starting XI (who played) are shown first.
+        squad.sort(key=lambda x: (x["minutes"], x["total_points"]), reverse=True)
 
         # Process all fixtures for the club (Season Schedule)
         club_schedule = []
