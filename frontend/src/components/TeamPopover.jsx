@@ -60,17 +60,34 @@ const TeamPopover = ({ team, children, className = "" }) => {
 			const rect = triggerRef.current.getBoundingClientRect();
 			const isMobile = window.innerWidth < 768;
 
+			// Estimated popover height (can be dynamic but 400px is a safe upper bound estimate for checking)
+			// Or we can just check if top < 20
+			let top = rect.top - 10;
+			let transform = '-translate-x-1/2 -translate-y-full'; // Default: above
+
+			// Check if it fits above
+			// If top edge of popover (rect.top - 10 - height) < 0
+			// Since we don't know exact height before render, we can guess or use a threshold.
+			// However, 'top' here sets the anchor point on the screen. 
+			// The CSS `translate-y-full` moves it UP from that anchor.
+			// So if rect.top is small (e.g. < 300px), it might overflow top.
+
+			if (rect.top < 500) { // Threshold for flipping to bottom
+				top = rect.bottom + 10;
+				transform = '-translate-x-1/2'; // No translate-y-full, so it hangs down
+			}
+
 			if (isMobile) {
 				setPosition({
-					top: rect.top - 10,
+					top: top,
 					left: window.innerWidth / 2,
-					transform: '-translate-x-1/2 -translate-y-full'
+					transform: transform
 				});
 			} else {
 				setPosition({
-					top: rect.top - 10,
+					top: top,
 					left: rect.left + (rect.width / 2),
-					transform: '-translate-x-1/2 -translate-y-full'
+					transform: transform
 				});
 			}
 		}
