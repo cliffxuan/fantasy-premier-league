@@ -534,6 +534,17 @@ class FPLService:
 
         return fixtures
 
+    async def get_pulse_lineup(self, pulse_match_id: int) -> Dict[str, Any]:
+        url = f"https://sdp-prem-prod.premier-league-prod.pulselive.com/api/v3/matches/{pulse_match_id}/lineups"
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    return response.json()
+        except Exception as e:
+            print(f"DEBUG: Failed to fetch pulse lineup for {pulse_match_id}: {e}")
+        return {}
+
     async def get_teams(self) -> list:
         bootstrap = await self.get_bootstrap_static()
         return bootstrap["teams"]
@@ -550,6 +561,8 @@ class FPLService:
             gw = int(gw)
 
         teams_map = {t["id"]: t for t in bootstrap["teams"]}
+        club_team = teams_map.get(club_id)
+        club_code = club_team["code"] if club_team else None
 
         # Get all players for this club
         club_players = [e for e in bootstrap["elements"] if e["team"] == club_id]
@@ -565,11 +578,72 @@ class FPLService:
 
         # Fetch fixtures for this GW
         fixtures = await self.get_fixtures()
+        # Filter for club fixtures in this GW
         club_fixtures = [
             f
             for f in fixtures
             if f["event"] == gw and (f["team_h"] == club_id or f["team_a"] == club_id)
         ]
+
+        # Attempt to get Official Lineup from Pulse API
+        starting_xi_codes = []
+        subs_codes = []
+        matchday_codes = set()
+
+        # Use simple logic: Take the first fixture found for this club in this GW
+        # (Handles DGW by just taking the first one found - could be improved to merge or select active)
+        if club_fixtures and club_code:
+            match = club_fixtures[0]
+            pulse_id = match.get("code")
+            if pulse_id:
+                lineup_data = await self.get_pulse_lineup(pulse_id)
+                if lineup_data:
+                    # Determine if we are home or away match for lineup parsing
+                    # match["team_h"] is FPL ID. club_id is FPL ID.
+                    is_home_model = match["team_h"] == club_id
+
+                    # Pulse data separates by home_team / away_team objects
+                    # But we should verify Team ID matches just in case.
+                    # Pulse Team ID == FPL Team Code.
+
+                    target_team_data = None
+                    if is_home_model:
+                        target_team_data = lineup_data.get("home_team")
+                    else:
+                        target_team_data = lineup_data.get("away_team")
+
+                    # Double check matches club_code if possible, but trust home/away logic
+                    if target_team_data:
+                        # Extract Matchday Squad
+                        players_list = target_team_data.get("players", [])
+                        for p in players_list:
+                            try:
+                                matchday_codes.add(int(p.get("id")))
+                            except ValueError:
+                                pass
+
+                        # Extract Lineup (Nested Arrays)
+                        # "lineup": [["GK_ID"], ["DEF...], ...]
+                        lineup_groups = target_team_data.get("formation", {}).get(
+                            "lineup", []
+                        )
+                        for group in lineup_groups:
+                            for player_id_str in group:
+                                try:
+                                    starting_xi_codes.append(int(player_id_str))
+                                except ValueError:
+                                    pass
+
+                        # Extract Subs (Simple List)
+                        # "subs": ["ID", ...]
+                        subs_list = target_team_data.get("formation", {}).get(
+                            "subs", []
+                        )
+                        for player_id_str in subs_list:
+                            try:
+                                subs_codes.append(int(player_id_str))
+                            except ValueError:
+                                pass
 
         fixture_strs = []
         max_difficulty = 0
@@ -597,9 +671,29 @@ class FPLService:
 
         squad = []
         for player in club_players:
+            # Filter by Matchday Squad if available
+            if matchday_codes and player["code"] not in matchday_codes:
+                continue
+
             stats = live_elements.get(player["id"], {})
             event_points = stats.get("total_points", 0)
             minutes = stats.get("minutes", 0)
+
+            # Determine Rank for Sorting
+            # 0 = Starter (In ordered list)
+            # 1 = Sub
+            # 2 = Everyone else
+
+            p_code = player["code"]
+            sort_rank = 2
+            lineup_index = 999
+
+            if p_code in starting_xi_codes:
+                sort_rank = 0
+                lineup_index = starting_xi_codes.index(p_code)
+            elif p_code in subs_codes:
+                sort_rank = 1
+                lineup_index = subs_codes.index(p_code)
 
             squad.append(
                 {
@@ -627,12 +721,26 @@ class FPLService:
                     "is_vice_captain": False,
                     "purchase_price": player["now_cost"] / 10,
                     "selling_price": player["now_cost"] / 10,
+                    # Internal sort helpers
+                    "_sort_rank": sort_rank,
+                    "_lineup_index": lineup_index,
                 }
             )
 
-        # Sort by minutes played in the GW (descending), then total points (descending)
-        # This ensures that for a specific GW, the starting XI (who played) are shown first.
-        squad.sort(key=lambda x: (x["minutes"], x["total_points"]), reverse=True)
+        # Sorting Logic
+        if starting_xi_codes:
+            # If we have official lineup data, sort by:
+            # 1. Rank (Starter, Sub, Reserve)
+            # 2. Lineup Index (Order in the formation/sub list)
+            squad.sort(key=lambda x: (x["_sort_rank"], x["_lineup_index"]))
+        else:
+            # Fallback: Minutes played in GW -> Total Points
+            squad.sort(key=lambda x: (x["minutes"], x["total_points"]), reverse=True)
+
+        # Cleanup internal keys
+        for p in squad:
+            p.pop("_sort_rank", None)
+            p.pop("_lineup_index", None)
 
         # Process all fixtures for the club (Season Schedule)
         club_schedule = []
