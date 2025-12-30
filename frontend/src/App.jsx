@@ -27,6 +27,31 @@ const TABS = [
   { id: 'players', label: 'Player Explorer' }
 ];
 
+const TeamInput = ({ centered = false, teamId, setTeamId, handleGoClick, loading }) => (
+  <div className={`flex w-full ${centered ? 'max-w-[400px]' : 'max-w-xs'} items-center gap-2 transition-all`}>
+    <div className="relative group flex-1">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ds-text-muted font-mono opacity-50 group-focus-within:opacity-100 transition-opacity">$</span>
+      <input
+        id="teamId"
+        type="text"
+        value={teamId}
+        onChange={(e) => setTeamId(e.target.value)}
+        placeholder={centered ? "Enter FPL Team ID" : "Team ID"}
+        className={`bg-ds-surface border border-ds-border rounded-md px-4 pl-8 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all w-full placeholder-ds-text-muted/50 font-mono ${centered ? 'py-3 text-lg' : 'py-2'}`}
+        onKeyDown={(e) => e.key === 'Enter' && handleGoClick()}
+      />
+    </div>
+    <button
+      type="button"
+      className={`bg-ds-primary text-white font-bold rounded-md hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 uppercase tracking-wider ${centered ? 'px-6 py-3 text-sm' : 'px-4 py-2 text-xs'}`}
+      onClick={handleGoClick}
+      disabled={loading}
+    >
+      {loading ? '...' : 'GO'}
+    </button>
+  </div>
+);
+
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
   const navigate = useNavigate();
@@ -299,30 +324,7 @@ function Dashboard() {
     }
   };
 
-  const TeamInput = ({ centered = false }) => (
-    <div className={`flex w-full ${centered ? 'max-w-[400px]' : 'max-w-xs'} items-center gap-2 transition-all`}>
-      <div className="relative group flex-1">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ds-text-muted font-mono opacity-50 group-focus-within:opacity-100 transition-opacity">$</span>
-        <input
-          id="teamId"
-          type="text"
-          value={teamId}
-          onChange={(e) => setTeamId(e.target.value)}
-          placeholder={centered ? "Enter FPL Team ID" : "Team ID"}
-          className={`bg-ds-surface border border-ds-border rounded-md px-4 pl-8 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all w-full placeholder-ds-text-muted/50 font-mono ${centered ? 'py-3 text-lg' : 'py-2'}`}
-          onKeyDown={(e) => e.key === 'Enter' && handleGoClick()}
-        />
-      </div>
-      <button
-        type="button"
-        className={`bg-ds-primary text-white font-bold rounded-md hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 uppercase tracking-wider ${centered ? 'px-6 py-3 text-sm' : 'px-4 py-2 text-xs'}`}
-        onClick={handleGoClick}
-        disabled={loading}
-      >
-        {loading ? '...' : 'GO'}
-      </button>
-    </div>
-  );
+
 
   return (
     <div
@@ -391,7 +393,13 @@ function Dashboard() {
                   </div>
                   <h2 className="text-2xl font-bold text-ds-text mb-6">My Squad</h2>
                   <div className="flex flex-col gap-3 justify-center w-full max-w-[400px] items-center">
-                    <TeamInput centered={true} />
+                    <TeamInput
+                      centered={true}
+                      teamId={teamId}
+                      setTeamId={setTeamId}
+                      handleGoClick={handleGoClick}
+                      loading={loading}
+                    />
                     <input
                       type="text"
                       placeholder="Auth Token (Optional)"
@@ -408,7 +416,12 @@ function Dashboard() {
                 <div className="flex flex-col gap-8">
                   {/* Input for switching teams */}
                   <div className="flex justify-end border-b border-ds-border pb-4">
-                    <TeamInput />
+                    <TeamInput
+                      teamId={teamId}
+                      setTeamId={setTeamId}
+                      handleGoClick={handleGoClick}
+                      loading={loading}
+                    />
                   </div>
 
                   <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} isPrivate={isPrivate} transferDetails={transferDetails} />
@@ -485,7 +498,12 @@ function Dashboard() {
                     Enter your Team ID to access live points tracking, transfer recommendations, and future planning tools.
                   </p>
                   <div className="scale-95 origin-left w-[105%]">
-                    <TeamInput />
+                    <TeamInput
+                      teamId={teamId}
+                      setTeamId={setTeamId}
+                      handleGoClick={handleGoClick}
+                      loading={loading}
+                    />
                   </div>
                 </div>
               </div>
