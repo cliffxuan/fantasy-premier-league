@@ -294,32 +294,12 @@ function Dashboard() {
           </a>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-2">
-          <nav
-            ref={tabsContainerRef}
-            className="flex overflow-x-auto gap-6 custom-scrollbar -mb-[1px]"
-          >
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                ref={el => tabRefs.current[tab.id] = el}
-                onClick={() => handleTabChange(tab.id)}
-                className={`pb-3 px-1 font-bold text-sm md:text-base whitespace-nowrap transition-all border-b-2 ${activeTab === tab.id
-                  ? 'text-ds-primary border-ds-primary'
-                  : 'text-ds-text-muted border-transparent hover:text-ds-text hover:border-ds-border'
-                  }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+
       </div>
 
       {/* Main Content */}
       <main
-        className="w-full max-w-[1400px] mx-auto p-4 md:p-8 box-border flex-1"
+        className="w-full max-w-[1400px] mx-auto p-4 md:p-8 box-border flex-1 pb-24"
 
       >
         {error && !isTeamLoaded && activeTab === 'squad' && (
@@ -512,6 +492,30 @@ function Dashboard() {
 
         </div>
       </main>
+
+      {/* Bottom Tab Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-ds-bg/95 backdrop-blur-md border-t border-ds-border transition-all duration-300">
+        <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8">
+          <nav
+            ref={tabsContainerRef}
+            className="flex overflow-x-auto gap-6 custom-scrollbar -mb-[1px]"
+          >
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                ref={el => tabRefs.current[tab.id] = el}
+                onClick={() => handleTabChange(tab.id)}
+                className={`py-4 px-1 font-bold text-sm md:text-base whitespace-nowrap transition-all border-t-4 ${activeTab === tab.id
+                  ? 'text-ds-primary border-ds-primary pt-[14px]'
+                  : 'text-ds-text-muted border-transparent hover:text-ds-text hover:border-ds-border'
+                  }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
       {/* Prompt Modal */}
       {showPromptModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
