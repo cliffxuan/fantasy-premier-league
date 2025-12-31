@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getClubSquad, getTeams } from '../api';
 import SquadDisplay from './SquadDisplay';
 import { ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import TeamPopover from './TeamPopover';
 
 const ClubViewer = () => {
 	const [teams, setTeams] = useState([]);
@@ -167,7 +168,7 @@ const ClubViewer = () => {
 								const date = new Date(fix.kickoff_time).toLocaleDateString(undefined, {
 									month: 'short', day: 'numeric'
 								});
-								const oppTeam = teams.find(t => t.id === fix.opponent_code) || {}; /* Note: backend returns opponent_code as team code, not team id. 
+								const oppTeam = teams.find(t => t.code === fix.opponent_code) || {}; /* Note: backend returns opponent_code as team code, not team id. 
                                 Actually backend returns `opponent_code` as `team.code`. My `teams` prop likely has `id` and `code`.
                                 Let's check `teams` state usage. `teams` comes from `getTeams()`. Usually has `id`, `code`, `name`.
                             */
@@ -184,15 +185,17 @@ const ClubViewer = () => {
 												<span className={`text-[10px] font-bold w-6 text-center ${fix.is_home ? 'text-ds-text bg-ds-surface px-1 py-0.5 rounded border border-ds-border' : 'text-ds-text-muted'}`}>
 													{fix.is_home ? 'H' : 'A'}
 												</span>
-												<div className="flex items-center gap-2">
-													<img
-														src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
-														alt={fix.opponent_short}
-														className="w-5 h-5 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
-														onError={(e) => e.target.style.display = 'none'}
-													/>
-													<span className="font-semibold text-sm">{fix.opponent_name}</span>
-												</div>
+												<TeamPopover team={oppTeam}>
+													<div className="flex items-center gap-2 cursor-pointer">
+														<img
+															src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
+															alt={fix.opponent_short}
+															className="w-5 h-5 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
+															onError={(e) => e.target.style.display = 'none'}
+														/>
+														<span className="font-semibold text-sm">{fix.opponent_short}</span>
+													</div>
+												</TeamPopover>
 											</div>
 										</td>
 										<td className="px-4 py-3 text-center">
