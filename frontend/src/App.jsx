@@ -81,9 +81,7 @@ function Dashboard() {
 
   const [authToken, setAuthToken] = useState(sessionStorage.getItem('fpl_auth_token') || '');
 
-  // Swipe state
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
+
 
   // Tab refs for auto-scrolling
   const tabsContainerRef = useRef(null);
@@ -99,66 +97,7 @@ function Dashboard() {
     }
   }, [activeTab]);
 
-  // Minimum swipe distance (in px)
-  const minSwipeDistance = 50;
 
-  const onTouchStart = (e) => {
-    // Check if the touch is inside a horizontally scrollable container
-    let target = e.target;
-    let isInsideScrollable = false;
-
-    // Traverse up the DOM tree from the target element to the current target (the main container)
-    // to check if any ancestor is horizontally scrollable.
-    while (target && target !== e.currentTarget) {
-      if (target instanceof HTMLElement) {
-        const style = window.getComputedStyle(target);
-        const overflowX = style.overflowX;
-
-        // If the element has horizontal scrolling enabled and its content exceeds its width
-        if ((overflowX === 'auto' || overflowX === 'scroll') && target.scrollWidth > target.clientWidth) {
-          isInsideScrollable = true;
-          break;
-        }
-      }
-      target = target.parentElement;
-    }
-
-    // If inside a scrollable container, don't initiate the swipe logic (treat as normal scroll)
-    if (isInsideScrollable) {
-      touchStartX.current = null;
-      touchStartY.current = null;
-      return;
-    }
-
-    touchStartX.current = e.targetTouches[0].clientX;
-    touchStartY.current = e.targetTouches[0].clientY;
-  };
-
-  const onTouchEnd = (e) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const distanceX = touchStartX.current - touchEndX;
-    const distanceY = touchStartY.current - touchEndY;
-    const isLeftSwipe = distanceX > minSwipeDistance;
-    const isRightSwipe = distanceX < -minSwipeDistance;
-
-    // Check if it's mostly a horizontal swipe
-    if (Math.abs(distanceX) > Math.abs(distanceY)) {
-      const currentIndex = TABS.findIndex(tab => tab.id === activeTab);
-      if (isLeftSwipe && currentIndex < TABS.length - 1) {
-        handleTabChange(TABS[currentIndex + 1].id);
-      } else if (isRightSwipe && currentIndex > 0) {
-        handleTabChange(TABS[currentIndex - 1].id);
-      }
-    }
-
-    // Reset
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
 
   useEffect(() => {
     if (authToken) {
@@ -381,8 +320,7 @@ function Dashboard() {
       {/* Main Content */}
       <main
         className="w-full max-w-[1400px] mx-auto p-4 md:p-8 box-border flex-1"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
+
       >
         {error && !isTeamLoaded && activeTab === 'squad' && (
           <div className="mb-6 bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg font-mono text-sm max-w-2xl mx-auto text-center animate-in fade-in slide-in-from-top-2">
