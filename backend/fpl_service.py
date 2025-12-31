@@ -2199,11 +2199,9 @@ class FPLService:
         # We want to identify "Good Run" for teams.
         # Calculates a custom difficulty score for each fixture.
 
-        # Filter futures
+        # Filter futures - allow finished if it's within our target range (to align grid)
         future_fixtures = [
-            f
-            for f in fixtures
-            if not f["finished"] and f["event"] is not None and f["event"] >= start_gw
+            f for f in fixtures if f["event"] is not None and f["event"] >= start_gw
         ]
 
         # Group by team
@@ -2368,15 +2366,71 @@ class FPLService:
         # 3. Analyze "Tickers" (Next 5 GWs)
         ticker_data = []
         for t_id, fixs in team_fixtures.items():
-            # Get next 5
-            next_5 = sorted(fixs, key=lambda x: x["gameweek"])[:5]
-            if not next_5:
+            # Align fixtures to the global start_gw range
+            aligned_next_5 = []
+
+            # Create a lookup map for existing fixtures
+            # Handle Double Gameweeks by keeping list
+            fix_map = {}
+            for f in fixs:
+                gw = f["gameweek"]
+                if gw not in fix_map:
+                    fix_map[gw] = []
+                fix_map[gw].append(f)
+
+            # Iterate through the grid from start_gw to start_gw + 4
+            for i in range(5):
+                target_gw = start_gw + i
+                gw_fixtures = fix_map.get(target_gw, [])
+
+                if not gw_fixtures:
+                    # BLANK / No Fixture
+                    aligned_next_5.append(
+                        {
+                            "gameweek": target_gw,
+                            "opponent": "-",
+                            "opponent_id": None,
+                            "is_home": None,
+                            "fdr_official": 3,  # Neutral
+                            "fdr_attack": 3,
+                            "fdr_defend": 3,
+                            "fdr_market": 3,
+                            "win_prob": 0,
+                            "source_type": "none",
+                        }
+                    )
+                else:
+                    # If multiple fixtures (DGW), we need to decide how to show them.
+                    # Current UI supports one block.
+                    # Complex strategy: Combine them visually?
+                    # Simple strategy: Take the first one, but maybe indicate DGW?
+                    # Better: If we can update frontend, great. If not, maybe concatenate Text?
+                    # "AVL(H) + MCI(A)"
+
+                    if len(gw_fixtures) == 1:
+                        aligned_next_5.append(gw_fixtures[0])
+                    else:
+                        # Double Gameweek Logic
+                        # Combine FDR (average?)
+                        # Combine Opponent Name
+                        f1 = gw_fixtures[0]
+                        f2 = gw_fixtures[1]  # Assume max 2 for simplicity
+
+                        fdr_market_avg = (f1["fdr_market"] + f2["fdr_market"]) / 2
+
+                        combined = f1.copy()
+                        combined["opponent"] = f"{f1['opponent']}, {f2['opponent']}"
+                        combined["fdr_market"] = round(fdr_market_avg, 2)
+                        combined["is_double"] = True  # Flag if needed
+                        aligned_next_5.append(combined)
+
+            if not aligned_next_5:
                 continue
 
-            avg_diff_off = sum(f["fdr_official"] for f in next_5) / len(next_5)
-            avg_diff_att = sum(f["fdr_attack"] for f in next_5) / len(next_5)
-            avg_diff_def = sum(f["fdr_defend"] for f in next_5) / len(next_5)
-            avg_diff_mkt = sum(f["fdr_market"] for f in next_5) / len(next_5)
+            avg_diff_off = sum(f["fdr_official"] for f in aligned_next_5) / 5
+            avg_diff_att = sum(f["fdr_attack"] for f in aligned_next_5) / 5
+            avg_diff_def = sum(f["fdr_defend"] for f in aligned_next_5) / 5
+            avg_diff_mkt = sum(f["fdr_market"] for f in aligned_next_5) / 5
 
             ticker_data.append(
                 {
@@ -2384,7 +2438,7 @@ class FPLService:
                     "team_name": teams[t_id]["name"],
                     "team_short": teams[t_id]["short_name"],
                     "team_code": teams[t_id]["code"],
-                    "next_5": next_5,
+                    "next_5": aligned_next_5,
                     "avg_difficulty_official": round(avg_diff_off, 2),
                     "avg_difficulty_attack": round(
                         avg_diff_att, 2

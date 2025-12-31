@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, X, FileText } from 'lucide-react';
+import { Copy, X, FileText, Code } from 'lucide-react';
 import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
@@ -343,6 +343,16 @@ function Dashboard() {
               Data Science & AI Powered Insights
             </p>
           </div>
+
+          <a
+            href="/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:flex items-center gap-2 text-xs font-bold text-ds-text-muted hover:text-ds-primary transition-colors border border-ds-border rounded-full px-3 py-1.5 hover:border-ds-primary/50 bg-ds-surface/50 group"
+          >
+            <Code size={14} className="group-hover:scale-110 transition-transform" />
+            API Docs
+          </a>
         </div>
 
         {/* Tab Navigation */}
