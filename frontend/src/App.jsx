@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, X, FileText, Code } from 'lucide-react';
+import { Copy, X, FileText, Code, Check } from 'lucide-react';
 import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
@@ -72,6 +72,7 @@ function Dashboard() {
 
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const activeTab = searchParams.get('tab') || 'matches';
   const gwParam = searchParams.get('gw');
@@ -579,12 +580,16 @@ function Dashboard() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(generatedPrompt);
-                  // Optional: Show a toast? For now just visual feedback could be nice but keeping it simple.
+                  setCopySuccess(true);
+                  setTimeout(() => setCopySuccess(false), 2000);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-ds-primary text-white rounded-md font-bold text-sm hover:bg-ds-primary-hover active:scale-95 transition-all shadow-lg hover:shadow-ds-primary/25"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md font-bold text-sm transition-all shadow-lg ${copySuccess
+                  ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/25'
+                  : 'bg-ds-primary text-white hover:bg-ds-primary-hover hover:shadow-ds-primary/25 active:scale-95'
+                  }`}
               >
-                <Copy size={16} />
-                Copy to Clipboard
+                {copySuccess ? <Check size={16} /> : <Copy size={16} />}
+                {copySuccess ? 'Copied!' : 'Copy to Clipboard'}
               </button>
             </div>
           </div>
