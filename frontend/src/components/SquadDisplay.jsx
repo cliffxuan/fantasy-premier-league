@@ -3,7 +3,7 @@ import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout, ChevronLeft, Chevr
 import PlayerPopover from './PlayerPopover';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
-const Chip = ({ name, label, status, event }) => {
+const Chip = ({ name, label, status, events }) => {
 	const getIcon = (name) => {
 		switch (name) {
 			case 'bboost': return <ArrowUpCircle size={20} />;
@@ -26,12 +26,17 @@ const Chip = ({ name, label, status, event }) => {
 		containerClass += " bg-ds-card text-ds-text border-ds-border hover:border-ds-primary/50";
 	}
 
+	// Format events list for display
+	const eventsStr = events && events.length > 0 ? events.join(", ") : "";
+
 	return (
 		<div className={containerClass}>
 			{getIcon(name)}
 			<span className={textClass}>{label}</span>
 			<span className={subTextClass}>
-				{status === 'active' ? 'Active' : status === 'played' ? `Played GW${event}` : 'Available'}
+				{status === 'active' ? 'Active' :
+					status === 'played' ? `Played GW${eventsStr}` :
+						(eventsStr ? `Available (Used GW${eventsStr})` : 'Available')}
 			</span>
 		</div>
 	);

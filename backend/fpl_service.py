@@ -362,22 +362,57 @@ class FPLService:
 
         else:
             # Fallback to public history
-            used_chips = {c["name"]: c["event"] for c in history.get("chips", [])}
+            # Create a map of chip_name -> list of events used
+            used_chips_map = {}
+            for c in history.get("chips", []):
+                cname = c["name"]
+                if cname not in used_chips_map:
+                    used_chips_map[cname] = []
+                used_chips_map[cname].append(c["event"])
+
+            # Sort events for consistency
+            for cname in used_chips_map:
+                used_chips_map[cname].sort()
+
             active_chip = picks.get("active_chip")
 
             for name in target_chips:
                 label = chip_labels.get(name, name)
                 status = "available"
-                event = None
+
+                start_gw_period_2 = 20  # Reset at GW20
+
+                used_events = used_chips_map.get(name, [])
 
                 if name == active_chip:
                     status = "active"
-                elif name in used_chips:
-                    status = "played"
-                    event = used_chips[name]
+                else:
+                    if gw < start_gw_period_2:
+                        # First Half
+                        if len(used_events) > 0:
+                            status = "played"
+                        else:
+                            status = "available"
+                    else:
+                        # Second Half (GW >= 20)
+                        # Check if used IN or AFTER the reset week
+                        post_reset_usage = [
+                            e for e in used_events if e >= start_gw_period_2
+                        ]
+
+                        if len(post_reset_usage) > 0:
+                            status = "played"
+                        else:
+                            # Not used in second half yet -> Available (Logic: Reset grants new one)
+                            status = "available"
 
                 chips_status.append(
-                    {"name": name, "label": label, "status": status, "event": event}
+                    {
+                        "name": name,
+                        "label": label,
+                        "status": status,
+                        "events": used_events,
+                    }
                 )
 
         # Update history with live points from picks for the current gameweek
