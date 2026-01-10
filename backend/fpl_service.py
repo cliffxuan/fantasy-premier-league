@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import Counter
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import httpx
 import pulp
@@ -321,99 +321,8 @@ class FPLService:
                 )
 
         # Process Chips
-        chip_labels = {
-            "bboost": "Bench Boost",
-            "3xc": "Triple Captain",
-            "wildcard": "Wildcard",
-            "freehit": "Free Hit",
-        }
+        chips_status = self.calculate_chip_status(gw, history, picks, my_team_data)
 
-        chips_status = []
-        target_chips = ["bboost", "3xc", "wildcard", "freehit"]
-
-        if my_team_data and "chips" in my_team_data:
-            # Use authenticated chips data
-            # Structure: [{"name": "bboost", "status_for_entry": "played", ...}, ...]
-            my_chips = {c["name"]: c for c in my_team_data["chips"]}
-
-            for name in target_chips:
-                label = chip_labels.get(name, name)
-                status = "available"
-                event = None
-
-                if name in my_chips:
-                    c_data = my_chips[name]
-                    status = c_data.get("status_for_entry", "available")
-                    # Map status if needed? 'played', 'active', 'available' seems common
-                    # If active, it matches 'is_pending' or just status 'active'
-
-                    # Try to find event
-                    if "played_by_entry" in c_data and c_data["played_by_entry"]:
-                        # This is a list of events? or entry IDs?
-                        # User example: "played_by_entry": [15] -> looks like event number
-                        event = c_data["played_by_entry"][0]
-                    elif "start_event" in c_data:
-                        # Use start event if active?
-                        pass
-
-                chips_status.append(
-                    {"name": name, "label": label, "status": status, "event": event}
-                )
-
-        else:
-            # Fallback to public history
-            # Create a map of chip_name -> list of events used
-            used_chips_map = {}
-            for c in history.get("chips", []):
-                cname = c["name"]
-                if cname not in used_chips_map:
-                    used_chips_map[cname] = []
-                used_chips_map[cname].append(c["event"])
-
-            # Sort events for consistency
-            for cname in used_chips_map:
-                used_chips_map[cname].sort()
-
-            active_chip = picks.get("active_chip")
-
-            for name in target_chips:
-                label = chip_labels.get(name, name)
-                status = "available"
-
-                start_gw_period_2 = 20  # Reset at GW20
-
-                used_events = used_chips_map.get(name, [])
-
-                if name == active_chip:
-                    status = "active"
-                else:
-                    if gw < start_gw_period_2:
-                        # First Half
-                        if len(used_events) > 0:
-                            status = "played"
-                        else:
-                            status = "available"
-                    else:
-                        # Second Half (GW >= 20)
-                        # Check if used IN or AFTER the reset week
-                        post_reset_usage = [
-                            e for e in used_events if e >= start_gw_period_2
-                        ]
-
-                        if len(post_reset_usage) > 0:
-                            status = "played"
-                        else:
-                            # Not used in second half yet -> Available (Logic: Reset grants new one)
-                            status = "available"
-
-                chips_status.append(
-                    {
-                        "name": name,
-                        "label": label,
-                        "status": status,
-                        "events": used_events,
-                    }
-                )
 
         # Update history with live points from picks for the current gameweek
         current_history = history.get("current", [])
@@ -469,6 +378,102 @@ class FPLService:
             "gameweek": gw,
             "is_private": bool(my_team_data),
         }
+
+    def calculate_chip_status(
+        self,
+        gw: int,
+        history: Dict[str, Any],
+        picks: Dict[str, Any] = None,
+        my_team_data: Dict[str, Any] = None,
+    ) -> List[Dict[str, Any]]:
+        chip_labels = {
+            "bboost": "Bench Boost",
+            "3xc": "Triple Captain",
+            "wildcard": "Wildcard",
+            "freehit": "Free Hit",
+        }
+        target_chips = ["bboost", "3xc", "wildcard", "freehit"]
+        chips_status = []
+
+        if my_team_data and "chips" in my_team_data:
+            # Use authenticated chips data
+            my_chips = {c["name"]: c for c in my_team_data["chips"]}
+
+            for name in target_chips:
+                label = chip_labels.get(name, name)
+                status = "available"
+                events = []
+
+                if name in my_chips:
+                    c_data = my_chips[name]
+                    status = c_data.get("status_for_entry", "available")
+
+                    if "played_by_entry" in c_data and c_data["played_by_entry"]:
+                        events = c_data["played_by_entry"]
+
+                    # Convert to ints if needed, though they might be ints already
+                    events = [int(e) for e in events]
+
+                chips_status.append(
+                    {
+                        "name": name,
+                        "label": label,
+                        "status": status,
+                        "events": events,
+                    }
+                )
+        else:
+            # Fallback to public history
+            used_chips_map = {}
+            for c in history.get("chips", []):
+                cname = c["name"]
+                if cname not in used_chips_map:
+                    used_chips_map[cname] = []
+                used_chips_map[cname].append(c["event"])
+
+            # Sort events
+            for cname in used_chips_map:
+                used_chips_map[cname].sort()
+
+            active_chip = picks.get("active_chip") if picks else None
+
+            for name in target_chips:
+                label = chip_labels.get(name, name)
+                status = "available"
+                start_gw_period_2 = 20  # Reset at GW20
+
+                used_events = used_chips_map.get(name, [])
+
+                if name == active_chip:
+                    status = "active"
+                else:
+                    if gw < start_gw_period_2:
+                        # First Half
+                        if len(used_events) > 0:
+                            status = "played"
+                        else:
+                            status = "available"
+                    else:
+                        # Second Half (GW >= 20)
+                        post_reset_usage = [
+                            e for e in used_events if e >= start_gw_period_2
+                        ]
+
+                        if len(post_reset_usage) > 0:
+                            status = "played"
+                        else:
+                            status = "available"
+
+                chips_status.append(
+                    {
+                        "name": name,
+                        "label": label,
+                        "status": status,
+                        "events": used_events,
+                    }
+                )
+
+        return chips_status
 
     def calculate_free_transfers(
         self, history: Dict[str, Any], transfers: list, next_gw: int

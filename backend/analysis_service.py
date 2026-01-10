@@ -159,21 +159,22 @@ class AnalysisService:
                     }
                 )
 
-        # Chips used
-        chips_used = [c["name"] for c in history.get("chips", [])]
-
-        # Determine Active Chip
-        active_chip = None
+        # Calculate Chip Status (Shared Logic)
+        my_team_data = None
         if request.auth_token and picks and "chips" in picks:
-            # Logic for authenticated data
-            for c in picks.get("chips", []):
-                # status_for_entry='active' means it is played for this GW
-                if c.get("status_for_entry") == "active":
-                    active_chip = c.get("name")
-                    break
-        elif picks:
-            # Logic for public data
-            active_chip = picks.get("active_chip")
+            my_team_data = picks
+
+        chips_status = self.fpl_service.calculate_chip_status(
+            gw, history, picks, my_team_data
+        )
+
+        # Extract available chips and active chip
+        chips_available = [
+            c["label"] for c in chips_status if c["status"] == "available"
+        ]
+        active_chip = next(
+            (c["name"] for c in chips_status if c["status"] == "active"), None
+        )
 
         # Override free transfers if chip active
         free_transfers_display = request.knowledge_gap.free_transfers
@@ -186,7 +187,7 @@ class AnalysisService:
             "free_transfers": free_transfers_display,
             "active_chip": active_chip,
             "squad": current_squad,
-            "chips_used": chips_used,
+            "chips_available": chips_available,
             "upcoming_fixtures": upcoming_fixtures,
         }
         # Use previous GW for stats/market (since current/next is hidden/unplayed)
