@@ -44,17 +44,27 @@ class Team(BaseModel):
 
 class Fixture(BaseModel):
     id: int
-    event: Optional[int]
+    code: int
+    event: Optional[int] = None
     team_h: int
     team_a: int
-    team_h_score: Optional[int]
-    team_a_score: Optional[int]
-    finished: bool
-    kickoff_time: str
+    team_h_score: Optional[int] = None
+    team_a_score: Optional[int] = None
+    finished: bool = False
+    kickoff_time: str or None
+    minutes: int = 0
+    started: Optional[bool] = False
+    finished_provisional: bool = False
+    team_h_difficulty: int
+    team_a_difficulty: int
 
     # Enriched
     team_h_name: Optional[str] = None
     team_a_name: Optional[str] = None
+    team_h_short: Optional[str] = None
+    team_a_short: Optional[str] = None
+    team_h_code: Optional[int] = None
+    team_a_code: Optional[int] = None
 
 
 class AnalysisResponse(BaseModel):

@@ -5,10 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from typing import List
 from .analysis_service import AnalysisService
 from .fpl_service import FPLService
 from .form_service import FormService
-from .models import AnalysisRequest, AnalysisResponse
+from .models import AnalysisRequest, AnalysisResponse, Team, Fixture
 
 app = FastAPI(title="FPL Alpha API")
 
@@ -70,7 +71,7 @@ async def get_squad(
         raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")
 
 
-@app.get("/api/teams", tags=["FPL Data"])
+@app.get("/api/teams", response_model=List[Team], tags=["FPL Data"])
 async def get_teams():
     service = FPLService()
     try:
@@ -244,7 +245,7 @@ async def get_fixture_analysis(gw: int | None = None):
         )
 
 
-@app.get("/api/fixtures", tags=["FPL Data"])
+@app.get("/api/fixtures", response_model=List[Fixture], tags=["FPL Data"])
 async def get_fixtures(event: int | None = None):
     service = FPLService()
     try:

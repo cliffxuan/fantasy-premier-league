@@ -326,21 +326,21 @@ class MLService:
 
         # Fetch Fixtures
         fixtures = await self.fpl_service.get_fixtures()
-        next_fixtures = [f for f in fixtures if f["event"] == gw]
+        next_fixtures = [f for f in fixtures if f.event == gw]
 
         player_fixture = {}  # pid -> {difficulty, is_home}
 
         for f in next_fixtures:
-            h = f["team_h_difficulty"]
-            a = f["team_a_difficulty"]
+            h = f.team_h_difficulty
+            a = f.team_a_difficulty
 
-            if f["team_h"] not in player_fixture:
-                player_fixture[f["team_h"]] = []
-            player_fixture[f["team_h"]].append({"diff": h, "home": 1})
+            if f.team_h not in player_fixture:
+                player_fixture[f.team_h] = []
+            player_fixture[f.team_h].append({"diff": h, "home": 1})
 
-            if f["team_a"] not in player_fixture:
-                player_fixture[f["team_a"]] = []
-            player_fixture[f["team_a"]].append({"diff": a, "home": 0})
+            if f.team_a not in player_fixture:
+                player_fixture[f.team_a] = []
+            player_fixture[f.team_a].append({"diff": a, "home": 0})
 
         # Build Inference DataFrame
         rows = []

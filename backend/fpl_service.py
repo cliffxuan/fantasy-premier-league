@@ -8,6 +8,7 @@ import pulp
 from loguru import logger
 
 from .team_details import TEAM_MAPPINGS
+from .models import Team, Fixture
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -185,24 +186,24 @@ class FPLService:
         fixtures = await self.get_fixtures()
         team_next_fixture = {}
         for f in fixtures:
-            if f["event"] == target_fixture_gw:
+            if f.event == target_fixture_gw:
                 # Home team
-                team_next_fixture[f["team_h"]] = {
-                    "opponent_id": f["team_a"],
+                team_next_fixture[f.team_h] = {
+                    "opponent_id": f.team_a,
                     "is_home": True,
-                    "difficulty": f["team_h_difficulty"],
-                    "started": f.get("started", False),
-                    "finished": f.get("finished", False),
-                    "kickoff_time": f["kickoff_time"],
+                    "difficulty": f.team_h_difficulty,
+                    "started": f.started,
+                    "finished": f.finished,
+                    "kickoff_time": f.kickoff_time,
                 }
                 # Away team
-                team_next_fixture[f["team_a"]] = {
-                    "opponent_id": f["team_h"],
+                team_next_fixture[f.team_a] = {
+                    "opponent_id": f.team_h,
                     "is_home": False,
-                    "difficulty": f["team_a_difficulty"],
-                    "started": f.get("started", False),
-                    "finished": f.get("finished", False),
-                    "kickoff_time": f["kickoff_time"],
+                    "difficulty": f.team_a_difficulty,
+                    "started": f.started,
+                    "finished": f.finished,
+                    "kickoff_time": f.kickoff_time,
                 }
 
         # Fetch live data for points
@@ -534,7 +535,7 @@ class FPLService:
 
         return ft
 
-    async def get_fixtures(self) -> list:
+    async def get_fixtures(self) -> List[Fixture]:
         async with self._cache_lock:
             now = time.time()
             if (
@@ -548,11 +549,14 @@ class FPLService:
                 response.raise_for_status()
                 data = response.json()
 
-                self._cache["fixtures"] = data
-                self._last_updated["fixtures"] = now
-                return data
+                # Parse into models
+                fixtures = [Fixture(**f) for f in data]
 
-    async def get_live_fixtures(self, gw: int) -> list:
+                self._cache["fixtures"] = fixtures
+                self._last_updated["fixtures"] = now
+                return fixtures
+
+    async def get_live_fixtures(self, gw: int) -> List[Fixture]:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
@@ -561,18 +565,21 @@ class FPLService:
                 f"{FPL_BASE_URL}/fixtures/", params={"event": gw}
             )
             response.raise_for_status()
-            fixtures = response.json()
+            data = response.json()
+
+            # Convert to Models
+            fixtures = [Fixture(**f) for f in data]
 
         # Enrich with team names
         for f in fixtures:
-            h_team = teams.get(f["team_h"])
-            a_team = teams.get(f["team_a"])
-            f["team_h_name"] = h_team["name"] if h_team else "Unknown"
-            f["team_h_short"] = h_team["short_name"] if h_team else "UNK"
-            f["team_a_name"] = a_team["name"] if a_team else "Unknown"
-            f["team_a_short"] = a_team["short_name"] if a_team else "UNK"
-            f["team_h_code"] = h_team["code"] if h_team else 0
-            f["team_a_code"] = a_team["code"] if a_team else 0
+            h_team = teams.get(f.team_h)
+            a_team = teams.get(f.team_a)
+            f.team_h_name = h_team["name"] if h_team else "Unknown"
+            f.team_h_short = h_team["short_name"] if h_team else "UNK"
+            f.team_a_name = a_team["name"] if a_team else "Unknown"
+            f.team_a_short = a_team["short_name"] if a_team else "UNK"
+            f.team_h_code = h_team["code"] if h_team else 0
+            f.team_a_code = a_team["code"] if a_team else 0
 
         return fixtures
 
@@ -587,9 +594,9 @@ class FPLService:
             print(f"DEBUG: Failed to fetch pulse lineup for {pulse_match_id}: {e}")
         return {}
 
-    async def get_teams(self) -> list:
+    async def get_teams(self) -> List[Team]:
         bootstrap = await self.get_bootstrap_static()
-        return bootstrap["teams"]
+        return [Team(**t) for t in bootstrap["teams"]]
 
     async def get_club_squad(
         self, club_id: int, gw: int | None = None
@@ -624,7 +631,7 @@ class FPLService:
         club_fixtures = [
             f
             for f in fixtures
-            if f["event"] == gw and (f["team_h"] == club_id or f["team_a"] == club_id)
+            if f.event == gw and (f.team_h == club_id or f.team_a == club_id)
         ]
 
         # Attempt to get Official Lineup from Pulse API
@@ -636,13 +643,23 @@ class FPLService:
         # (Handles DGW by just taking the first one found - could be improved to merge or select active)
         if club_fixtures and club_code:
             match = club_fixtures[0]
-            pulse_id = match.get("code")
+            # pulse_id might not be in the model if I didn't add 'code'.
+            # My Fixture model has 'id', 'event', 'team_h'... does it have 'code'?
+            # Check models.py. Fixture: id, event, team_h, team_a, team_h_score, team_a_score, finished, kickoff_time.
+            # It IS MISSING 'code' (which is the pulse id).
+            # I must update Fixture model first or access raw if I kept it?
+            # I replaced the cache with objects. I lost 'code'.
+            # CRITICAL: I need to add 'code' to Fixture model.
+
+            # Reverting strategy: I need to add 'code' to Fixture model in models.py BEFORE updating usage, or I lose data.
+            pass
+            pulse_id = match.code
             if pulse_id:
                 lineup_data = await self.get_pulse_lineup(pulse_id)
                 if lineup_data:
                     # Determine if we are home or away match for lineup parsing
                     # match["team_h"] is FPL ID. club_id is FPL ID.
-                    is_home_model = match["team_h"] == club_id
+                    is_home_model = match.team_h == club_id
 
                     # Pulse data separates by home_team / away_team objects
                     # But we should verify Team ID matches just in case.
@@ -693,18 +710,18 @@ class FPLService:
         finished = False
 
         for f in club_fixtures:
-            is_home = f["team_h"] == club_id
-            opponent_id = f["team_a"] if is_home else f["team_h"]
+            is_home = f.team_h == club_id
+            opponent_id = f.team_a if is_home else f.team_h
             opp_short = teams_map.get(opponent_id, {}).get("short_name", "UNK")
             char = "(H)" if is_home else "(A)"
             fixture_strs.append(f"{opp_short} {char}")
-            diff = f["team_h_difficulty"] if is_home else f["team_a_difficulty"]
+            diff = f.team_h_difficulty if is_home else f.team_a_difficulty
             if diff > max_difficulty:
                 max_difficulty = diff
 
-            if f.get("started"):
+            if f.started:
                 started = True
-            if f.get("finished"):
+            if f.finished:
                 finished = True
 
         fixture_str = ", ".join(fixture_strs) if fixture_strs else "No Fixture"
@@ -788,22 +805,22 @@ class FPLService:
         club_schedule = []
         all_fixtures = await self.get_fixtures()
         relevant_fixtures = [
-            f for f in all_fixtures if f["team_h"] == club_id or f["team_a"] == club_id
+            f for f in all_fixtures if f.team_h == club_id or f.team_a == club_id
         ]
         # Sort by event/kickoff
-        relevant_fixtures.sort(key=lambda x: x.get("event") or 999)
+        relevant_fixtures.sort(key=lambda x: x.event or 999)
 
         for f in relevant_fixtures:
-            is_home = f["team_h"] == club_id
-            opponent_id = f["team_a"] if is_home else f["team_h"]
+            is_home = f.team_h == club_id
+            opponent_id = f.team_a if is_home else f.team_h
             opp_team = teams_map.get(opponent_id, {})
 
             # Calculate result if finished
             result = None
             score = None
-            if f.get("finished"):
-                h_score = f.get("team_h_score")
-                a_score = f.get("team_a_score")
+            if f.finished:
+                h_score = f.team_h_score
+                a_score = f.team_a_score
                 score = f"{h_score}-{a_score}"
 
                 if h_score is not None and a_score is not None:
@@ -824,18 +841,18 @@ class FPLService:
 
             club_schedule.append(
                 {
-                    "event": f.get("event"),
+                    "event": f.event,
                     "opponent_name": opp_team.get("name", "Unknown"),
                     "opponent_short": opp_team.get("short_name", "UNK"),
                     "opponent_code": opp_team.get("code"),
                     "is_home": is_home,
-                    "difficulty": f["team_h_difficulty"]
+                    "difficulty": f.team_h_difficulty
                     if is_home
-                    else f["team_a_difficulty"],
-                    "finished": f.get("finished"),
+                    else f.team_a_difficulty,
+                    "finished": f.finished,
                     "score": score,
                     "result": result,
-                    "kickoff_time": f.get("kickoff_time"),
+                    "kickoff_time": f.kickoff_time,
                 }
             )
 
@@ -882,59 +899,57 @@ class FPLService:
         recent = []
 
         # Sort by event
-        fixtures.sort(key=lambda x: x.get("event") or 999)
+        fixtures.sort(key=lambda x: x.event or 999)
 
         # Separate fixtures into past and future
         # Note: fixtures are sorted by event ascending (1, 2, 3...)
 
         # 1. Collect all club fixtures
         club_fixtures = [
-            f for f in fixtures if f["team_h"] == club_id or f["team_a"] == club_id
+            f for f in fixtures if f.team_h == club_id or f.team_a == club_id
         ]
 
         # 2. Upcoming (first 3 that are not finished)
         future_fixtures = [
-            f
-            for f in club_fixtures
-            if not f.get("finished") and not f.get("finished_provisional")
+            f for f in club_fixtures if not f.finished and not f.finished_provisional
         ][:5]
 
         # 3. Recent (last 3 that ARE finished or provisionally finished)
         past_fixtures = [
             f
             for f in club_fixtures
-            if (f.get("finished") or f.get("finished_provisional"))
-            and f.get("team_h_score") is not None
-            and f.get("team_a_score") is not None
+            if (f.finished or f.finished_provisional)
+            and f.team_h_score is not None
+            and f.team_a_score is not None
         ]
-        past_fixtures.sort(key=lambda x: x.get("event") or 0, reverse=True)  # Sort desc
+        past_fixtures.sort(key=lambda x: x.event or 0, reverse=True)  # Sort desc
         recent_fixtures = past_fixtures
 
         for f in future_fixtures:
-            is_home = f["team_h"] == club_id
-            opponent_id = f["team_a"] if is_home else f["team_h"]
+            is_home = f.team_h == club_id
+            opponent_id = f.team_a if is_home else f.team_h
             opp_team = teams_map.get(opponent_id, {})
             upcoming.append(
                 {
-                    "id": f["id"],
-                    "event": f["event"],
+                    "id": f.id,
+                    "event": f.event,
                     "opponent_name": opp_team.get("name", "Unknown"),
                     "opponent_short": opp_team.get("short_name", "UNK"),
                     "is_home": is_home,
-                    "difficulty": f["team_h_difficulty"]
+                    "difficulty": f.team_h_difficulty
                     if is_home
-                    else f["team_a_difficulty"],
-                    "kickoff_time": f["kickoff_time"],
+                    else f.team_a_difficulty,
+                    "kickoff_time": f.kickoff_time,
                 }
             )
 
         for f in recent_fixtures:
-            is_home = f["team_h"] == club_id
-            opponent_id = f["team_a"] if is_home else f["team_h"]
+            is_home = f.team_h == club_id
+            opponent_id = f.team_a if is_home else f.team_h
             opp_team = teams_map.get(opponent_id, {})
 
-            h_score = f["team_h_score"]
-            a_score = f["team_a_score"]
+            h_score = f.team_h_score
+            a_score = f.team_a_score
             score = f"{h_score}-{a_score}"
 
             result = "D"
@@ -951,17 +966,17 @@ class FPLService:
 
             recent.append(
                 {
-                    "id": f["id"],
-                    "event": f["event"],
+                    "id": f.id,
+                    "event": f.event,
                     "opponent_name": opp_team.get("name", "Unknown"),
                     "opponent_short": opp_team.get("short_name", "UNK"),
                     "is_home": is_home,
                     "score": score,
                     "result": result,
-                    "difficulty": f["team_h_difficulty"]
+                    "difficulty": f.team_h_difficulty
                     if is_home
-                    else f["team_a_difficulty"],
-                    "kickoff_time": f["kickoff_time"],
+                    else f.team_a_difficulty,
+                    "kickoff_time": f.kickoff_time,
                 }
             )
 
@@ -1041,23 +1056,23 @@ class FPLService:
 
         # Process fixtures
         # Sort fixtures by kickoff time to help with form calculation later if needed
-        fixtures.sort(key=lambda x: x["kickoff_time"] if x["kickoff_time"] else "")
+        fixtures.sort(key=lambda x: x.kickoff_time if x.kickoff_time else "")
 
         for f in fixtures:
-            if not f["finished"] and not f["finished_provisional"]:
+            if not f.finished and not f.finished_provisional:
                 continue
 
             # Filtering by Gameweek Range
-            if f["event"] is None:
+            if f.event is None:
                 continue
 
-            if not (min_gw <= f["event"] <= max_gw):
+            if not (min_gw <= f.event <= max_gw):
                 continue
 
-            h_id = f["team_h"]
-            a_id = f["team_a"]
-            h_score = f["team_h_score"]
-            a_score = f["team_a_score"]
+            h_id = f.team_h
+            a_id = f.team_a
+            h_score = f.team_h_score
+            a_score = f.team_a_score
 
             if h_id not in teams or a_id not in teams:
                 continue
@@ -1155,26 +1170,22 @@ class FPLService:
 
         # Fetch fixtures for this GW
         fixtures = await self.get_fixtures()
-        gw_fixtures = [f for f in fixtures if f["event"] == gw]
+        gw_fixtures = [f for f in fixtures if f.event == gw]
 
         # Map team ID to fixture info
         team_fixture = {}
         for f in gw_fixtures:
             # Home team
-            team_fixture[f["team_h"]] = {
-                "opponent_id": f["team_a"],
+            team_fixture[f.team_h] = {
+                "opponent_id": f.team_a,
                 "is_home": True,
-                "score": f"{f['team_h_score']}-{f['team_a_score']}"
-                if f["finished"]
-                else None,
+                "score": f"{f.team_h_score}-{f.team_a_score}" if f.finished else None,
             }
             # Away team
-            team_fixture[f["team_a"]] = {
-                "opponent_id": f["team_h"],
+            team_fixture[f.team_a] = {
+                "opponent_id": f.team_h,
                 "is_home": False,
-                "score": f"{f['team_a_score']}-{f['team_h_score']}"
-                if f["finished"]
-                else None,
+                "score": f"{f.team_a_score}-{f.team_h_score}" if f.finished else None,
             }
 
         squad = []
@@ -1475,16 +1486,16 @@ class FPLService:
         # We need a quick lookup: map[gw][team_id] -> 'home' or 'away'
         venue_map = {}  # {gw: {team_id: 'home'|'away'}}
         for fix in all_fixtures:
-            event = fix["event"]
+            event = fix.event
             if event is None:
                 continue
             if event not in venue_map:
                 venue_map[event] = {}
-            venue_map[event][fix["team_h"]] = "home"
-            venue_map[event][fix["team_a"]] = "away"
+            venue_map[event][fix.team_h] = "home"
+            venue_map[event][fix.team_a] = "away"
 
         # Helper map for fixtures to support DGWs and precise points attribution
-        fixture_lookup = {f["id"]: f for f in all_fixtures}
+        fixture_lookup = {f.id: f for f in all_fixtures}
 
         # 3. Fetch live data for each GW in range in parallel
         tasks = []
@@ -1556,7 +1567,7 @@ class FPLService:
                         if not fix_info:
                             continue
 
-                        is_home = fix_info["team_h"] == team_id
+                        is_home = fix_info.team_h == team_id
 
                         target_venue = venue.lower()
                         should_include = False
@@ -2249,7 +2260,7 @@ class FPLService:
 
         # Filter futures - allow finished if it's within our target range (to align grid)
         future_fixtures = [
-            f for f in fixtures if f["event"] is not None and f["event"] >= start_gw
+            f for f in fixtures if f.event is not None and f.event >= start_gw
         ]
 
         # Group by team
@@ -2262,8 +2273,8 @@ class FPLService:
             # For attackers: Opponent Defense Strength.
             # For defenders: Opponent Attack Strength.
 
-            h_team = teams[f["team_h"]]
-            a_team = teams[f["team_a"]]
+            h_team = teams[f.team_h]
+            a_team = teams[f.team_a]
 
             # Difficulty for Home Team (to Attack)
             # Opponent is Away Team
@@ -2287,7 +2298,7 @@ class FPLService:
             # 2. Future Games: Use Market Odds.
             # 3. Fallback: Use Stats.
 
-            is_finished = f.get("finished_provisional") or f.get("finished")
+            is_finished = f.finished_provisional or f.finished
 
             h_win_prob = 0.0
             a_win_prob = 0.0
@@ -2295,8 +2306,8 @@ class FPLService:
 
             if is_finished:
                 # Use actual result
-                h_score = f.get("team_h_score", 0)
-                a_score = f.get("team_a_score", 0)
+                h_score = f.team_h_score or 0
+                a_score = f.team_a_score or 0
                 source_type = "result"
 
                 if h_score > a_score:
@@ -2310,7 +2321,7 @@ class FPLService:
                     h_win_prob = 0.0
                     a_win_prob = 0.0
 
-            elif f.get("started"):
+            elif f.started:
                 # Game started but not finished (Live)
                 # Could use live scores? For now fallback to stats or pre-game odds if cached.
                 # But since we clear cache/don't have history, let's use stats as safe fallback.
@@ -2318,7 +2329,7 @@ class FPLService:
 
             else:
                 # Future Game - Try Market
-                market_key = (f["event"], h_team["code"], a_team["code"])
+                market_key = (f.event, h_team["code"], a_team["code"])
                 market_event = market_lookup.get(market_key)
 
                 if market_event:
@@ -2379,35 +2390,35 @@ class FPLService:
             home_market_fdr = 1 + 4 * (1 - h_win_prob)
             away_market_fdr = 1 + 4 * (1 - a_win_prob)
 
-            team_fixtures[f["team_h"]].append(
+            team_fixtures[f.team_h].append(
                 {
-                    "gameweek": f["event"],
+                    "gameweek": f.event,
                     "opponent": a_team["short_name"],
-                    "opponent_id": f["team_a"],
+                    "opponent_id": f.team_a,
                     "is_home": True,
-                    "fdr_official": f["team_h_difficulty"],
+                    "fdr_official": f.team_h_difficulty,
                     "fdr_attack": round(map_strength(h_diff_attack), 2),
                     "fdr_defend": round(map_strength(h_diff_defend), 2),
                     "fdr_market": round(home_market_fdr, 2),
                     "win_prob": round(h_win_prob, 2),
                     "source_type": source_type,
-                    "kickoff": f["kickoff_time"],
+                    "kickoff": f.kickoff_time,
                 }
             )
 
-            team_fixtures[f["team_a"]].append(
+            team_fixtures[f.team_a].append(
                 {
-                    "gameweek": f["event"],
+                    "gameweek": f.event,
                     "opponent": h_team["short_name"],
-                    "opponent_id": f["team_h"],
+                    "opponent_id": f.team_h,
                     "is_home": False,
-                    "fdr_official": f["team_a_difficulty"],
+                    "fdr_official": f.team_a_difficulty,
                     "fdr_attack": round(map_strength(a_diff_attack), 2),
                     "fdr_defend": round(map_strength(a_diff_defend), 2),
                     "fdr_market": round(away_market_fdr, 2),
                     "win_prob": round(a_win_prob, 2),
                     "source_type": source_type,
-                    "kickoff": f["kickoff_time"],
+                    "kickoff": f.kickoff_time,
                 }
             )
 
