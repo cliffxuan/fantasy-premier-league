@@ -2139,8 +2139,14 @@ class FPLService:
     async def get_advanced_fixtures(self, gw: int | None = None) -> list:
         # If gw is None, user likely wants fixtures for upcoming GWs
         # Let's say we return the next 38 - current GW fixtures
-        current_gw = await self.get_current_gameweek()
-        start_gw = gw if gw else current_gw
+        if gw:
+            start_gw = gw
+        else:
+            status = await self.get_gameweek_status()
+            if status.get("finished"):
+                start_gw = status["id"] + 1
+            else:
+                start_gw = status["id"]
 
         fixtures = await self.get_fixtures()
         bootstrap = await self.get_bootstrap_static()
