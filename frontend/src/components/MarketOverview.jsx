@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getFixtures, getPolymarketData } from '../api';
 import { ArrowUpRight, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { getTeamBadgeUrl, PROBABILITY_COLORS } from '../utils';
 import TeamPopover from './TeamPopover';
 
 const MarketOverview = () => {
@@ -115,7 +116,7 @@ const MarketOverview = () => {
 
 	const TeamBadge = ({ code }) => (
 		<img
-			src={`https://resources.premierleague.com/premierleague/badges/50/t${code}.png`}
+			src={getTeamBadgeUrl(code)}
 			alt="Badge"
 			className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-sm"
 			onError={(e) => e.target.style.display = 'none'}
@@ -205,13 +206,13 @@ const MarketOverview = () => {
 									const label = outcome.label === 'Draw' ? 'Draw' : (idx === 0 ? f.team_h_short : f.team_a_short);
 
 									// Dynamic coloring based on probability
-									let colorClass = "bg-ds-surface text-ds-text-muted border-ds-border";
-									if (prob > 60) colorClass = "bg-green-500/10 text-green-400 border-green-500/30";
-									else if (prob > 40) colorClass = "bg-blue-500/10 text-blue-400 border-blue-500/30";
+									let styles = PROBABILITY_COLORS.LOW;
+									if (prob > 60) styles = PROBABILITY_COLORS.HIGH;
+									else if (prob > 40) styles = PROBABILITY_COLORS.MEDIUM;
 
 									return (
-										<div key={idx} className={`flex flex-col items-center justify-center w-20 h-14 rounded-lg border ${colorClass} transition-all`}>
-											<span className="text-[10px] uppercase font-bold opacity-70 truncate w-full text-center px-1">{label}</span>
+										<div key={idx} className={`flex flex-col items-center justify-center w-20 h-14 rounded-lg border ${styles.bg} ${styles.text} ${styles.border} transition-all`}>
+											<span className={`text-[10px] uppercase font-bold opacity-70 truncate w-full text-center px-1 ${styles.label}`}>{label}</span>
 											<span className="text-lg font-bold font-mono">{prob}%</span>
 										</div>
 									)

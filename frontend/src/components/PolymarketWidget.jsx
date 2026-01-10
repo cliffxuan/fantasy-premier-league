@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { getPolymarketData } from '../api';
+import { getTeamBadgeUrl, PROBABILITY_COLORS } from '../utils';
 
 const PolymarketWidget = () => {
 	const [markets, setMarkets] = useState([]);
@@ -45,10 +46,7 @@ const PolymarketWidget = () => {
 		return null; // Don't show if no data
 	}
 
-	const getBadgeUrl = (code) => {
-		if (!code) return null;
-		return `https://resources.premierleague.com/premierleague/badges/70/t${code}.png`;
-	};
+
 
 	const availableGws = Array.from(new Set(markets.map(m => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
 	const hasGameweekData = availableGws.length > 0;
@@ -146,7 +144,7 @@ const PolymarketWidget = () => {
 									<div className="flex items-center gap-2 justify-end flex-1">
 										<span className="text-sm font-bold text-ds-text hidden sm:block">{market.home_team?.short_name || "HOME"}</span>
 										{market.home_team?.code ? (
-											<img src={getBadgeUrl(market.home_team.code)} alt={market.home_team.short_name} className="w-8 h-8 object-contain" />
+											<img src={getTeamBadgeUrl(market.home_team.code, 70)} alt={market.home_team.short_name} className="w-8 h-8 object-contain" />
 										) : (
 											<div className="w-8 h-8 rounded-full bg-ds-card border border-ds-border flex items-center justify-center text-[10px] font-bold text-ds-text-muted">
 												{market.home_team?.short_name?.[0] || "?"}
@@ -159,7 +157,7 @@ const PolymarketWidget = () => {
 									{/* Away Team */}
 									<div className="flex items-center gap-2 justify-start flex-1">
 										{market.away_team?.code ? (
-											<img src={getBadgeUrl(market.away_team.code)} alt={market.away_team.short_name} className="w-8 h-8 object-contain" />
+											<img src={getTeamBadgeUrl(market.away_team.code, 70)} alt={market.away_team.short_name} className="w-8 h-8 object-contain" />
 										) : (
 											<div className="w-8 h-8 rounded-full bg-ds-card border border-ds-border flex items-center justify-center text-[10px] font-bold text-ds-text-muted">
 												{market.away_team?.short_name?.[0] || "?"}
@@ -175,28 +173,17 @@ const PolymarketWidget = () => {
 										const isDraw = outcome.label === "Draw";
 										const prob = outcome.price;
 
-										let styles = {
-											bg: "bg-slate-700/10 hover:bg-slate-700/20",
-											text: "text-slate-500",
-											border: "border-slate-700/30",
-											label: "text-slate-600"
-										};
+										let styles = PROBABILITY_COLORS.LOW;
 
 										if (prob >= 0.6) {
-											styles = {
-												bg: "bg-emerald-500/20 hover:bg-emerald-500/30",
-												text: "text-emerald-400",
-												border: "border-emerald-500/50",
-												label: "text-emerald-400/60"
-											};
+											styles = PROBABILITY_COLORS.HIGH;
 										} else if (prob >= 0.4) {
-											styles = {
-												bg: "bg-blue-500/20 hover:bg-blue-500/30",
-												text: "text-blue-400",
-												border: "border-blue-500/50",
-												label: "text-blue-400/60"
-											};
+											styles = PROBABILITY_COLORS.MEDIUM;
 										} else if (prob >= 0.25) {
+											// Keep LOW for now or define a specific "Low but relevant" if needed.
+											// The original code had a specific gray style for > 25%.
+											// Let's map it to LOW which is our gray default, or customized if needed.
+											// Re-using LOW for consistency with MarketOverview
 											styles = {
 												bg: "bg-slate-500/20 hover:bg-slate-500/30",
 												text: "text-slate-300",
