@@ -16,24 +16,26 @@ class FPLService:
     # Class-level cache to persist across request instances
     _cache: Dict[str, Any] = {}
     _last_updated: Dict[str, float] = {}
+    _cache_lock = asyncio.Lock()
     CACHE_TTL = 300  # 5 minutes
 
     async def get_bootstrap_static(self) -> Dict[str, Any]:
-        now = time.time()
-        if (
-            "bootstrap" in self._cache
-            and (now - self._last_updated.get("bootstrap", 0)) < self.CACHE_TTL
-        ):
-            return self._cache["bootstrap"]
+        async with self._cache_lock:
+            now = time.time()
+            if (
+                "bootstrap" in self._cache
+                and (now - self._last_updated.get("bootstrap", 0)) < self.CACHE_TTL
+            ):
+                return self._cache["bootstrap"]
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/bootstrap-static/")
-            response.raise_for_status()
-            data = response.json()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{FPL_BASE_URL}/bootstrap-static/")
+                response.raise_for_status()
+                data = response.json()
 
-            self._cache["bootstrap"] = data
-            self._last_updated["bootstrap"] = now
-            return data
+                self._cache["bootstrap"] = data
+                self._last_updated["bootstrap"] = now
+                return data
 
     async def get_entry_history(self, team_id: int) -> Dict[str, Any]:
         async with httpx.AsyncClient() as client:
@@ -323,7 +325,6 @@ class FPLService:
         # Process Chips
         chips_status = self.calculate_chip_status(gw, history, picks, my_team_data)
 
-
         # Update history with live points from picks for the current gameweek
         current_history = history.get("current", [])
         if picks and "entry_history" in picks:
@@ -534,21 +535,22 @@ class FPLService:
         return ft
 
     async def get_fixtures(self) -> list:
-        now = time.time()
-        if (
-            "fixtures" in self._cache
-            and (now - self._last_updated.get("fixtures", 0)) < self.CACHE_TTL
-        ):
-            return self._cache["fixtures"]
+        async with self._cache_lock:
+            now = time.time()
+            if (
+                "fixtures" in self._cache
+                and (now - self._last_updated.get("fixtures", 0)) < self.CACHE_TTL
+            ):
+                return self._cache["fixtures"]
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/fixtures/")
-            response.raise_for_status()
-            data = response.json()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{FPL_BASE_URL}/fixtures/")
+                response.raise_for_status()
+                data = response.json()
 
-            self._cache["fixtures"] = data
-            self._last_updated["fixtures"] = now
-            return data
+                self._cache["fixtures"] = data
+                self._last_updated["fixtures"] = now
+                return data
 
     async def get_live_fixtures(self, gw: int) -> list:
         bootstrap = await self.get_bootstrap_static()

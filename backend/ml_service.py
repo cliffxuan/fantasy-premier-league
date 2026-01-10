@@ -56,13 +56,17 @@ class MLService:
 
         all_rows = []
 
-        # Chunk requests to be nice to API
-        chunk_size = 20
-        sem = asyncio.Semaphore(10)
+        # Chunk requests to be nice to API but faster
+        chunk_size = 50
+        sem = asyncio.Semaphore(20)
 
         async def fetch_history(pid):
             async with sem:
-                return await self.fpl_service.get_player_summary(pid)
+                try:
+                    return await self.fpl_service.get_player_summary(pid)
+                except Exception as e:
+                    logger.error(f"Failed to fetch summary for {pid}: {e}")
+                    return None
 
         chunks = [
             candidates[i : i + chunk_size]
@@ -287,7 +291,11 @@ class MLService:
             if os.path.exists(TRAINING_DATA_FILE):
                 self.train_model()
             else:
+                logger.warning("No training data available. Skipping prediction.")
                 return {}
+
+        if not self.model:
+            return {}
 
         bootstrap = await self.fpl_service.get_bootstrap_static()
         elements = bootstrap["elements"]
