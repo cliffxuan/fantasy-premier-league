@@ -81,8 +81,9 @@ class AnalysisService:
     async def analyze_team(self, request: AnalysisRequest) -> AnalysisResponse:
         # 1. Fetch User Data
         gw = request.gameweek
+
         if not gw:
-            gw = await self.fpl_service.get_current_gameweek()
+            gw = await self.fpl_service.get_next_gameweek_id()
 
         history = await self.fpl_service.get_entry_history(request.team_id)
 
@@ -90,10 +91,9 @@ class AnalysisService:
         # Try to use authenticated data if available
         if request.auth_token:
             try:
-                my_team_data = await self.fpl_service.get_my_team(
+                picks = await self.fpl_service.get_my_team(
                     request.team_id, request.auth_token
                 )
-                picks = my_team_data
                 # If we have private data, it's usually for the *next* deadline or current live state.
                 # The structure is slightly different but get_my_team follows picks structure roughly?
                 # Actually get_my_team returns { "picks": [...], "chips": [...] }
@@ -101,7 +101,13 @@ class AnalysisService:
                 logging.warning(f"Failed to fetch private team data: {e}")
 
         if not picks:
-            picks = await self.fpl_service.get_entry_picks(request.team_id, gw)
+            # If gw is future (next), fetch picks from the current/latest known gameweek
+            current_gw_id = await self.fpl_service.get_current_gameweek()
+            if gw > current_gw_id:
+                picks_gw = current_gw_id
+            else:
+                picks_gw = gw
+            picks = await self.fpl_service.get_entry_picks(request.team_id, picks_gw)
 
         bootstrap = await self.fpl_service.get_bootstrap_static()
         fixtures = await self.fpl_service.get_fixtures()
