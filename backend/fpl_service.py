@@ -7,8 +7,8 @@ import httpx
 import pulp
 from loguru import logger
 
-from .team_details import TEAM_MAPPINGS, TEAM_NAME_OVERRIDES
-from .models import Team, Fixture
+from .models import Fixture, Team
+from .team_details import NAME_TO_FULL_NAME, TEAM_MAPPINGS
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -35,14 +35,10 @@ class FPLService:
                 data = response.json()
 
                 # Populate full_name from overrides
-                name_overrides = TEAM_NAME_OVERRIDES
-
                 for team in data.get("teams", []):
-                    if team["name"] in name_overrides:
-                        team["full_name"] = name_overrides[team["name"]]
-                    else:
-                        # Fallback to name if no override
-                        team["full_name"] = team["name"]
+                    team["full_name"] = NAME_TO_FULL_NAME.get(
+                        team["name"], team["name"]
+                    )
 
                 self._cache["bootstrap"] = data
                 self._last_updated["bootstrap"] = now
@@ -156,7 +152,6 @@ class FPLService:
                 print(f"DEBUG: Failed to fetch my team with token: {e}")
                 # Fallback to public picks if auth fails? Or just fail?
                 # Let's fallback for now, or just leave picks as None to be handled below
-                pass
 
         if not picks:
             try:
@@ -662,7 +657,6 @@ class FPLService:
             # CRITICAL: I need to add 'code' to Fixture model.
 
             # Reverting strategy: I need to add 'code' to Fixture model in models.py BEFORE updating usage, or I lose data.
-            pass
             pulse_id = match.code
             if pulse_id:
                 lineup_data = await self.get_pulse_lineup(pulse_id)

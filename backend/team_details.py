@@ -144,6 +144,6 @@ for team, aliases in TEAM_VARIANTS:
 
 # Overrides for full club names in display
 # Dynamically generated from TEAM_VARIANTS
-TEAM_NAME_OVERRIDES = {}
+NAME_TO_FULL_NAME = {}
 for team_dict, _ in TEAM_VARIANTS:
-    TEAM_NAME_OVERRIDES[team_dict["name"]] = team_dict["full_name"]
+    NAME_TO_FULL_NAME[team_dict["name"]] = team_dict["full_name"]
