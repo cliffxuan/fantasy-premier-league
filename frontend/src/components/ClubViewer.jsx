@@ -256,7 +256,10 @@ const ClubViewer = () => {
 											alt="Badge"
 											className="w-6 h-6 object-contain"
 										/>
-										<span className="font-bold">{teams.find(t => t.id === selectedClub)?.name}</span>
+										<span className="font-bold">{(() => {
+											const t = teams.find(t => t.id === selectedClub);
+											return t?.full_name || t?.name;
+										})()}</span>
 									</>
 								) : (
 									<span className="text-ds-text-muted">Select a Premier League Club...</span>
@@ -294,7 +297,7 @@ const ClubViewer = () => {
 								{teams.map(team => (
 									<div
 										key={team.id}
-										data-name={team.name}
+										data-name={team.full_name || team.name}
 										className="club-item flex items-center gap-3 px-4 py-3 hover:bg-ds-bg cursor-pointer transition-colors border-b border-ds-border/50 last:border-none"
 										onClick={() => {
 											setSelectedClub(team.id);
@@ -311,7 +314,7 @@ const ClubViewer = () => {
 											alt={team.name}
 											className="w-8 h-8 object-contain"
 										/>
-										<span className="font-bold text-sm">{team.name}</span>
+										<span className="font-bold text-sm">{team.full_name || team.name}</span>
 									</div>
 								))}
 							</div>
@@ -476,7 +479,7 @@ const ClubViewer = () => {
 																alt={squadData.team?.name}
 															/>
 														)}
-														<h2 className="text-2xl font-bold">{squadData.team?.name}</h2>
+														<h2 className="text-2xl font-bold">{squadData.team?.full_name || squadData.team?.name}</h2>
 													</div>
 												</div>
 											</div>

@@ -34,12 +34,15 @@ class FPLService:
                 response.raise_for_status()
                 data = response.json()
 
-                # Override team names with full names
+                # Populate full_name from overrides
                 name_overrides = TEAM_NAME_OVERRIDES
 
                 for team in data.get("teams", []):
                     if team["name"] in name_overrides:
-                        team["name"] = name_overrides[team["name"]]
+                        team["full_name"] = name_overrides[team["name"]]
+                    else:
+                        # Fallback to name if no override
+                        team["full_name"] = team["name"]
 
                 self._cache["bootstrap"] = data
                 self._last_updated["bootstrap"] = now

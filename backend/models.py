@@ -39,6 +39,7 @@ class Team(BaseModel):
     code: int
     name: str
     short_name: str
+    full_name: Optional[str] = None
     strength: int
 
 
