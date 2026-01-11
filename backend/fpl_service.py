@@ -7,7 +7,7 @@ import httpx
 import pulp
 from loguru import logger
 
-from .team_details import TEAM_MAPPINGS
+from .team_details import TEAM_MAPPINGS, TEAM_NAME_OVERRIDES
 from .models import Team, Fixture
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
@@ -33,6 +33,13 @@ class FPLService:
                 response = await client.get(f"{FPL_BASE_URL}/bootstrap-static/")
                 response.raise_for_status()
                 data = response.json()
+
+                # Override team names with full names
+                name_overrides = TEAM_NAME_OVERRIDES
+
+                for team in data.get("teams", []):
+                    if team["name"] in name_overrides:
+                        team["name"] = name_overrides[team["name"]]
 
                 self._cache["bootstrap"] = data
                 self._last_updated["bootstrap"] = now
