@@ -147,15 +147,20 @@ class AnalysisService:
         # Filter next 3 GW fixtures
         upcoming_fixtures = []
         for f in fixtures:
-            if f["event"] and gw <= f["event"] <= gw + 2:
-                h_team = teams.get(f["team_h"])
-                a_team = teams.get(f["team_a"])
+            # Fixture is a Pydantic model now, use dot notation
+            if f.event and gw <= f.event <= gw + 2:
+                h_team = teams.get(f.team_h)
+                a_team = teams.get(f.team_a)
+
+                h_name = h_team["short_name"] if h_team else "UNK"
+                a_name = a_team["short_name"] if a_team else "UNK"
+
                 upcoming_fixtures.append(
                     {
-                        "event": f["event"],
-                        "match": f"{h_team['short_name']} vs {a_team['short_name']}",
-                        "difficulty_h": f["team_h_difficulty"],
-                        "difficulty_a": f["team_a_difficulty"],
+                        "event": f.event,
+                        "match": f"{h_name} vs {a_name}",
+                        "difficulty_h": f.team_h_difficulty,
+                        "difficulty_a": f.team_a_difficulty,
                     }
                 )
 
@@ -165,7 +170,7 @@ class AnalysisService:
             my_team_data = picks
 
         chips_status = self.fpl_service.calculate_chip_status(
-            gw, history, picks, my_team_data
+            gw, history, picks, my_team_data or {}
         )
 
         # Extract available chips and active chip

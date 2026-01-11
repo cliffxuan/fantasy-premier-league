@@ -1,15 +1,16 @@
 import os
+from typing import List
+from loguru import logger
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from typing import List
 from .analysis_service import AnalysisService
-from .fpl_service import FPLService
 from .form_service import FormService
-from .models import AnalysisRequest, AnalysisResponse, Team, Fixture
+from .fpl_service import FPLService
+from .models import AnalysisRequest, AnalysisResponse, Fixture, Team
 
 app = FastAPI(title="FPL Alpha API")
 
@@ -29,7 +30,7 @@ async def global_exception_handler(request, call_next):
         response = await call_next(request)
         return response
     except Exception as e:
-        print(f"Unhandled Exception: {str(e)}")
+        logger.exception(f"Unhandled Exception: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={"detail": "Internal Server Error", "error": str(e)},
@@ -45,6 +46,7 @@ async def analyze_team(request: AnalysisRequest):
     try:
         return await analysis_service.analyze_team(request)
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -53,6 +55,7 @@ async def get_form_analysis():
     try:
         return await form_service.get_form_analysis_data()
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -78,6 +81,7 @@ async def get_teams():
         data = await service.get_teams()
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=f"Failed to fetch teams: {str(e)}")
 
 
@@ -88,6 +92,7 @@ async def get_club_squad(club_id: int, gw: int | None = None):
         data = await service.get_club_squad(club_id, gw)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch club squad: {str(e)}"
         )
@@ -100,6 +105,7 @@ async def get_club_summary(club_id: int):
         data = await service.get_club_summary(club_id)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch club summary: {str(e)}"
         )
@@ -115,6 +121,7 @@ async def get_my_team(team_id: int, authorization: str = Header(None)):
         data = await service.get_my_team(team_id, authorization)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch my team: {str(e)}"
         )
@@ -127,6 +134,7 @@ async def get_league_table(min_gw: int = 1, max_gw: int = 38):
         data = await service.get_league_table(min_gw, max_gw)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch league table: {str(e)}"
         )
@@ -139,6 +147,7 @@ async def get_player_summary(player_id: int):
         data = await service.get_player_summary(player_id)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch player summary: {str(e)}"
         )
@@ -161,6 +170,7 @@ async def get_aggregated_players(
         data = await service.get_aggregated_player_stats(min_gw, max_gw, venue)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch aggregated player stats: {str(e)}"
         )
@@ -173,6 +183,7 @@ async def get_dream_team(gw: int):
         data = await service.get_dream_team(gw)
         return data
     except Exception as e:
+        logger.exception(f"Failed to fetch dream team: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch dream team: {str(e)}"
         )
@@ -190,6 +201,7 @@ async def get_top_managers_analysis(gw: int | None = None, count: int = 1000):
         data = await service.get_top_managers_ownership(gw, count)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch top managers analysis: {str(e)}"
         )
@@ -230,6 +242,7 @@ async def solve_optimization(
         )
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(status_code=500, detail=f"Optimization failed: {str(e)}")
 
 
@@ -240,6 +253,7 @@ async def get_fixture_analysis(gw: int | None = None):
         data = await service.get_advanced_fixtures(gw)
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Fixture analysis failed: {str(e)}"
         )
@@ -255,6 +269,7 @@ async def get_fixtures(event: int | None = None):
             data = await service.get_fixtures()
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch fixtures: {str(e)}"
         )
@@ -267,6 +282,7 @@ async def get_polymarket_data():
         data = await service.get_polymarket_data()
         return data
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch Polymarket data: {str(e)}"
         )
@@ -279,6 +295,7 @@ async def get_current_gameweek():
         status = await service.get_gameweek_status()
         return {"gameweek": status["id"], "status": status}
     except Exception as e:
+        logger.exception(e)
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch current gameweek: {str(e)}"
         )
