@@ -815,8 +815,8 @@ class FPLService:
         relevant_fixtures.sort(key=lambda x: x.event or 999)
 
         for f in relevant_fixtures:
-            is_home = f.team_h == club_id
-            opponent_id = f.team_a if is_home else f.team_h
+            is_home = f.is_home_for(club_id)
+            opponent_id = f.get_opponent_id(club_id)
             opp_team = teams_map.get(opponent_id, {})
 
             # Calculate result if finished
@@ -850,9 +850,7 @@ class FPLService:
                     "opponent_short": opp_team.get("short_name", "UNK"),
                     "opponent_code": opp_team.get("code"),
                     "is_home": is_home,
-                    "difficulty": f.team_h_difficulty
-                    if is_home
-                    else f.team_a_difficulty,
+                    "difficulty": f.get_difficulty_for(club_id),
                     "finished": f.finished,
                     "score": score,
                     "result": result,
@@ -930,8 +928,8 @@ class FPLService:
         recent_fixtures = past_fixtures
 
         for f in future_fixtures:
-            is_home = f.team_h == club_id
-            opponent_id = f.team_a if is_home else f.team_h
+            is_home = f.is_home_for(club_id)
+            opponent_id = f.get_opponent_id(club_id)
             opp_team = teams_map.get(opponent_id, {})
             upcoming.append(
                 {
@@ -940,16 +938,14 @@ class FPLService:
                     "opponent_name": opp_team.get("name", "Unknown"),
                     "opponent_short": opp_team.get("short_name", "UNK"),
                     "is_home": is_home,
-                    "difficulty": f.team_h_difficulty
-                    if is_home
-                    else f.team_a_difficulty,
+                    "difficulty": f.get_difficulty_for(club_id),
                     "kickoff_time": f.kickoff_time,
                 }
             )
 
         for f in recent_fixtures:
-            is_home = f.team_h == club_id
-            opponent_id = f.team_a if is_home else f.team_h
+            is_home = f.is_home_for(club_id)
+            opponent_id = f.get_opponent_id(club_id)
             opp_team = teams_map.get(opponent_id, {})
 
             h_score = f.team_h_score
@@ -977,9 +973,7 @@ class FPLService:
                     "is_home": is_home,
                     "score": score,
                     "result": result,
-                    "difficulty": f.team_h_difficulty
-                    if is_home
-                    else f.team_a_difficulty,
+                    "difficulty": f.get_difficulty_for(club_id),
                     "kickoff_time": f.kickoff_time,
                 }
             )
@@ -1571,7 +1565,7 @@ class FPLService:
                         if not fix_info:
                             continue
 
-                        is_home = fix_info.team_h == team_id
+                        is_home = fix_info.is_home_for(team_id)
 
                         target_venue = venue.lower()
                         should_include = False
