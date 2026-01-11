@@ -1648,6 +1648,13 @@ class FPLService:
                 "photo": p["photo"].replace(".jpg", ""),
                 "code": p["code"],
                 "chance_of_playing_next_round": p["chance_of_playing_next_round"],
+                "matches_in_range": stats.get("matches_in_range", 0),
+                "points_per_game": round(
+                    stats.get("points_in_range", 0) / stats.get("matches_in_range", 1),
+                    1,
+                )
+                if stats.get("matches_in_range", 0) > 0
+                else 0.0,
             }
             results.append(summary)
 

@@ -481,7 +481,10 @@ const PlayerExplorer = () => {
 								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('team_short')}>Club</th>
 								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('now_cost')}>Price</th>
 								<th className="p-3 cursor-pointer hover:text-ds-primary text-right text-ds-primary" onClick={() => handleSort('points_in_range')}>
-									Pts (Range) {sortConfig.key === 'points_in_range' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
+									Pts {sortConfig.key === 'points_in_range' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
+								</th>
+								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('points_per_game')}>
+									PPG {sortConfig.key === 'points_per_game' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
 								</th>
 								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('total_points')}>Total</th>
 								<th className="p-3 text-center">Status</th>
@@ -490,7 +493,7 @@ const PlayerExplorer = () => {
 						<tbody className="divide-y divide-ds-border text-sm text-ds-text">
 							{loading ? (
 								<tr>
-									<td colSpan="8" className="p-8 text-center text-ds-text-muted">
+									<td colSpan="9" className="p-8 text-center text-ds-text-muted">
 										<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-ds-primary mb-2"></div>
 										<p>Aggregating stats...</p>
 									</td>
@@ -529,6 +532,7 @@ const PlayerExplorer = () => {
 										<td className="p-3 text-xs text-ds-text-muted">{player.team_short}</td>
 										<td className="p-3 text-right font-mono">£{player.now_cost}m</td>
 										<td className="p-3 text-right font-bold text-ds-primary">{player.points_in_range}</td>
+										<td className="p-3 text-right text-ds-text">{player.points_per_game}</td>
 										<td className="p-3 text-right text-ds-text-muted">{player.total_points}</td>
 										<td className="p-3 text-center">
 											<div className={`w-2 h-2 rounded-full mx-auto ${statusColorMap[player.status] || 'bg-green-500'}`} title={player.news || "Available"}></div>
@@ -538,7 +542,7 @@ const PlayerExplorer = () => {
 							)}
 							{!loading && filteredPlayers.length === 0 && (
 								<tr>
-									<td colSpan="8" className="p-8 text-center text-ds-text-muted">
+									<td colSpan="9" className="p-8 text-center text-ds-text-muted">
 										No players found matching filters.
 									</td>
 								</tr>
