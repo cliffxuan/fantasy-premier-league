@@ -199,6 +199,16 @@ async def get_fixtures(event: int | None = None):
     return data
 
 
+@app.get("/api/history/h2h/{team_h_id}/{team_a_id}", tags=["History"])
+async def get_h2h_history(team_h_id: int, team_a_id: int):
+    # Lazy import to avoid circular dependencies if any
+    from .history_service import HistoryService
+
+    service = HistoryService()
+    data = await service.get_h2h_history(team_h_id, team_a_id)
+    return data
+
+
 @app.get("/api/polymarket", tags=["Polymarket"])
 async def get_polymarket_data():
     service = FPLService()

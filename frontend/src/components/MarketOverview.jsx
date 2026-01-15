@@ -3,6 +3,7 @@ import { getFixtures, getPolymarketData } from '../api';
 import { ArrowUpRight, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { getTeamBadgeUrl, PROBABILITY_COLORS } from '../utils';
 import TeamPopover from './TeamPopover';
+import HistoryModal from './HistoryModal';
 
 const MarketOverview = () => {
 	const [fixtures, setFixtures] = useState([]);
@@ -123,6 +124,37 @@ const MarketOverview = () => {
 		/>
 	);
 
+	// History Modal State
+	const [showHistoryModal, setShowHistoryModal] = useState(false);
+	const [historyData, setHistoryData] = useState([]);
+	const [historyLoading, setHistoryLoading] = useState(false);
+	const [selectedTeams, setSelectedTeams] = useState({ home: null, away: null });
+
+	// Lazy load HistoryModal? Or just import at top. 
+	// I need to add the import statement at the top of the file as well. 
+	// This tool call only replaces a block. I should probably use multi_replace or do it in two steps.
+	// Let's assume I'll add the import in a separate call or use multi_replace.
+	// I will use multi_replace to do both safely.
+
+	const handleOpenHistory = async (teamH, teamA) => {
+		setSelectedTeams({ home: teamH, away: teamA });
+		setShowHistoryModal(true);
+		setHistoryLoading(true);
+		setHistoryData([]);
+
+		try {
+			const res = await fetch(`/api/history/h2h/${teamH.id}/${teamA.id}`);
+			if (res.ok) {
+				const data = await res.json();
+				setHistoryData(data);
+			}
+		} catch (e) {
+			console.error("Failed to fetch history", e);
+		} finally {
+			setHistoryLoading(false);
+		}
+	};
+
 	const MarketCard = ({ f }) => {
 		const isLive = f.started && !f.finished_provisional;
 		const market = f.market;
@@ -147,12 +179,26 @@ const MarketOverview = () => {
 							</span>
 						)}
 					</div>
-					{market && (
-						<a href={`https://polymarket.com/event/${market.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors">
-							<span className="hidden sm:inline">Polymarket</span>
-							<ArrowUpRight size={12} />
-						</a>
-					)}
+					<div className="flex items-center gap-3">
+						{/* H2H Button */}
+						<button
+							onClick={() => handleOpenHistory(
+								{ id: f.team_h, name: f.team_h_name },
+								{ id: f.team_a, name: f.team_a_name }
+							)}
+							className="flex items-center gap-1 text-ds-text-muted hover:text-ds-primary transition-colors cursor-pointer"
+						>
+							<span className="hidden sm:inline">H2H</span>
+							<span className="sm:hidden">H2H</span>
+						</button>
+
+						{market && (
+							<a href={`https://polymarket.com/event/${market.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors">
+								<span className="hidden sm:inline">Polymarket</span>
+								<ArrowUpRight size={12} />
+							</a>
+						)}
+					</div>
 				</div>
 
 				<div className="p-4 grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-6 items-center">
@@ -239,6 +285,14 @@ const MarketOverview = () => {
 
 	return (
 		<div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+			<HistoryModal
+				isOpen={showHistoryModal}
+				onClose={() => setShowHistoryModal(false)}
+				history={historyData}
+				teamH={selectedTeams.home}
+				teamA={selectedTeams.away}
+			/>
+
 			<div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
 				<h2 className="text-2xl font-bold flex items-center gap-3">
 					<span className="text-3xl">🏟️</span>
