@@ -158,16 +158,34 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 
 										{/* Scoreline */}
 										<div className="flex-1 flex items-center justify-center gap-4 w-full">
-											<div className={`text-sm font-bold ${match.score_home > match.score_away ? 'text-ds-text' : 'text-ds-text-muted'} text-right flex-1`}>
-												{match.home_team}
+											<div className={`text-sm font-bold ${match.score_home > match.score_away ? 'text-ds-text' : 'text-ds-text-muted'} text-right flex-1 flex flex-col items-end`}>
+												<span>{match.home_team}</span>
+												{match.scorers_home && match.scorers_home.length > 0 && (
+													<div className="flex flex-col items-end mt-1 space-y-0.5">
+														{match.scorers_home.map((scorer, i) => (
+															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+																⚽ {scorer}
+															</span>
+														))}
+													</div>
+												)}
 											</div>
 
 											<div className={`border px-3 py-1.5 rounded-md font-mono font-bold text-lg min-w-[60px] text-center shadow-sm transition-colors ${colorClass}`}>
 												{match.score_home} - {match.score_away}
 											</div>
 
-											<div className={`text-sm font-bold ${match.score_away > match.score_home ? 'text-ds-text' : 'text-ds-text-muted'} text-left flex-1`}>
-												{match.away_team}
+											<div className={`text-sm font-bold ${match.score_away > match.score_home ? 'text-ds-text' : 'text-ds-text-muted'} text-left flex-1 flex flex-col items-start`}>
+												<span>{match.away_team}</span>
+												{match.scorers_away && match.scorers_away.length > 0 && (
+													<div className="flex flex-col items-start mt-1 space-y-0.5">
+														{match.scorers_away.map((scorer, i) => (
+															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+																⚽ {scorer}
+															</span>
+														))}
+													</div>
+												)}
 											</div>
 										</div>
 									</div>
@@ -192,7 +210,7 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 				</div>
 
 			</div>
-		</div>
+		</div >
 	);
 };
 

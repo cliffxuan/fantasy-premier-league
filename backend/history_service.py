@@ -1,5 +1,6 @@
 import asyncio
 import io
+import ast
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -130,24 +131,89 @@ class HistoryService:
                         score_h = 0
                         score_a = 0
 
-                    history.append(
-                        {
-                            "season": season,
-                            "date": row["kickoff_time"],
-                            "gameweek": row["event"],
-                            "home_team": home_name
-                            if is_home_perspective
-                            else away_name,
-                            "away_team": away_name
-                            if is_home_perspective
-                            else home_name,
-                            "score_home": score_h,
-                            "score_away": score_a,
-                            "home_team_id": int(row["team_h"]),
-                            "away_team_id": int(row["team_a"]),
-                            "match_is_home": is_home_perspective,
-                        }
-                    )
+                    match_entry = {
+                        "season": season,
+                        "date": row["kickoff_time"],
+                        "gameweek": row["event"],
+                        "home_team": home_name if is_home_perspective else away_name,
+                        "away_team": away_name if is_home_perspective else home_name,
+                        "score_home": score_h,
+                        "score_away": score_a,
+                        "home_team_id": int(row["team_h"]),
+                        "away_team_id": int(row["team_a"]),
+                        "match_is_home": is_home_perspective,
+                    }
+
+                    # Parse Stats for Scorers if available
+                    scorers_h = []
+                    scorers_a = []
+
+                    raw_stats = row.get("stats")
+                    player_map = season_data.get("players", {})
+
+                    if raw_stats and isinstance(raw_stats, str) and len(raw_stats) > 2:
+                        try:
+                            # It uses single quotes, use ast.literal_eval safe parsing
+                            stats_list = ast.literal_eval(raw_stats)
+
+                            # Find goals_scored identifier
+                            for stat in stats_list:
+                                if stat.get("identifier") == "goals_scored":
+                                    # Process Home Scorers ('h')
+                                    for item in stat.get("h", []):
+                                        pid = item["element"]
+                                        val = item["value"]
+                                        pname = player_map.get(pid, f"#{pid}")
+                                        # Only add name, multiply by value if > 1? Or separate entries?
+                                        # Standard notation: "Name (2)" if 2 goals.
+                                        entry = pname
+                                        if val > 1:
+                                            entry += f" ({val})"
+                                        scorers_h.append(entry)
+
+                                    # Process Away Scorers ('a')
+                                    for item in stat.get("a", []):
+                                        pid = item["element"]
+                                        val = item["value"]
+                                        pname = player_map.get(pid, f"#{pid}")
+                                        entry = pname
+                                        if val > 1:
+                                            entry += f" ({val})"
+                                        scorers_a.append(entry)
+                        except Exception:
+                            # Parse error, ignore stats
+                            pass
+
+                    # Assign scorers based on perspective
+                    # scorers_h is actual HOME team scorers
+                    # scorers_a is actual AWAY team scorers
+
+                    # If match_is_home (User's teamH is Home):
+                    #   display_home = scorers_h
+                    #   display_away = scorers_a
+                    # Else (User's teamH is Away):
+                    #   display_home = scorers_a (since away matches show "Away Team" as first/home_team column in object? No, check object keys)
+
+                    # Object keys: "home_team" (name), "away_team" (name).
+                    # "home_team" field in match_entry is: home_name if is_home else away_name.
+                    # This means "home_team" in json IS THE USER'S TEAM (team H).
+
+                    # Logic:
+                    # If is_home_perspective:
+                    #   match_entry["home_team"] = real_home (User Team)
+                    #   match_entry["scorers_home"] = real_home_scorers
+                    # Else:
+                    #   match_entry["home_team"] = real_away (User Team)
+                    #   match_entry["scorers_home"] = real_away_scorers
+
+                    # Wait, let's keep it consistent with "home_team" / "away_team" names.
+                    # If match_entry["home_team"] holds the NAME of the team on the left side (perspective team),
+                    # then match_entry["scorers_home"] should hold the scorers for THAT team.
+
+                    match_entry["scorers_home"] = scorers_h
+                    match_entry["scorers_away"] = scorers_a
+
+                    history.append(match_entry)
 
             except Exception as e:
                 logger.error(f"Error processing fixtures for {season}: {e}")
@@ -179,13 +245,16 @@ class HistoryService:
             async with httpx.AsyncClient() as client:
                 teams_url = f"{REPO_BASE_URL}/{season}/teams.csv"
                 fixtures_url = f"{REPO_BASE_URL}/{season}/fixtures.csv"
+                players_url = f"{REPO_BASE_URL}/{season}/players_raw.csv"
 
-                t_resp, f_resp = await asyncio.gather(
-                    client.get(teams_url), client.get(fixtures_url)
+                t_resp, f_resp, p_resp = await asyncio.gather(
+                    client.get(teams_url),
+                    client.get(fixtures_url),
+                    client.get(players_url),
                 )
 
                 if t_resp.status_code != 200 or f_resp.status_code != 200:
-                    logger.error(f"Failed to fetch data for {season}")
+                    logger.error(f"Failed to fetch data for {season} (Teams/Fixtures)")
                     return None
 
                 # Parse CSVs with Polars
@@ -198,9 +267,30 @@ class HistoryService:
                     io.BytesIO(f_resp.content),
                     infer_schema_length=10000,
                     null_values=[""],
+                    ignore_errors=True,
                 )
 
-                return {"season": season, "teams": teams_df, "fixtures": fixtures_df}
+                # Players mapping: ID -> Web Name
+                player_map = {}
+                if p_resp.status_code == 200:
+                    try:
+                        players_df = pl.read_csv(
+                            io.BytesIO(p_resp.content),
+                            columns=["id", "web_name"],
+                            infer_schema_length=10000,
+                            null_values=[""],
+                        )
+                        for row in players_df.iter_rows(named=True):
+                            player_map[row["id"]] = row["web_name"]
+                    except Exception as e:
+                        logger.warning(f"Failed to parse players for {season}: {e}")
+
+                return {
+                    "season": season,
+                    "teams": teams_df,
+                    "fixtures": fixtures_df,
+                    "players": player_map,
+                }
         except Exception as e:
             logger.error(f"Error fetching {season}: {e}")
             return None
