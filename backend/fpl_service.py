@@ -565,6 +565,12 @@ class FPLService:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
+        # Import HistoryService here to avoid circular dependencies
+        from .history_service import HistoryService
+
+        history_service = HistoryService()
+        await history_service._ensure_history_data()
+
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{FPL_BASE_URL}/fixtures/", params={"event": gw}
@@ -575,7 +581,7 @@ class FPLService:
             # Convert to Models
             fixtures = [Fixture(**f) for f in data]
 
-        # Enrich with team names
+        # Enrich with team names and H2H Stats
         for f in fixtures:
             h_team = teams.get(f.team_h)
             a_team = teams.get(f.team_a)
@@ -585,6 +591,84 @@ class FPLService:
             f.team_a_short = a_team["short_name"] if a_team else "UNK"
             f.team_h_code = h_team["code"] if h_team else 0
             f.team_a_code = a_team["code"] if a_team else 0
+
+            # Calculate H2H Stats
+            try:
+                history = await history_service.get_h2h_history(f.team_h, f.team_a)
+                total = len(history)
+                if total > 0:
+                    team_h_wins = 0
+                    team_a_wins = 0
+                    draws = 0
+
+                    for match in history:
+                        home_won = match["score_home"] > match["score_away"]
+                        away_won = match["score_away"] > match["score_home"]
+
+                        # Perspective check: history has 'home_team' name not ID easily accessible unless we parse
+                        # But get_h2h_history returns standard structure where 'score_home' corresponds to 'home_team'
+                        # We stored 'match_is_home' relative to REQUESTED team_h.
+                        # Wait, get_h2h_history(t1, t2) returns list.
+                        # In HistoryService:
+                        # history.append({ ..., "match_is_home": is_home_perspective, ... })
+                        # is_home_perspective = (h_id == s_home_id) where s_home_id is first arg to get_h2h_history
+
+                        # So if match["match_is_home"] is True, then t1 was Home.
+                        # If False, t1 was Away.
+
+                        if match["match_is_home"]:
+                            if home_won:
+                                team_h_wins += 1
+                            elif away_won:
+                                team_a_wins += 1
+                            else:
+                                draws += 1
+                        else:
+                            if away_won:
+                                team_h_wins += 1
+                            elif home_won:
+                                team_a_wins += 1
+                            else:
+                                draws += 1
+
+                    f.history_stats = {
+                        "team_h_win": round((team_h_wins / total) * 100),
+                        "draw": round((draws / total) * 100),
+                        "team_a_win": round((team_a_wins / total) * 100),
+                        "total": total,
+                    }
+
+                    # Venue Specific Stats
+                    venue_matches = [m for m in history if m["match_is_home"]]
+                    venue_total = len(venue_matches)
+
+                    if venue_total > 0:
+                        v_h_wins = 0
+                        v_a_wins = 0
+                        v_draws = 0
+
+                        for match in venue_matches:
+                            # For these matches, match_is_home is ALWAYS True
+                            home_won = match["score_home"] > match["score_away"]
+                            away_won = match["score_away"] > match["score_home"]
+
+                            if home_won:
+                                v_h_wins += 1
+                            elif away_won:
+                                v_a_wins += 1
+                            else:
+                                v_draws += 1
+
+                        f.history_stats_venue = {
+                            "team_h_win": round((v_h_wins / venue_total) * 100),
+                            "draw": round((v_draws / venue_total) * 100),
+                            "team_a_win": round((v_a_wins / venue_total) * 100),
+                            "total": venue_total,
+                        }
+            except Exception as e:
+                print(
+                    f"DEBUG: Failed to calc stats for {f.team_h_name} vs {f.team_a_name}: {e}"
+                )
 
         return fixtures
 

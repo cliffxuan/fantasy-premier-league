@@ -68,6 +68,10 @@ class Fixture(BaseModel):
     team_h_code: Optional[int] = None
     team_a_code: Optional[int] = None
 
+    # H2H Stats
+    history_stats: Optional[Dict[str, float]] = None
+    history_stats_venue: Optional[Dict[str, float]] = None
+
     def is_home_for(self, team_id: int) -> bool:
         """Returns True if the given team_id is playing at home in this fixture."""
         return self.team_h == team_id

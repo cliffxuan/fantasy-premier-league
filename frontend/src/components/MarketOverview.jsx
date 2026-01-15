@@ -12,6 +12,7 @@ const MarketOverview = () => {
 	const [gw, setGw] = useState(null);
 	const [currentGw, setCurrentGw] = useState(null);
 	const [sortBy, setSortBy] = useState('time'); // 'time' or 'odds'
+	const [h2hStatsFilter, setH2hStatsFilter] = useState('all'); // 'all' or 'venue'
 
 	useEffect(() => {
 		const init = async () => {
@@ -203,44 +204,68 @@ const MarketOverview = () => {
 
 				<div className="p-4 grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-6 items-center">
 
-					{/* Left: Match Score/Vs */}
-					<div className="flex items-center justify-between gap-4">
-						{/* Home */}
-						<TeamPopover
-							team={{ id: f.team_h, code: f.team_h_code, name: f.team_h_name, short_name: f.team_h_short }}
-							className="flex-1 min-w-0"
-						>
-							<div className="flex items-center gap-3 justify-end w-full cursor-pointer hover:opacity-80 transition-opacity">
-								<span className="font-bold text-lg hidden sm:block text-right">{f.team_h_name}</span>
-								<span className="font-bold text-lg sm:hidden text-right">{f.team_h_short}</span>
-								<TeamBadge code={f.team_h_code} />
-							</div>
-						</TeamPopover>
+					{/* Left Column: Match & Stats */}
+					<div className="flex flex-col gap-2 min-w-0">
+						{/* Match Score/Vs */}
+						<div className="flex items-center justify-between gap-4">
+							{/* Home */}
+							<TeamPopover
+								team={{ id: f.team_h, code: f.team_h_code, name: f.team_h_name, short_name: f.team_h_short }}
+								className="flex-1 min-w-0"
+							>
+								<div className="flex items-center gap-3 justify-end w-full cursor-pointer hover:opacity-80 transition-opacity">
+									<span className="font-bold text-lg hidden sm:block text-right">{f.team_h_name}</span>
+									<span className="font-bold text-lg sm:hidden text-right">{f.team_h_short}</span>
+									<TeamBadge code={f.team_h_code} />
+								</div>
+							</TeamPopover>
 
-						{/* Middle Score */}
-						<div className="flex flex-col items-center min-w-[60px]">
-							{f.started ? (
-								<div className="text-3xl font-bold font-mono tracking-tighter">
-									{f.team_h_score}-{f.team_a_score}
+							{/* Middle Score */}
+							<div className="flex flex-col items-center min-w-[60px]">
+								{f.started ? (
+									<div className="text-3xl font-bold font-mono tracking-tighter">
+										{f.team_h_score}-{f.team_a_score}
+									</div>
+								) : (
+									<div className="text-ds-text-muted text-sm font-bold bg-ds-surface px-2 py-1 rounded">
+										VS
+									</div>
+								)}
+							</div>
+
+							{/* Away */}
+							<TeamPopover
+								team={{ id: f.team_a, code: f.team_a_code, name: f.team_a_name, short_name: f.team_a_short }}
+								className="flex-1 min-w-0"
+							>
+								<div className="flex items-center gap-3 justify-start w-full cursor-pointer hover:opacity-80 transition-opacity">
+									<TeamBadge code={f.team_a_code} />
+									<span className="font-bold text-lg hidden sm:block text-left">{f.team_a_name}</span>
+									<span className="font-bold text-lg sm:hidden text-left">{f.team_a_short}</span>
 								</div>
-							) : (
-								<div className="text-ds-text-muted text-sm font-bold bg-ds-surface px-2 py-1 rounded">
-									VS
-								</div>
-							)}
+							</TeamPopover>
 						</div>
 
-						{/* Away */}
-						<TeamPopover
-							team={{ id: f.team_a, code: f.team_a_code, name: f.team_a_name, short_name: f.team_a_short }}
-							className="flex-1 min-w-0"
-						>
-							<div className="flex items-center gap-3 justify-start w-full cursor-pointer hover:opacity-80 transition-opacity">
-								<TeamBadge code={f.team_a_code} />
-								<span className="font-bold text-lg hidden sm:block text-left">{f.team_a_name}</span>
-								<span className="font-bold text-lg sm:hidden text-left">{f.team_a_short}</span>
-							</div>
-						</TeamPopover>
+						{/* H2H Stats Bar */}
+						{(() => {
+							const stats = h2hStatsFilter === 'venue' ? f.history_stats_venue : f.history_stats;
+							if (!stats) return null;
+
+							return (
+								<div className="px-2">
+									<div className="flex justify-between text-[10px] font-bold text-ds-text-muted uppercase tracking-wider mb-1">
+										<span className="text-green-500">{stats.team_h_win}%</span>
+										<span>H2H ({stats.total})</span>
+										<span className="text-red-500">{stats.team_a_win}%</span>
+									</div>
+									<div className="h-1.5 w-full bg-ds-bg rounded-full overflow-hidden flex opacity-80 hover:opacity-100 transition-opacity" title={`H2H History: Home ${stats.team_h_win}%, Draw ${stats.draw}%, Away ${stats.team_a_win}%`}>
+										<div className="h-full bg-green-500" style={{ width: `${stats.team_h_win}%` }} />
+										<div className="h-full bg-gray-500/50" style={{ width: `${stats.draw}%` }} />
+										<div className="h-full bg-red-500" style={{ width: `${stats.team_a_win}%` }} />
+									</div>
+								</div>
+							);
+						})()}
 					</div>
 
 					{/* Right: Odds Buttons */}
@@ -272,7 +297,7 @@ const MarketOverview = () => {
 					</div>
 
 				</div>
-			</div>
+			</div >
 		);
 	};
 
@@ -300,6 +325,22 @@ const MarketOverview = () => {
 				</h2>
 
 				<div className="flex items-center gap-3">
+					{/* H2H Filter Toggle */}
+					<div className="flex p-0.5 bg-ds-surface rounded-lg border border-ds-border">
+						<button
+							onClick={() => setH2hStatsFilter('all')}
+							className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${h2hStatsFilter === 'all' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+						>
+							All Matches
+						</button>
+						<button
+							onClick={() => setH2hStatsFilter('venue')}
+							className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${h2hStatsFilter === 'venue' ? 'bg-ds-primary text-white shadow-sm' : 'text-ds-text-muted hover:text-ds-text'}`}
+						>
+							Same Venue
+						</button>
+					</div>
+
 					<button
 						onClick={() => setSortBy(prev => prev === 'time' ? 'odds' : 'time')}
 						className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ds-surface border border-ds-border hover:border-ds-primary/50 transition-colors text-xs font-bold text-ds-text"
