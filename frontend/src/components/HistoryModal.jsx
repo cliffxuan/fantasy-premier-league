@@ -13,6 +13,42 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 		return history.filter(match => match.match_is_home === true);
 	}, [history, filterType]);
 
+	// Calculate Stats based on filtered history for dynamic context
+	const stats = React.useMemo(() => {
+		if (!filteredHistory || filteredHistory.length === 0) return null;
+
+		let teamHWins = 0;
+		let draws = 0;
+		let teamAWins = 0;
+
+		filteredHistory.forEach(match => {
+			const homeWon = match.score_home > match.score_away;
+			const awayWon = match.score_away > match.score_home;
+
+			// If Team H (from props) was Home
+			if (match.match_is_home) {
+				if (homeWon) teamHWins++;
+				else if (awayWon) teamAWins++;
+				else draws++;
+			} else {
+				// Team H was Away
+				if (awayWon) teamHWins++;
+				else if (homeWon) teamAWins++;
+				else draws++;
+			}
+		});
+
+		const total = filteredHistory.length;
+		if (total === 0) return null;
+
+		return {
+			teamH: Math.round((teamHWins / total) * 100),
+			draw: Math.round((draws / total) * 100),
+			teamA: Math.round((teamAWins / total) * 100),
+			total
+		};
+	}, [filteredHistory]);
+
 	React.useEffect(() => {
 		const handleKeyDown = (e) => {
 			if (e.key === 'Escape' && isOpen) {
@@ -64,6 +100,25 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 							Same Venue
 						</button>
 					</div>
+
+					{/* Stats Bar */}
+					{stats && (
+						<div className="w-full bg-ds-surface/50 border border-ds-border rounded-lg p-3 flex flex-col gap-2">
+							<div className="flex justify-between text-xs font-bold text-ds-text-muted uppercase tracking-wider">
+								<span className="text-green-500">{teamH?.name} {stats.teamH}%</span>
+								<span className="text-gray-400">Draw {stats.draw}%</span>
+								<span className="text-red-500">{teamA?.name} {stats.teamA}%</span>
+							</div>
+							<div className="h-2.5 w-full bg-ds-bg rounded-full overflow-hidden flex">
+								<div className="h-full bg-green-500 transition-all" style={{ width: `${stats.teamH}%` }} />
+								<div className="h-full bg-gray-500/50 transition-all" style={{ width: `${stats.draw}%` }} />
+								<div className="h-full bg-red-500 transition-all" style={{ width: `${stats.teamA}%` }} />
+							</div>
+							<div className="text-[10px] text-center text-ds-text-muted italic">
+								Based on last {stats.total} meetings
+							</div>
+						</div>
+					)}
 				</div>
 
 				{/* Content */}
