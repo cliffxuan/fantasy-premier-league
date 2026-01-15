@@ -144,9 +144,11 @@ class HistoryService:
                         "match_is_home": is_home_perspective,
                     }
 
-                    # Parse Stats for Scorers if available
+                    # Parse Stats for Scorers and Assists if available
                     scorers_h = []
                     scorers_a = []
+                    assists_h = []
+                    assists_a = []
 
                     raw_stats = row.get("stats")
                     player_map = season_data.get("players", {})
@@ -164,8 +166,6 @@ class HistoryService:
                                         pid = item["element"]
                                         val = item["value"]
                                         pname = player_map.get(pid, f"#{pid}")
-                                        # Only add name, multiply by value if > 1? Or separate entries?
-                                        # Standard notation: "Name (2)" if 2 goals.
                                         entry = pname
                                         if val > 1:
                                             entry += f" ({val})"
@@ -180,38 +180,37 @@ class HistoryService:
                                         if val > 1:
                                             entry += f" ({val})"
                                         scorers_a.append(entry)
+
+                                elif stat.get("identifier") == "assists":
+                                    # Process Home Assists ('h')
+                                    for item in stat.get("h", []):
+                                        pid = item["element"]
+                                        val = item["value"]
+                                        pname = player_map.get(pid, f"#{pid}")
+                                        entry = pname
+                                        if val > 1:
+                                            entry += f" ({val})"
+                                        assists_h.append(entry)
+
+                                    # Process Away Assists ('a')
+                                    for item in stat.get("a", []):
+                                        pid = item["element"]
+                                        val = item["value"]
+                                        pname = player_map.get(pid, f"#{pid}")
+                                        entry = pname
+                                        if val > 1:
+                                            entry += f" ({val})"
+                                        assists_a.append(entry)
+
                         except Exception:
                             # Parse error, ignore stats
                             pass
 
-                    # Assign scorers based on perspective
-                    # scorers_h is actual HOME team scorers
-                    # scorers_a is actual AWAY team scorers
-
-                    # If match_is_home (User's teamH is Home):
-                    #   display_home = scorers_h
-                    #   display_away = scorers_a
-                    # Else (User's teamH is Away):
-                    #   display_home = scorers_a (since away matches show "Away Team" as first/home_team column in object? No, check object keys)
-
-                    # Object keys: "home_team" (name), "away_team" (name).
-                    # "home_team" field in match_entry is: home_name if is_home else away_name.
-                    # This means "home_team" in json IS THE USER'S TEAM (team H).
-
-                    # Logic:
-                    # If is_home_perspective:
-                    #   match_entry["home_team"] = real_home (User Team)
-                    #   match_entry["scorers_home"] = real_home_scorers
-                    # Else:
-                    #   match_entry["home_team"] = real_away (User Team)
-                    #   match_entry["scorers_home"] = real_away_scorers
-
-                    # Wait, let's keep it consistent with "home_team" / "away_team" names.
-                    # If match_entry["home_team"] holds the NAME of the team on the left side (perspective team),
-                    # then match_entry["scorers_home"] should hold the scorers for THAT team.
-
+                    # Assign scorers and assists based on match data (always consistent with home_team/away_team)
                     match_entry["scorers_home"] = scorers_h
                     match_entry["scorers_away"] = scorers_a
+                    match_entry["assists_home"] = assists_h
+                    match_entry["assists_away"] = assists_a
 
                     history.append(match_entry)
 

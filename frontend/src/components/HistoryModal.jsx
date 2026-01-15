@@ -169,6 +169,15 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 														))}
 													</div>
 												)}
+												{match.assists_home && match.assists_home.length > 0 && (
+													<div className="flex flex-col items-end mt-1 space-y-0.5">
+														{match.assists_home.map((assist, i) => (
+															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+																👟 {assist}
+															</span>
+														))}
+													</div>
+												)}
 											</div>
 
 											<div className={`border px-3 py-1.5 rounded-md font-mono font-bold text-lg min-w-[60px] text-center shadow-sm transition-colors ${colorClass}`}>
@@ -182,6 +191,15 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 														{match.scorers_away.map((scorer, i) => (
 															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
 																⚽ {scorer}
+															</span>
+														))}
+													</div>
+												)}
+												{match.assists_away && match.assists_away.length > 0 && (
+													<div className="flex flex-col items-start mt-1 space-y-0.5">
+														{match.assists_away.map((assist, i) => (
+															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+																👟 {assist}
 															</span>
 														))}
 													</div>
