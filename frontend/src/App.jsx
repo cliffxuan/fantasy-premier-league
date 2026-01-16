@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, X, FileText, Code, Check } from 'lucide-react';
+import { Copy, X, FileText, Code, Check, Key } from 'lucide-react';
 import { analyzeTeam, getSquad } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
@@ -52,6 +52,75 @@ const TeamInput = ({ centered = false, teamId, setTeamId, handleGoClick, loading
   </div>
 );
 
+const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
+  const [token, setToken] = useState(currentToken);
+
+  useEffect(() => {
+    setToken(currentToken);
+  }, [currentToken, isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-ds-card w-full max-w-lg rounded-xl border border-ds-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center p-6 border-b border-ds-border bg-ds-card/50">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-ds-primary/10 rounded-lg text-ds-primary">
+              <Key size={24} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-ds-text">FPL Auth Token</h3>
+              <p className="text-xs text-ds-text-muted">Enter your cookie for authenticated data</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-ds-surface rounded-full text-ds-text-muted hover:text-ds-text transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <p className="text-sm text-ds-text-muted mb-4">
+            Providing your FPL Auth Token allows access to private league data and your specific transfer details.
+            This is stored locally in your browser session.
+          </p>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-ds-text uppercase tracking-wider">Auth Token / My Team ID</label>
+            <input
+              type="text"
+              className="w-full bg-ds-surface border border-ds-border rounded-md px-4 py-3 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all font-mono"
+              placeholder="Enter Auth Token"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-ds-border bg-ds-card/50 flex justify-end gap-3 rounded-b-xl">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-bold text-ds-text-muted hover:text-ds-text transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              onSave(token);
+              onClose();
+            }}
+            className="bg-ds-primary text-white font-bold rounded-md px-6 py-2 text-sm hover:bg-ds-primary-hover active:scale-95 transition-all shadow-lg shadow-ds-primary/20"
+          >
+            Save Token
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function Dashboard() {
   const { teamId: paramTeamId } = useParams();
   const navigate = useNavigate();
@@ -73,6 +142,7 @@ function Dashboard() {
   const [showPromptModal, setShowPromptModal] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const activeTab = searchParams.get('tab') || 'matches';
   const gwParam = searchParams.get('gw');
@@ -374,6 +444,13 @@ function Dashboard() {
                       handleGoClick={handleGoClick}
                       loading={loading}
                     />
+                    <button
+                      onClick={() => setShowAuthModal(true)}
+                      className="ml-3 p-2 bg-ds-surface border border-ds-border rounded-md text-ds-text-muted hover:text-ds-primary hover:border-ds-primary/50 transition-all group"
+                      title="Update Auth Token"
+                    >
+                      <Key size={20} className="group-hover:scale-110 transition-transform" />
+                    </button>
                   </div>
 
                   <TeamHeader entry={entry} freeTransfers={calculatedFreeTransfers} isPrivate={isPrivate} transferDetails={transferDetails} />
@@ -595,6 +672,13 @@ function Dashboard() {
           </div>
         </div>
       )}
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        currentToken={authToken}
+        onSave={(newToken) => setAuthToken(newToken)}
+      />
     </div>
   );
 }
