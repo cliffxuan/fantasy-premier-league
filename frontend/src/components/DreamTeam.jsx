@@ -4,7 +4,7 @@ import { getDreamTeam } from '../api';
 import PlayerPopover from './PlayerPopover';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 
-const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
+const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 	const [data, setData] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [fetchedStatus, setFetchedStatus] = useState(null);
@@ -17,8 +17,8 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 				if (response.ok) {
 					const res = await response.json();
 					setFetchedStatus(res.status);
-					// Only update GW if it's missing
-					if (!gw && onGwChange) {
+					// Only update GW if it's missing AND this tab is active
+					if (!gw && onGwChange && isActive) {
 						onGwChange(res.gameweek);
 					}
 				}
@@ -27,7 +27,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch }) => {
 			}
 		};
 		fetchCurrent();
-	}, [gw, onGwChange]);
+	}, [gw, onGwChange, isActive]);
 
 	useEffect(() => {
 		const fetchData = async () => {

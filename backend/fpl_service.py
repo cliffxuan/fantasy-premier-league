@@ -106,9 +106,16 @@ class FPLService:
         )
         bootstrap = await self.get_bootstrap_static()
 
+        # Determine Gameweek
+        gw_status = await self.get_gameweek_status()
+        # Default view is what get_gameweek_status says (active or next if finished)
+        default_gw = gw_status["id"]
+
+        # But we also need the strict 'current' gameweek for data fetching logic
         current_gw = await self.get_current_gameweek()
+
         if gw is None:
-            gw = current_gw
+            gw = default_gw
         else:
             gw = int(gw)
 
@@ -1074,8 +1081,7 @@ class FPLService:
         for event in data["events"]:
             if event["is_current"]:
                 return event["id"]
-        # If no current event, find the next one and subtract 1?
-        # Or just return the next one if season hasn't started?
+        # Fallback if no current (e.g. pre-season)
         for event in data["events"]:
             if event["is_next"]:
                 return max(1, event["id"] - 1)
@@ -1084,17 +1090,41 @@ class FPLService:
     async def get_gameweek_status(self) -> Dict[str, Any]:
         data = await self.get_bootstrap_static()
         now = time.time()
+
+        # 1. Try to find current event
+        current_event = None
         for event in data["events"]:
             if event["is_current"]:
-                deadline = event.get("deadline_time_epoch", 0)
-                started = now > deadline
-                return {
-                    "id": event["id"],
-                    "finished": event["finished"],
-                    "data_checked": event["data_checked"],
-                    "started": started,
-                }
-        # Fallback if no current (e.g. pre-season)
+                current_event = event
+                break
+
+        # 2. If current event exists and is finished, we want to return the NEXT event instead
+        # FPL "is_current" stays True until the next gw update, which might be days after it finished.
+        if current_event:
+            if current_event["finished"]:
+                # Find the next event
+                for event in data["events"]:
+                    if event["is_next"]:
+                        deadline = event.get("deadline_time_epoch", 0)
+                        started = now > deadline
+                        return {
+                            "id": event["id"],
+                            "finished": event["finished"],
+                            "data_checked": event["data_checked"],
+                            "started": started,
+                        }
+
+            # If not finished, or no next event found (e.g. end of season), return current
+            deadline = current_event.get("deadline_time_epoch", 0)
+            started = now > deadline
+            return {
+                "id": current_event["id"],
+                "finished": current_event["finished"],
+                "data_checked": current_event["data_checked"],
+                "started": started,
+            }
+
+        # 3. Fallback if no current (e.g. pre-season)
         for event in data["events"]:
             if event["is_next"]:
                 prev_id = max(1, event["id"] - 1)

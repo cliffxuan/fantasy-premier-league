@@ -126,7 +126,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [teamId, setTeamId] = useState(paramTeamId || '');
+  const [teamId, setTeamId] = useState(paramTeamId || sessionStorage.getItem('fpl_team_id') || '');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -178,6 +178,15 @@ function Dashboard() {
     }
   }, [authToken]);
 
+  // Persist Team ID similarly
+  useEffect(() => {
+    if (teamId) {
+      sessionStorage.setItem('fpl_team_id', teamId);
+    } else {
+      sessionStorage.removeItem('fpl_team_id');
+    }
+  }, [teamId]);
+
   const [isPrivate, setIsPrivate] = useState(false);
 
   // Fetch squad when URL param changes
@@ -192,7 +201,7 @@ function Dashboard() {
     } else {
       // If no teamId in URL, reset data
       if (!paramTeamId) {
-        setTeamId('');
+        setTeamId(sessionStorage.getItem('fpl_team_id') || '');
         setSquad(null);
         setChips([]);
         setHistory([]);
@@ -477,6 +486,7 @@ function Dashboard() {
                 gw={viewGw}
                 onGwChange={handleGwChange}
                 onTabSwitch={() => handleTabChange('squad')}
+                isActive={activeTab === 'dream_team'}
               />
             </div>
 
