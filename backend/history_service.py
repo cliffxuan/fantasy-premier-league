@@ -222,6 +222,79 @@ class HistoryService:
         history.sort(key=lambda x: x["date"], reverse=True)
         return history
 
+    async def get_player_history_vs_team(
+        self, player_name: str, opponent_name: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Get historical points for a player against a specific opponent across all seasons.
+        """
+        await self._ensure_history_data()
+        history = []
+
+        for season in SEASONS:
+            season_data = self._cache.get(season)
+            if not season_data:
+                continue
+
+            df_teams = season_data["teams"]
+            df_gws = season_data.get("gws")
+
+            if df_gws is None:
+                continue
+
+            try:
+                # 1. Find opponent team ID in this season
+                opp_rows = df_teams.filter(pl.col("name") == opponent_name)
+                if opp_rows.height == 0:
+                    continue
+                opponent_id = opp_rows[0, "id"]
+
+                # 2. Filter GWs for player and opponent
+                # Normalize names for comparison (simple case insensitive check)
+
+                # We need to handle name formatting.
+                # merged_gw.csv has "name" column like "Erling Haaland"
+                # Input player_name should match this.
+
+                player_rows = df_gws.filter(
+                    (pl.col("name") == player_name)
+                    & (pl.col("opponent_team") == opponent_id)
+                )
+
+                if player_rows.height == 0:
+                    # Try partial match or fuzzy match if exact match fails?
+                    # For now, stick to exact match.
+                    # Maybe try checking if last name is in the name?
+                    # But "Gabriel" matches multiple.
+                    continue
+
+                for row in player_rows.iter_rows(named=True):
+                    history.append(
+                        {
+                            "season": season,
+                            "date": row["kickoff_time"],
+                            "gameweek": row["GW"],
+                            "points": row["total_points"],
+                            "fixture": row["fixture"],
+                            "minutes": row["minutes"],
+                            "goals_scored": row["goals_scored"],
+                            "assists": row["assists"],
+                            "bonus": row["bonus"],
+                            "bps": row["bps"],
+                            "saves": row["saves"],
+                            "was_home": str(row["was_home"]).lower() == "true",
+                            "opponent_name": opponent_name,
+                        }
+                    )
+
+            except Exception as e:
+                logger.warning(f"Error getting player history in {season}: {e}")
+                continue
+
+        # Sort by date descending
+        history.sort(key=lambda x: x.get("date", ""), reverse=True)
+        return history
+
     async def _ensure_history_data(self):
         async with self._cache_lock:
             if all(s in self._cache for s in SEASONS):
@@ -245,11 +318,13 @@ class HistoryService:
                 teams_url = f"{REPO_BASE_URL}/{season}/teams.csv"
                 fixtures_url = f"{REPO_BASE_URL}/{season}/fixtures.csv"
                 players_url = f"{REPO_BASE_URL}/{season}/players_raw.csv"
+                gws_url = f"{REPO_BASE_URL}/{season}/gws/merged_gw.csv"
 
-                t_resp, f_resp, p_resp = await asyncio.gather(
+                t_resp, f_resp, p_resp, g_resp = await asyncio.gather(
                     client.get(teams_url),
                     client.get(fixtures_url),
                     client.get(players_url),
+                    client.get(gws_url),
                 )
 
                 if t_resp.status_code != 200 or f_resp.status_code != 200:
@@ -268,6 +343,22 @@ class HistoryService:
                     null_values=[""],
                     ignore_errors=True,
                 )
+
+                gws_df = None
+                if g_resp.status_code == 200:
+                    try:
+                        gws_df = pl.read_csv(
+                            io.BytesIO(g_resp.content),
+                            infer_schema_length=10000,
+                            null_values=[""],
+                            ignore_errors=True,
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to parse GWs for {season}: {e}")
+                else:
+                    logger.warning(
+                        f"Failed to fetch GWs for {season}: {g_resp.status_code}"
+                    )
 
                 # Players mapping: ID -> Web Name
                 player_map = {}
@@ -289,6 +380,7 @@ class HistoryService:
                     "teams": teams_df,
                     "fixtures": fixtures_df,
                     "players": player_map,
+                    "gws": gws_df,
                 }
         except Exception as e:
             logger.error(f"Error fetching {season}: {e}")

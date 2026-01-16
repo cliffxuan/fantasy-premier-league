@@ -225,6 +225,52 @@ const PlayerPopover = ({ player, children }) => {
 								</div>
 							</div>
 
+							{/* History vs Next Opponent */}
+							{summary.history_vs_opponent && summary.history_vs_opponent.length > 0 && (
+								<div className="pt-2 mt-2">
+									<h4 className="text-xs font-bold text-ds-text-muted uppercase mb-2">
+										History vs {summary.next_opponent_name}
+									</h4>
+									<div className="grid grid-cols-5 gap-1">
+										{summary.history_vs_opponent.slice(0, 5).map((fixture) => {
+											const isActive = activeFixtureId === fixture.fixture;
+											return (
+												<div
+													key={`${fixture.season}-${fixture.gameweek}`}
+													onClick={(e) => {
+														e.stopPropagation();
+														setActiveFixtureId(isActive ? null : fixture.fixture);
+													}}
+													className="group relative flex flex-col items-center bg-ds-bg/50 rounded p-1 border border-ds-border hover:bg-ds-surface transition-colors cursor-help"
+												>
+													<span className="text-[8px] font-mono text-ds-text-muted">{fixture.season.split('-')[1] || fixture.season}</span>
+													<span className={`text-sm font-bold ${fixture.points >= 6 ? 'text-ds-accent' : fixture.points >= 3 ? 'text-ds-text' : 'text-ds-text-muted'}`}>
+														{fixture.points}
+													</span>
+													<span className="text-[9px] text-ds-text-muted/70">{fixture.was_home ? '(H)' : '(A)'}</span>
+
+													{/* Tooltip */}
+													<div className={`absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-ds-card border border-ds-border shadow-xl rounded-lg p-3 z-50 ${isActive ? 'block' : 'hidden md:group-hover:block'} pointer-events-none`}>
+														<div className="text-xs font-bold text-ds-text border-b border-ds-border pb-1 mb-2 whitespace-nowrap">
+															<span>{fixture.season}</span>
+															<span className="ml-2 text-ds-text-muted font-normal">GW{fixture.gameweek} ({fixture.was_home ? 'H' : 'A'})</span>
+														</div>
+														<div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-ds-text-muted">
+															<div className="flex justify-between"><span>Points:</span> <span className="text-ds-primary font-bold">{fixture.points}</span></div>
+															<div className="flex justify-between"><span>Mins:</span> <span>{fixture.minutes}</span></div>
+															{fixture.goals_scored > 0 && <div className="flex justify-between"><span className="text-green-400">Goals:</span> <span className="font-bold text-ds-text">{fixture.goals_scored}</span></div>}
+															{fixture.assists > 0 && <div className="flex justify-between"><span className="text-blue-400">Assists:</span> <span className="font-bold text-ds-text">{fixture.assists}</span></div>}
+															{fixture.bonus > 0 && <div className="flex justify-between"><span className="text-yellow-400">Bonus:</span> <span className="font-bold text-ds-text">{fixture.bonus}</span></div>}
+															<div className="flex justify-between"><span>BPS:</span> <span>{fixture.bps}</span></div>
+														</div>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								</div>
+							)}
+
 							{/* Next Fixtures */}
 							<div>
 								<h4 className="text-xs font-bold text-ds-text-muted uppercase mb-2">Next Fixtures</h4>

@@ -1214,6 +1214,7 @@ class FPLService:
     async def get_player_summary(self, player_id: int) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
+        elements = {p["id"]: p for p in bootstrap["elements"]}
 
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/element-summary/{player_id}/")
@@ -1237,6 +1238,41 @@ class FPLService:
                 fixture["team_a_short"] = (
                     teams[a_id]["short_name"] if a_id in teams else "UNK"
                 )
+
+            # Get History vs Next Opponent
+            try:
+                if data.get("fixtures") and len(data["fixtures"]) > 0:
+                    next_fixture = data["fixtures"][0]
+                    player = elements.get(player_id)
+
+                    if player:
+                        player_full_name = (
+                            f"{player['first_name']} {player['second_name']}"
+                        )
+                        my_team_id = player["team"]
+
+                        if next_fixture["team_h"] == my_team_id:
+                            opponent_id = next_fixture["team_a"]
+                        else:
+                            opponent_id = next_fixture["team_h"]
+
+                        opponent = teams.get(opponent_id)
+                        if opponent:
+                            opponent_name = opponent["name"]
+
+                            from .history_service import HistoryService
+
+                            history_service = HistoryService()
+
+                            vs_history = (
+                                await history_service.get_player_history_vs_team(
+                                    player_full_name, opponent_name
+                                )
+                            )
+                            data["history_vs_opponent"] = vs_history
+                            data["next_opponent_name"] = opponent_name
+            except Exception as e:
+                print(f"DEBUG: Failed to fetch history vs opponent: {e}")
 
             return data
 
