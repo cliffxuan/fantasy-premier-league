@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getClubSummary } from '../api';
@@ -21,41 +21,7 @@ const TeamPopover = ({ team, children, className = "" }) => {
 	const popoverRef = useRef(null);
 	const timerRef = useRef(null);
 
-	const handleMouseEnter = () => {
-		// Clear any closing timer
-		if (timerRef.current) {
-			clearTimeout(timerRef.current);
-			timerRef.current = null;
-		}
-
-		setIsVisible(true);
-		updatePosition();
-
-		if (!summary && !loading) {
-			setLoading(true);
-			fetchData();
-		}
-	};
-
-	const fetchData = async () => {
-		try {
-			const data = await getClubSummary(team.id);
-			setSummary(data);
-		} catch (error) {
-			console.error("Failed to fetch team summary", error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleMouseLeave = () => {
-		// Add delay to check if moving to popover
-		timerRef.current = setTimeout(() => {
-			setIsVisible(false);
-		}, 100);
-	};
-
-	const updatePosition = () => {
+	const updatePosition = useCallback(() => {
 		if (triggerRef.current) {
 			const rect = triggerRef.current.getBoundingClientRect();
 			const isMobile = window.innerWidth < 768;
@@ -90,6 +56,52 @@ const TeamPopover = ({ team, children, className = "" }) => {
 					transform: transform
 				});
 			}
+		}
+	}, []);
+
+	useEffect(() => {
+		if (isVisible) {
+			updatePosition();
+			window.addEventListener('scroll', updatePosition, true);
+			window.addEventListener('resize', updatePosition);
+			return () => {
+				window.removeEventListener('scroll', updatePosition, true);
+				window.removeEventListener('resize', updatePosition);
+			};
+		}
+	}, [isVisible, updatePosition]);
+
+	const handleMouseLeave = () => {
+		// Add delay to check if moving to popover
+		timerRef.current = setTimeout(() => {
+			setIsVisible(false);
+		}, 100);
+	};
+
+	const fetchData = async () => {
+		try {
+			const data = await getClubSummary(team.id);
+			setSummary(data);
+		} catch (error) {
+			console.error("Failed to fetch team summary", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const handleMouseEnter = () => {
+		// Clear any closing timer
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+			timerRef.current = null;
+		}
+
+		setIsVisible(true);
+		// updatePosition is called in useEffect when isVisible becomes true
+
+		if (!summary && !loading) {
+			setLoading(true);
+			fetchData();
 		}
 	};
 

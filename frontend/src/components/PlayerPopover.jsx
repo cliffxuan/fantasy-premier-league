@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPlayerSummary } from '../api';
@@ -21,37 +21,7 @@ const PlayerPopover = ({ player, children }) => {
 	const popoverRef = useRef(null);
 	const timerRef = useRef(null);
 
-	const handleMouseEnter = async () => {
-		// Clear any closing timer
-		if (timerRef.current) {
-			clearTimeout(timerRef.current);
-			timerRef.current = null;
-		}
-
-		setIsVisible(true);
-		updatePosition();
-
-		if (!summary && !loading) {
-			setLoading(true);
-			try {
-				const data = await getPlayerSummary(player.id);
-				setSummary(data);
-			} catch (error) {
-				console.error("Failed to fetch player summary", error);
-			} finally {
-				setLoading(false);
-			}
-		}
-	};
-
-	const handleMouseLeave = () => {
-		// Add delay to check if moving to popover
-		timerRef.current = setTimeout(() => {
-			setIsVisible(false);
-		}, 100);
-	};
-
-	const updatePosition = () => {
+	const updatePosition = useCallback(() => {
 		if (triggerRef.current) {
 			const rect = triggerRef.current.getBoundingClientRect();
 			const isMobile = window.innerWidth < 768; // Mobile breakpoint
@@ -76,6 +46,48 @@ const PlayerPopover = ({ player, children }) => {
 					left: rect.left + (rect.width / 2),
 					transform: transform
 				});
+			}
+		}
+	}, []);
+
+	useEffect(() => {
+		if (isVisible) {
+			updatePosition();
+			window.addEventListener('scroll', updatePosition, true);
+			window.addEventListener('resize', updatePosition);
+			return () => {
+				window.removeEventListener('scroll', updatePosition, true);
+				window.removeEventListener('resize', updatePosition);
+			};
+		}
+	}, [isVisible, updatePosition]);
+
+	const handleMouseLeave = () => {
+		// Add delay to check if moving to popover
+		timerRef.current = setTimeout(() => {
+			setIsVisible(false);
+		}, 100);
+	};
+
+	const handleMouseEnter = async () => {
+		// Clear any closing timer
+		if (timerRef.current) {
+			clearTimeout(timerRef.current);
+			timerRef.current = null;
+		}
+
+		setIsVisible(true);
+		// updatePosition is called in useEffect when isVisible becomes true
+
+		if (!summary && !loading) {
+			setLoading(true);
+			try {
+				const data = await getPlayerSummary(player.id);
+				setSummary(data);
+			} catch (error) {
+				console.error("Failed to fetch player summary", error);
+			} finally {
+				setLoading(false);
 			}
 		}
 	};
