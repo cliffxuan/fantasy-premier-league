@@ -68,8 +68,12 @@ export const getSquad = async (teamId, gw = null, authToken = null) => {
 	return response.json();
 };
 
-export const getPlayerSummary = async (playerId) => {
-	const response = await fetch(`${API_BASE_URL}/player/${playerId}/summary`);
+export const getPlayerSummary = async (playerId, opponentId = null) => {
+	let url = `${API_BASE_URL}/player/${playerId}/summary`;
+	if (opponentId) {
+		url += `?opponent_id=${opponentId}`;
+	}
+	const response = await fetch(url);
 	if (!response.ok) {
 		return null;
 	}

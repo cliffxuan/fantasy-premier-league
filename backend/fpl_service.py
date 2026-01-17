@@ -240,12 +240,14 @@ class FPLService:
                 fixture_info = team_next_fixture.get(player["team"])
                 fixture_str = "-"
                 difficulty = 3
+                opponent_id = None
                 if fixture_info:
                     opponent = teams.get(fixture_info["opponent_id"])
                     opp_name = opponent["name"] if opponent else "UNK"
                     home_away = "(H)" if fixture_info["is_home"] else "(A)"
                     fixture_str = f"{opp_name} {home_away}"
                     difficulty = fixture_info["difficulty"]
+                    opponent_id = fixture_info["opponent_id"]
 
                 # Get points for this GW
                 event_points = player["event_points"]  # Default to current
@@ -332,6 +334,7 @@ class FPLService:
                         "fixture_difficulty": difficulty,
                         "chance_of_playing": player["chance_of_playing_next_round"],
                         "code": player["code"],
+                        "opponent_id": opponent_id,
                     }
                 )
 
@@ -1241,7 +1244,9 @@ class FPLService:
 
         return table
 
-    async def get_player_summary(self, player_id: int) -> Dict[str, Any]:
+    async def get_player_summary(
+        self, player_id: int, opponent_id: int | None = None
+    ) -> Dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
         elements = {p["id"]: p for p in bootstrap["elements"]}
@@ -1269,38 +1274,41 @@ class FPLService:
                     teams[a_id]["short_name"] if a_id in teams else "UNK"
                 )
 
-            # Get History vs Next Opponent
+            # Get History vs Opponent (Next or Specific)
             try:
-                if data.get("fixtures") and len(data["fixtures"]) > 0:
+                target_opponent_id = None
+
+                if opponent_id:
+                    target_opponent_id = opponent_id
+                elif data.get("fixtures") and len(data["fixtures"]) > 0:
                     next_fixture = data["fixtures"][0]
                     player = elements.get(player_id)
-
                     if player:
+                        my_team_id = player["team"]
+                        if next_fixture["team_h"] == my_team_id:
+                            target_opponent_id = next_fixture["team_a"]
+                        else:
+                            target_opponent_id = next_fixture["team_h"]
+
+                if target_opponent_id:
+                    opponent = teams.get(target_opponent_id)
+                    player = elements.get(player_id)
+
+                    if opponent and player:
+                        opponent_name = opponent["name"]
                         player_full_name = (
                             f"{player['first_name']} {player['second_name']}"
                         )
-                        my_team_id = player["team"]
 
-                        if next_fixture["team_h"] == my_team_id:
-                            opponent_id = next_fixture["team_a"]
-                        else:
-                            opponent_id = next_fixture["team_h"]
+                        from .history_service import HistoryService
 
-                        opponent = teams.get(opponent_id)
-                        if opponent:
-                            opponent_name = opponent["name"]
+                        history_service = HistoryService()
 
-                            from .history_service import HistoryService
-
-                            history_service = HistoryService()
-
-                            vs_history = (
-                                await history_service.get_player_history_vs_team(
-                                    player_full_name, opponent_name
-                                )
-                            )
-                            data["history_vs_opponent"] = vs_history
-                            data["next_opponent_name"] = opponent_name
+                        vs_history = await history_service.get_player_history_vs_team(
+                            player_full_name, opponent_name
+                        )
+                        data["history_vs_opponent"] = vs_history
+                        data["next_opponent_name"] = opponent_name
             except Exception as e:
                 print(f"DEBUG: Failed to fetch history vs opponent: {e}")
 
@@ -1351,11 +1359,13 @@ class FPLService:
             # Resolve Fixture
             fixture_info = team_fixture.get(team_id)
             fixture_str = "-"
+            opponent_id = None
             if fixture_info:
                 opponent = teams.get(fixture_info["opponent_id"])
                 opp_short = opponent["short_name"] if opponent else "UNK"
                 home_away = "(H)" if fixture_info["is_home"] else "(A)"
                 fixture_str = f"{opp_short} {home_away}"
+                opponent_id = fixture_info["opponent_id"]
 
             squad.append(
                 {
@@ -1380,6 +1390,7 @@ class FPLService:
                     "is_captain": False,
                     "is_vice_captain": False,
                     "fixture_difficulty": 3,  # Default, not really needed for dream team
+                    "opponent_id": opponent_id,
                 }
             )
             total_points += item["points"]

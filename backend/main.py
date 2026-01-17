@@ -105,9 +105,9 @@ async def get_league_table(min_gw: int = 1, max_gw: int = 38):
 
 
 @app.get("/api/player/{player_id}/summary", tags=["FPL Data"])
-async def get_player_summary(player_id: int):
+async def get_player_summary(player_id: int, opponent_id: int | None = None):
     service = FPLService()
-    data = await service.get_player_summary(player_id)
+    data = await service.get_player_summary(player_id, opponent_id)
     return data
 
 

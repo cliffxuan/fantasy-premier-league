@@ -82,7 +82,9 @@ const PlayerPopover = ({ player, children }) => {
 		if (!summary && !loading) {
 			setLoading(true);
 			try {
-				const data = await getPlayerSummary(player.id);
+				// Pass player.opponent_id if available (provided by SquadDisplay for viewing context)
+				// If not available, it defaults to null and backend finds the actual next fixture
+				const data = await getPlayerSummary(player.id, player.opponent_id);
 				setSummary(data);
 			} catch (error) {
 				console.error("Failed to fetch player summary", error);
