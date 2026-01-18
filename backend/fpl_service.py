@@ -806,10 +806,13 @@ class FPLService:
         max_difficulty = 0
         started = False
         finished = False
+        primary_opponent_id = None
 
-        for f in club_fixtures:
+        for i, f in enumerate(club_fixtures):
             is_home = f.team_h == club_id
             opponent_id = f.team_a if is_home else f.team_h
+            if i == 0:
+                primary_opponent_id = opponent_id
             opp_short = teams_map.get(opponent_id, {}).get("short_name", "UNK")
             char = "(H)" if is_home else "(A)"
             fixture_strs.append(f"{opp_short} {char}")
@@ -878,6 +881,7 @@ class FPLService:
                     "is_vice_captain": False,
                     "purchase_price": player["now_cost"] / 10,
                     "selling_price": player["now_cost"] / 10,
+                    "opponent_id": primary_opponent_id,
                     # Internal sort helpers
                     "_sort_rank": sort_rank,
                     "_lineup_index": lineup_index,
