@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 import httpx
 import pulp
 from loguru import logger
+from pydantic import ValidationError
 
 from .models import Fixture, Team
 from .team_details import NAME_TO_FULL_NAME, TEAM_MAPPINGS
@@ -565,7 +566,12 @@ class FPLService:
                 data = response.json()
 
                 # Parse into models
-                fixtures = [Fixture(**f) for f in data]
+                fixtures = []
+                for f in data:
+                    try:
+                        fixtures.append(Fixture(**f))
+                    except ValidationError:
+                        logger.warning(f"Failed parsing fixture: {f}")
 
                 self._cache["fixtures"] = fixtures
                 self._last_updated["fixtures"] = now
