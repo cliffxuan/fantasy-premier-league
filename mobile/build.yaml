@@ -1,0 +1,10 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          field_rename: snake
+          create_to_json: true
+          explicit_to_json: true
+      riverpod_generator:
+        enabled: true
