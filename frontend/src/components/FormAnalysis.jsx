@@ -171,9 +171,6 @@ const FormAnalysis = () => {
 										{getClassificationIcon(player.classification)}
 										{player.classification}
 									</div>
-									<div className="text-[10px] font-mono text-ds-text-muted">
-										Ends: <span className="text-ds-text">GW{player.predicted_end_gw}</span>
-									</div>
 								</div>
 							</div>
 						))}
@@ -191,7 +188,6 @@ const FormAnalysis = () => {
 										<th className="px-3 py-3 font-semibold text-center">Delta</th>
 										<th className="px-3 py-3 font-semibold">Sustainability</th>
 										<th className="px-3 py-3 font-semibold">Verdict</th>
-										<th className="px-3 py-3 font-semibold text-right">Predicted End</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-ds-border/50">
@@ -272,9 +268,6 @@ const FormAnalysis = () => {
 														<div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-ds-card border-b border-r border-ds-border rotate-45"></div>
 													</div>
 												</div>
-											</td>
-											<td className="px-3 py-2 text-right">
-												<span className="font-mono text-sm text-ds-text-muted">{player.predicted_end_gw}</span>
 											</td>
 										</tr>
 									))}
