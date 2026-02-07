@@ -32,8 +32,9 @@ dart run build_runner build --delete-conflicting-outputs  # Code gen
 flutter run                        # Run app
 ```
 
-## Pre-commit
+## Pre-commit (prek)
 ```bash
-uv run pre-commit run --all-files  # Run all hooks
-uv run pre-commit install          # Install git hooks
+prek run --all-files               # Run all hooks
+prek run ruff                      # Run a single hook by id
+prek install                       # Install git hooks
 ```
