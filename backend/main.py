@@ -100,6 +100,18 @@ async def auth_refresh(request: RefreshTokenRequest):
     }
 
 
+@app.get("/api/auth/me", tags=["Auth"])
+async def get_me(authorization: str = Header(None)):
+    """Returns the logged-in user's FPL profile (entry ID, name, etc.)."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required.")
+    service = FPLService()
+    try:
+        return await service.get_me(authorization)
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Failed to fetch user profile: {e}")
+
+
 @app.get("/api/team/{team_id}/squad", tags=["FPL Team"])
 async def get_squad(
     team_id: int, gw: int | None = None, authorization: str = Header(None)

@@ -133,6 +133,20 @@ class FPLService:
             response.raise_for_status()
             return response.json()
 
+    async def get_me(self, auth_token: str) -> Dict[str, Any]:
+        headers = {
+            "x-api-authorization": auth_token,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        }
+        if not auth_token.startswith("Bearer "):
+            auth_token = f"Bearer {auth_token}"
+        headers["x-api-authorization"] = auth_token
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{FPL_BASE_URL}/me/", headers=headers)
+            response.raise_for_status()
+            return response.json()
+
     async def get_my_team(self, team_id: int, auth_token: str) -> Dict[str, Any]:
         headers = {
             "x-api-authorization": auth_token,
