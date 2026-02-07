@@ -1,12 +1,6 @@
 import React from 'react';
 
-const GameweekRangeSlider = ({
-	start,
-	end,
-	min = 1,
-	max = 38,
-	onChange
-}) => {
+const GameweekRangeSlider = ({ start, end, min = 1, max = 38, onChange }) => {
 	// Use refs only for stable calculations if needed, but for controlled, props are source of truth.
 	// We don't need internal state.
 
@@ -20,9 +14,13 @@ const GameweekRangeSlider = ({
 			<div className="flex justify-between items-center mb-2">
 				<span className="text-xs font-bold text-ds-text-muted uppercase">GW Range</span>
 				<div className="flex gap-1 items-center">
-					<span className="text-xs font-mono text-ds-text bg-ds-bg px-2 py-0.5 rounded border border-ds-border">{start}</span>
+					<span className="text-xs font-mono text-ds-text bg-ds-bg px-2 py-0.5 rounded border border-ds-border">
+						{start}
+					</span>
 					<span className="text-ds-text-muted text-xs">-</span>
-					<span className="text-xs font-mono text-ds-text bg-ds-bg px-2 py-0.5 rounded border border-ds-border">{end}</span>
+					<span className="text-xs font-mono text-ds-text bg-ds-bg px-2 py-0.5 rounded border border-ds-border">
+						{end}
+					</span>
 				</div>
 			</div>
 
@@ -44,7 +42,7 @@ const GameweekRangeSlider = ({
 					className="thumb thumb--left absolute z-20 w-full h-0 outline-none -top-[5px]"
 					style={{
 						zIndex: start > max - 10 ? 50 : 20,
-						pointerEvents: 'none'
+						pointerEvents: 'none',
 					}}
 				/>
 				{/* Right Thumb Input */}
@@ -60,7 +58,7 @@ const GameweekRangeSlider = ({
 					className="thumb thumb--right absolute z-20 w-full h-0 outline-none -top-[5px]"
 					style={{
 						zIndex: 30,
-						pointerEvents: 'none'
+						pointerEvents: 'none',
 					}}
 				/>
 			</div>

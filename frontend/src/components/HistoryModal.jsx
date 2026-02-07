@@ -10,7 +10,7 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 
 		// "Same Venue" means:
 		// match.match_is_home should be true (since we are viewing from teamH perspective)
-		return history.filter(match => match.match_is_home === true);
+		return history.filter((match) => match.match_is_home === true);
 	}, [history, filterType]);
 
 	// Calculate Stats based on filtered history for dynamic context
@@ -21,7 +21,7 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 		let draws = 0;
 		let teamAWins = 0;
 
-		filteredHistory.forEach(match => {
+		filteredHistory.forEach((match) => {
 			const homeWon = match.score_home > match.score_away;
 			const awayWon = match.score_away > match.score_home;
 
@@ -45,7 +45,7 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 			teamH: Math.round((teamHWins / total) * 100),
 			draw: Math.round((draws / total) * 100),
 			teamA: Math.round((teamAWins / total) * 100),
-			total
+			total,
 		};
 	}, [filteredHistory]);
 
@@ -65,7 +65,6 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 	return (
 		<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
 			<div className="bg-ds-card w-full max-w-2xl rounded-xl border border-ds-border shadow-2xl flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-
 				{/* Header */}
 				<div className="flex flex-col gap-4 p-6 border-b border-ds-border bg-ds-surface/50 rounded-t-xl">
 					<div className="flex justify-between items-start">
@@ -105,9 +104,13 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 					{stats && (
 						<div className="w-full bg-ds-surface/50 border border-ds-border rounded-lg p-3 flex flex-col gap-2">
 							<div className="flex justify-between text-xs font-bold text-ds-text-muted uppercase tracking-wider">
-								<span className="text-green-500">{teamH?.name} {stats.teamH}%</span>
+								<span className="text-green-500">
+									{teamH?.name} {stats.teamH}%
+								</span>
 								<span className="text-gray-400">Draw {stats.draw}%</span>
-								<span className="text-red-500">{teamA?.name} {stats.teamA}%</span>
+								<span className="text-red-500">
+									{teamA?.name} {stats.teamA}%
+								</span>
 							</div>
 							<div className="h-2.5 w-full bg-ds-bg rounded-full overflow-hidden flex">
 								<div className="h-full bg-green-500 transition-all" style={{ width: `${stats.teamH}%` }} />
@@ -143,8 +146,10 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 								}
 
 								return (
-									<div key={idx} className="bg-ds-bg border border-ds-border p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-ds-primary/30 transition-colors">
-
+									<div
+										key={idx}
+										className="bg-ds-bg border border-ds-border p-4 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-ds-primary/30 transition-colors"
+									>
 										{/* Date & Competition */}
 										<div className="flex flex-col items-center sm:items-start min-w-[100px]">
 											<span className="text-xs font-bold text-ds-text-muted uppercase tracking-wider bg-ds-surface px-2 py-0.5 rounded-full mb-1">
@@ -158,12 +163,17 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 
 										{/* Scoreline */}
 										<div className="flex-1 flex items-center justify-center gap-4 w-full">
-											<div className={`text-sm font-bold ${match.score_home > match.score_away ? 'text-ds-text' : 'text-ds-text-muted'} text-right flex-1 flex flex-col items-end`}>
+											<div
+												className={`text-sm font-bold ${match.score_home > match.score_away ? 'text-ds-text' : 'text-ds-text-muted'} text-right flex-1 flex flex-col items-end`}
+											>
 												<span>{match.home_team}</span>
 												{match.scorers_home && match.scorers_home.length > 0 && (
 													<div className="flex flex-col items-end mt-1 space-y-0.5">
 														{match.scorers_home.map((scorer, i) => (
-															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+															<span
+																key={i}
+																className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap"
+															>
 																⚽ {scorer}
 															</span>
 														))}
@@ -172,7 +182,10 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 												{match.assists_home && match.assists_home.length > 0 && (
 													<div className="flex flex-col items-end mt-1 space-y-0.5">
 														{match.assists_home.map((assist, i) => (
-															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+															<span
+																key={i}
+																className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap"
+															>
 																👟 {assist}
 															</span>
 														))}
@@ -180,16 +193,23 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 												)}
 											</div>
 
-											<div className={`border px-3 py-1.5 rounded-md font-mono font-bold text-lg min-w-[60px] text-center shadow-sm transition-colors ${colorClass}`}>
+											<div
+												className={`border px-3 py-1.5 rounded-md font-mono font-bold text-lg min-w-[60px] text-center shadow-sm transition-colors ${colorClass}`}
+											>
 												{match.score_home} - {match.score_away}
 											</div>
 
-											<div className={`text-sm font-bold ${match.score_away > match.score_home ? 'text-ds-text' : 'text-ds-text-muted'} text-left flex-1 flex flex-col items-start`}>
+											<div
+												className={`text-sm font-bold ${match.score_away > match.score_home ? 'text-ds-text' : 'text-ds-text-muted'} text-left flex-1 flex flex-col items-start`}
+											>
 												<span>{match.away_team}</span>
 												{match.scorers_away && match.scorers_away.length > 0 && (
 													<div className="flex flex-col items-start mt-1 space-y-0.5">
 														{match.scorers_away.map((scorer, i) => (
-															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+															<span
+																key={i}
+																className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap"
+															>
 																⚽ {scorer}
 															</span>
 														))}
@@ -198,7 +218,10 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 												{match.assists_away && match.assists_away.length > 0 && (
 													<div className="flex flex-col items-start mt-1 space-y-0.5">
 														{match.assists_away.map((assist, i) => (
-															<span key={i} className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap">
+															<span
+																key={i}
+																className="text-[10px] bg-ds-surface px-1.5 py-0.5 rounded text-ds-text-muted font-normal whitespace-nowrap"
+															>
 																👟 {assist}
 															</span>
 														))}
@@ -226,9 +249,8 @@ const HistoryModal = ({ isOpen, onClose, history, teamH, teamA }) => {
 						Close
 					</button>
 				</div>
-
 			</div>
-		</div >
+		</div>
 	);
 };
 

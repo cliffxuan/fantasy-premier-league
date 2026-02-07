@@ -47,19 +47,22 @@ const FixtureTicker = () => {
 		return 'bg-red-700 text-white'; // Very Hard
 	};
 
-	const sortedData = data ? [...data].sort((a, b) => {
-		if (mode === 'attack') return a.avg_difficulty_attack - b.avg_difficulty_attack;
-		if (mode === 'defense') return a.avg_difficulty_defend - b.avg_difficulty_defend;
-		if (mode === 'market') return a.avg_difficulty_market - b.avg_difficulty_market;
-		return 0;
-	}) : [];
+	const sortedData = data
+		? [...data].sort((a, b) => {
+				if (mode === 'attack') return a.avg_difficulty_attack - b.avg_difficulty_attack;
+				if (mode === 'defense') return a.avg_difficulty_defend - b.avg_difficulty_defend;
+				if (mode === 'market') return a.avg_difficulty_market - b.avg_difficulty_market;
+				return 0;
+			})
+		: [];
 
-	if (loading) return (
-		<div className="bg-ds-card rounded-xl p-8 md:p-12 border border-ds-border shadow-sm flex flex-col items-center justify-center text-center">
-			<div className="w-8 h-8 border-4 border-ds-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-			<p className="text-ds-text-muted text-sm">Analyzing Strength of Schedule...</p>
-		</div>
-	);
+	if (loading)
+		return (
+			<div className="bg-ds-card rounded-xl p-8 md:p-12 border border-ds-border shadow-sm flex flex-col items-center justify-center text-center">
+				<div className="w-8 h-8 border-4 border-ds-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+				<p className="text-ds-text-muted text-sm">Analyzing Strength of Schedule...</p>
+			</div>
+		);
 
 	if (error) return null;
 
@@ -106,14 +109,19 @@ const FixtureTicker = () => {
 							<th className="px-3 py-2 w-16">Rank</th>
 							<th className="px-3 py-2 w-24">Team</th>
 							{sortedData[0]?.next_5.map((f, i) => (
-								<th key={i} className="px-1 py-2 text-center w-12 text-ds-text/50">GW{f.gameweek}</th>
+								<th key={i} className="px-1 py-2 text-center w-12 text-ds-text/50">
+									GW{f.gameweek}
+								</th>
 							))}
 							<th className="px-3 py-2 text-right">FDR</th>
 						</tr>
 					</thead>
 					<tbody>
 						{sortedData.slice(0, 20).map((team, index) => (
-							<tr key={team.team_id} className="border-b border-ds-border hover:bg-ds-card-hover/50 transition-colors last:border-none">
+							<tr
+								key={team.team_id}
+								className="border-b border-ds-border hover:bg-ds-card-hover/50 transition-colors last:border-none"
+							>
 								<td className="px-3 py-2 font-bold text-ds-text-muted">#{index + 1}</td>
 								<td className="px-3 py-2">
 									<div className="flex items-center gap-2">
@@ -121,7 +129,9 @@ const FixtureTicker = () => {
 											src={`https://resources.premierleague.com/premierleague/badges/70/t${team.team_code}.png`}
 											alt={team.team_short}
 											className="w-6 h-6 object-contain"
-											onError={(e) => { e.target.style.display = 'none'; }}
+											onError={(e) => {
+												e.target.style.display = 'none';
+											}}
 										/>
 										<span className="font-bold">{team.team_short}</span>
 									</div>
@@ -137,7 +147,9 @@ const FixtureTicker = () => {
 
 									return (
 										<td key={i} className="p-1">
-											<div className={`w-full h-8 flex flex-col items-center justify-center rounded text-[10px] leading-tight ${getFDRColor(difficulty)} relative group cursor-help`}>
+											<div
+												className={`w-full h-8 flex flex-col items-center justify-center rounded text-[10px] leading-tight ${getFDRColor(difficulty)} relative group cursor-help`}
+											>
 												<span className="font-bold">{f.opponent}</span>
 												<div className="flex items-center gap-0.5 transform scale-75 opacity-90">
 													<span>{f.is_home ? 'H' : 'A'}</span>
@@ -161,9 +173,9 @@ const FixtureTicker = () => {
 								<td className="px-3 py-2 text-right font-bold text-ds-text">
 									{mode === 'market'
 										? team.avg_difficulty_market?.toFixed(2)
-										: (mode === 'attack'
+										: mode === 'attack'
 											? team.avg_difficulty_attack.toFixed(2)
-											: team.avg_difficulty_defend.toFixed(2))}
+											: team.avg_difficulty_defend.toFixed(2)}
 								</td>
 							</tr>
 						))}

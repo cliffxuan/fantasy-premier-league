@@ -18,12 +18,20 @@ const AnalysisResult = ({ data, onShowPrompt }) => {
 					<span>🔄</span> Transfer Plan
 				</h2>
 				<div className="mb-4 p-4 bg-ds-bg/50 border border-ds-border rounded-lg last:mb-0">
-					<h3 className="mt-0 text-sm text-ds-text-muted font-bold mb-2 uppercase tracking-wider">Option A (Conservative)</h3>
-					<p className="text-ds-text font-mono text-sm leading-relaxed">{data.transfer_plan["Option A (Conservative)"]}</p>
+					<h3 className="mt-0 text-sm text-ds-text-muted font-bold mb-2 uppercase tracking-wider">
+						Option A (Conservative)
+					</h3>
+					<p className="text-ds-text font-mono text-sm leading-relaxed">
+						{data.transfer_plan['Option A (Conservative)']}
+					</p>
 				</div>
 				<div className="mb-4 p-4 bg-ds-bg/50 border border-ds-border rounded-lg last:mb-0">
-					<h3 className="mt-0 text-sm text-ds-text-muted font-bold mb-2 uppercase tracking-wider">Option B (Aggressive)</h3>
-					<p className="text-ds-text font-mono text-sm leading-relaxed">{data.transfer_plan["Option B (Aggressive)"]}</p>
+					<h3 className="mt-0 text-sm text-ds-text-muted font-bold mb-2 uppercase tracking-wider">
+						Option B (Aggressive)
+					</h3>
+					<p className="text-ds-text font-mono text-sm leading-relaxed">
+						{data.transfer_plan['Option B (Aggressive)']}
+					</p>
 				</div>
 			</div>
 

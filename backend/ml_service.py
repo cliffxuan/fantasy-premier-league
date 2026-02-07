@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import pickle
-from typing import Dict, Optional
 
 import polars as pl
 from sklearn.ensemble import RandomForestRegressor
@@ -68,10 +67,7 @@ class MLService:
                     logger.error(f"Failed to fetch summary for {pid}: {e}")
                     return None
 
-        chunks = [
-            candidates[i : i + chunk_size]
-            for i in range(0, len(candidates), chunk_size)
-        ]
+        chunks = [candidates[i : i + chunk_size] for i in range(0, len(candidates), chunk_size)]
 
         for chunk in chunks:
             tasks = [fetch_history(p["id"]) for p in chunk]
@@ -92,9 +88,7 @@ class MLService:
                 try:
                     df_hist = pl.DataFrame(history)
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to create DataFrame for {player['web_name']}: {e}"
-                    )
+                    logger.warning(f"Failed to create DataFrame for {player['web_name']}: {e}")
                     continue
 
                 if df_hist.is_empty():
@@ -111,16 +105,10 @@ class MLService:
                         pl.col("total_points").shift(2).alias("points_lag_2"),
                         pl.col("total_points").shift(3).alias("points_lag_3"),
                         # 2. Moving Average (Form) - last 3 games
-                        pl.col("total_points")
-                        .rolling_mean(window_size=3)
-                        .shift(1)
-                        .alias("ma_3"),
+                        pl.col("total_points").rolling_mean(window_size=3).shift(1).alias("ma_3"),
                         # 3. Minutes played lag
                         pl.col("minutes").shift(1).alias("minutes_lag_1"),
-                        pl.col("minutes")
-                        .rolling_mean(window_size=3)
-                        .shift(1)
-                        .alias("minutes_mean_3"),
+                        pl.col("minutes").rolling_mean(window_size=3).shift(1).alias("minutes_mean_3"),
                         # 4. Cleanup/Rename for features
                         pl.col("value").alias("cost"),
                         (pl.col("was_home").cast(pl.Int8)).alias("is_home"),
@@ -132,7 +120,8 @@ class MLService:
                 df_hist = df_hist.filter(pl.col("points_lag_1").is_not_null())
 
                 # Select only relevant columns and add player metadata
-                # Note: Polars can't easily iterate rows for "appending" safely to a massive list in tight loop efficiently if strictly typed,
+                # Note: Polars can't easily iterate rows for "appending" safely to a massive list in tight
+                # loop efficiently if strictly typed,
                 # but we can add constant columns and then convert to dicts or concatenate dataframes.
                 # Adding constant columns is efficient.
 
@@ -200,13 +189,11 @@ class MLService:
 
         if not final_df.is_empty():
             final_df.write_csv(TRAINING_DATA_FILE)
-            logger.info(
-                f"Saved {len(final_df)} training examples to {TRAINING_DATA_FILE}"
-            )
+            logger.info(f"Saved {len(final_df)} training examples to {TRAINING_DATA_FILE}")
 
         return final_df
 
-    def train_model(self, df: Optional[pl.DataFrame] = None):
+    def train_model(self, df: pl.DataFrame | None = None):
         """
         Trains a Random Forest model on the collected data.
         """
@@ -253,9 +240,7 @@ class MLService:
         X = pdf[feature_cols]
         y = pdf[target_col]
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         pipeline = Pipeline(
             [
@@ -263,9 +248,7 @@ class MLService:
                 ("scaler", StandardScaler()),
                 (
                     "regressor",
-                    RandomForestRegressor(
-                        n_estimators=100, max_depth=10, random_state=42
-                    ),
+                    RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42),
                 ),
             ]
         )
@@ -281,7 +264,7 @@ class MLService:
         self.model = pipeline
         return score
 
-    async def predict_next_gw(self, gw: int) -> Dict[int, float]:
+    async def predict_next_gw(self, gw: int) -> dict[int, float]:
         """
         Predicts points for all players for the specified (upcoming) GW.
         Returns a dict: {player_id: predicted_points}

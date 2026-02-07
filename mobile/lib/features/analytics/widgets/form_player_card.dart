@@ -12,7 +12,9 @@ class FormPlayerCard extends StatelessWidget {
   Color get _classificationColor {
     if (player.classification.contains('Sustainable')) return AppColors.accent;
     if (player.classification.contains('Lucky') ||
-        player.classification.contains('Over')) return AppColors.warning;
+        player.classification.contains('Over')) {
+      return AppColors.warning;
+    }
     return AppColors.danger;
   }
 

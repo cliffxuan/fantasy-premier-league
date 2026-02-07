@@ -199,15 +199,15 @@ class MatchCard extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                flex: (homeWin / total * 100).round().clamp(1, 100),
+                flex: (homeWin / total * 100).round().clamp(1, 100) as int,
                 child: Container(height: 4, color: AppColors.primary),
               ),
               Expanded(
-                flex: (draw / total * 100).round().clamp(1, 100),
+                flex: (draw / total * 100).round().clamp(1, 100) as int,
                 child: Container(height: 4, color: AppColors.textMuted),
               ),
               Expanded(
-                flex: (awayWin / total * 100).round().clamp(1, 100),
+                flex: (awayWin / total * 100).round().clamp(1, 100) as int,
                 child: Container(height: 4, color: AppColors.danger),
               ),
             ],

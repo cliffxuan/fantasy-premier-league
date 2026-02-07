@@ -16,12 +16,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
  *
  * @returns {Object} popover - All state, refs, and handlers needed by the consuming component
  */
-export function usePopover({
-	onShow,
-	hideDelay = 100,
-	flipThreshold = 500,
-	mobileBreakpoint = 768,
-} = {}) {
+export function usePopover({ onShow, hideDelay = 100, flipThreshold = 500, mobileBreakpoint = 768 } = {}) {
 	const [isVisible, setIsVisible] = useState(false);
 	const [position, setPosition] = useState({
 		top: 0,

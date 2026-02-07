@@ -16,7 +16,7 @@ const PolymarketWidget = () => {
 				setMarkets(data);
 
 				// Set default GW to the earliest one found in the data
-				const gws = Array.from(new Set(data.map(m => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
+				const gws = Array.from(new Set(data.map((m) => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
 				if (gws.length > 0) {
 					setSelectedGw(gws[0]);
 				}
@@ -46,19 +46,15 @@ const PolymarketWidget = () => {
 		return null; // Don't show if no data
 	}
 
-
-
-	const availableGws = Array.from(new Set(markets.map(m => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
+	const availableGws = Array.from(new Set(markets.map((m) => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
 	const hasGameweekData = availableGws.length > 0;
 
-	const displayedMarkets = hasGameweekData && selectedGw
-		? markets.filter(m => m.gameweek === selectedGw)
-		: markets;
+	const displayedMarkets = hasGameweekData && selectedGw ? markets.filter((m) => m.gameweek === selectedGw) : markets;
 
 	const sortedMarkets = [...displayedMarkets].sort((a, b) => {
 		if (sortBy === 'odds') {
-			const maxA = Math.max(...a.outcomes.slice(0, 3).map(o => o.price || 0));
-			const maxB = Math.max(...b.outcomes.slice(0, 3).map(o => o.price || 0));
+			const maxA = Math.max(...a.outcomes.slice(0, 3).map((o) => o.price || 0));
+			const maxB = Math.max(...b.outcomes.slice(0, 3).map((o) => o.price || 0));
 			return maxB - maxA;
 		}
 		return new Date(a.endDate) - new Date(b.endDate);
@@ -85,7 +81,7 @@ const PolymarketWidget = () => {
 
 				<div className="flex items-center gap-3">
 					<button
-						onClick={() => setSortBy(prev => prev === 'date' ? 'odds' : 'date')}
+						onClick={() => setSortBy((prev) => (prev === 'date' ? 'odds' : 'date'))}
 						className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ds-bg/50 border border-ds-border hover:border-ds-primary/30 transition-colors text-xs font-medium text-ds-text-muted hover:text-ds-text"
 					>
 						<ArrowUpDown size={14} />
@@ -101,9 +97,7 @@ const PolymarketWidget = () => {
 							>
 								<ChevronLeft size={18} />
 							</button>
-							<span className="text-sm font-bold text-center text-ds-text min-w-[100px]">
-								Gameweek {selectedGw}
-							</span>
+							<span className="text-sm font-bold text-center text-ds-text min-w-[100px]">Gameweek {selectedGw}</span>
 							<button
 								onClick={handleNext}
 								disabled={availableGws.indexOf(selectedGw) >= availableGws.length - 1}
@@ -142,12 +136,18 @@ const PolymarketWidget = () => {
 								<div className="flex-1 flex items-center justify-center gap-4 min-w-0">
 									{/* Home Team */}
 									<div className="flex items-center gap-2 justify-end flex-1">
-										<span className="text-sm font-bold text-ds-text hidden sm:block">{market.home_team?.short_name || "HOME"}</span>
+										<span className="text-sm font-bold text-ds-text hidden sm:block">
+											{market.home_team?.short_name || 'HOME'}
+										</span>
 										{market.home_team?.code ? (
-											<img src={getTeamBadgeUrl(market.home_team.code, 70)} alt={market.home_team.short_name} className="w-8 h-8 object-contain" />
+											<img
+												src={getTeamBadgeUrl(market.home_team.code, 70)}
+												alt={market.home_team.short_name}
+												className="w-8 h-8 object-contain"
+											/>
 										) : (
 											<div className="w-8 h-8 rounded-full bg-ds-card border border-ds-border flex items-center justify-center text-[10px] font-bold text-ds-text-muted">
-												{market.home_team?.short_name?.[0] || "?"}
+												{market.home_team?.short_name?.[0] || '?'}
 											</div>
 										)}
 									</div>
@@ -157,20 +157,26 @@ const PolymarketWidget = () => {
 									{/* Away Team */}
 									<div className="flex items-center gap-2 justify-start flex-1">
 										{market.away_team?.code ? (
-											<img src={getTeamBadgeUrl(market.away_team.code, 70)} alt={market.away_team.short_name} className="w-8 h-8 object-contain" />
+											<img
+												src={getTeamBadgeUrl(market.away_team.code, 70)}
+												alt={market.away_team.short_name}
+												className="w-8 h-8 object-contain"
+											/>
 										) : (
 											<div className="w-8 h-8 rounded-full bg-ds-card border border-ds-border flex items-center justify-center text-[10px] font-bold text-ds-text-muted">
-												{market.away_team?.short_name?.[0] || "?"}
+												{market.away_team?.short_name?.[0] || '?'}
 											</div>
 										)}
-										<span className="text-sm font-bold text-ds-text hidden sm:block">{market.away_team?.short_name || "AWAY"}</span>
+										<span className="text-sm font-bold text-ds-text hidden sm:block">
+											{market.away_team?.short_name || 'AWAY'}
+										</span>
 									</div>
 								</div>
 
 								{/* Right: Odds */}
 								<div className="flex items-center gap-1">
 									{market.outcomes.slice(0, 3).map((outcome, idx) => {
-										const isDraw = outcome.label === "Draw";
+										const isDraw = outcome.label === 'Draw';
 										const prob = outcome.price;
 
 										let styles = PROBABILITY_COLORS.LOW;
@@ -185,21 +191,22 @@ const PolymarketWidget = () => {
 											// Let's map it to LOW which is our gray default, or customized if needed.
 											// Re-using LOW for consistency with MarketOverview
 											styles = {
-												bg: "bg-slate-500/20 hover:bg-slate-500/30",
-												text: "text-slate-300",
-												border: "border-slate-500/40",
-												label: "text-slate-400/60"
+												bg: 'bg-slate-500/20 hover:bg-slate-500/30',
+												text: 'text-slate-300',
+												border: 'border-slate-500/40',
+												label: 'text-slate-400/60',
 											};
 										}
 
 										return (
-											<div key={idx} className={`w-14 h-10 flex flex-col items-center justify-center rounded border ${styles.bg} ${styles.border} transition-colors`}>
+											<div
+												key={idx}
+												className={`w-14 h-10 flex flex-col items-center justify-center rounded border ${styles.bg} ${styles.border} transition-colors`}
+											>
 												<span className={`text-[9px] uppercase tracking-wider mb-0.5 ${styles.label}`}>
-													{isDraw ? "Draw" : (idx === 0 ? "1" : "2")}
+													{isDraw ? 'Draw' : idx === 0 ? '1' : '2'}
 												</span>
-												<span className={`text-sm font-bold font-mono ${styles.text}`}>
-													{Math.round(prob * 100)}%
-												</span>
+												<span className={`text-sm font-bold font-mono ${styles.text}`}>{Math.round(prob * 100)}%</span>
 											</div>
 										);
 									})}
@@ -210,7 +217,12 @@ const PolymarketWidget = () => {
 				})}
 			</div>
 			<div className="mt-6 text-center">
-				<a href="https://polymarket.com/sports/epl/games" target="_blank" rel="noopener noreferrer" className="text-xs text-ds-text-muted hover:text-ds-primary transition-colors">
+				<a
+					href="https://polymarket.com/sports/epl/games"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-xs text-ds-text-muted hover:text-ds-primary transition-colors"
+				>
 					View all Premier League Markets on Polymarket →
 				</a>
 			</div>

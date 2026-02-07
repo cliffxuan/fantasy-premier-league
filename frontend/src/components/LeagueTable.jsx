@@ -54,12 +54,7 @@ const LeagueTable = () => {
 						<span className="text-ds-primary">🏆</span> Premier League Table
 					</h2>
 				</div>
-				<GameweekRangeSlider
-					start={gwRange.start}
-					end={gwRange.end}
-					max={maxGw}
-					onChange={setGwRange}
-				/>
+				<GameweekRangeSlider start={gwRange.start} end={gwRange.end} max={maxGw} onChange={setGwRange} />
 			</div>
 			<div className="overflow-x-auto">
 				<table className="w-full text-sm text-left text-ds-text font-mono">
@@ -76,7 +71,10 @@ const LeagueTable = () => {
 					</thead>
 					<tbody>
 						{table.map((team) => (
-							<tr key={team.id} className="border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none">
+							<tr
+								key={team.id}
+								className="border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none"
+							>
 								<td className="px-1 py-2 md:px-4 md:py-3 font-bold">{team.position}</td>
 								<td className="px-1 py-2 md:px-4 md:py-3">
 									<TeamPopover team={team}>
@@ -85,10 +83,16 @@ const LeagueTable = () => {
 												src={`https://resources.premierleague.com/premierleague/badges/25/t${team.code}.png`}
 												alt={team.short_name}
 												className="w-6 h-6 object-contain"
-												onError={(e) => { e.target.style.display = 'none' }}
+												onError={(e) => {
+													e.target.style.display = 'none';
+												}}
 											/>
-											<span className="hidden sm:inline font-sans font-medium hover:text-ds-primary transition-colors">{team.name}</span>
-											<span className="sm:hidden font-sans font-medium hover:text-ds-primary transition-colors">{team.short_name}</span>
+											<span className="hidden sm:inline font-sans font-medium hover:text-ds-primary transition-colors">
+												{team.name}
+											</span>
+											<span className="sm:hidden font-sans font-medium hover:text-ds-primary transition-colors">
+												{team.short_name}
+											</span>
 										</div>
 									</TeamPopover>
 								</td>

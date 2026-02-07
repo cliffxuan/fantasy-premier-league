@@ -91,9 +91,9 @@ class _SquadPlayerSheetState extends ConsumerState<SquadPlayerSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Column(
                     children: [
-                      Text(
+                      const Text(
                         'Could not load details',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 13,
                         ),

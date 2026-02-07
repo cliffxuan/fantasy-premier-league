@@ -133,7 +133,7 @@ class LeagueTableScreen extends ConsumerWidget {
                     ref.invalidate(leagueTableProvider),
                 child: ListView.separated(
                   itemCount: entries.length,
-                  separatorBuilder: (_, __) => const Divider(
+                  separatorBuilder: (_, _) => const Divider(
                     height: 1,
                     indent: 12,
                     endIndent: 12,

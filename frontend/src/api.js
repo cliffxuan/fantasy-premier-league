@@ -1,6 +1,13 @@
 const API_BASE_URL = '/api';
 
-export const analyzeTeam = async (teamId, moneyInBank, freeTransfers, transfersRolled, authToken = null, returnPrompt = false) => {
+export const analyzeTeam = async (
+	teamId,
+	moneyInBank,
+	freeTransfers,
+	transfersRolled,
+	authToken = null,
+	returnPrompt = false,
+) => {
 	const response = await fetch(`${API_BASE_URL}/analyze`, {
 		method: 'POST',
 		headers: {
@@ -69,8 +76,8 @@ export const exchangeCode = async (code) => {
 export const getMe = async (token) => {
 	const response = await fetch(`${API_BASE_URL}/auth/me`, {
 		headers: {
-			'Authorization': `Bearer ${token}`
-		}
+			Authorization: `Bearer ${token}`,
+		},
 	});
 	if (!response.ok) throw new Error('Failed to get user details');
 	return response.json();
@@ -121,7 +128,7 @@ export const getPolymarketData = async () => {
 		}
 		return response.json();
 	} catch (e) {
-		console.error("Failed to fetch Polymarket data:", e);
+		console.error('Failed to fetch Polymarket data:', e);
 		return [];
 	}
 };
@@ -137,4 +144,3 @@ export const getFixtures = async (gw = null) => {
 	}
 	return response.json();
 };
-

@@ -59,20 +59,20 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Card(
+          const Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'API',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   _SettingsRow(
                     label: 'Base URL',
                     value: ApiConstants.baseUrl,
@@ -82,22 +82,22 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Card(
+          const Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'About',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const _SettingsRow(label: 'Version', value: '1.0.0'),
-                  const _SettingsRow(label: 'App', value: 'FPL Alpha Mobile'),
+                  SizedBox(height: 12),
+                  _SettingsRow(label: 'Version', value: '1.0.0'),
+                  _SettingsRow(label: 'App', value: 'FPL Alpha Mobile'),
                 ],
               ),
             ),

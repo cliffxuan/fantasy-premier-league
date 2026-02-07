@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 from loguru import logger
@@ -14,7 +14,7 @@ class FormService:
     def __init__(self):
         self.fpl_service = FPLService()
 
-    async def get_form_analysis_data(self) -> List[Dict[str, Any]]:
+    async def get_form_analysis_data(self) -> list[dict[str, Any]]:
         """
         Analyzes all players to find those in 'good form' and classifies the sustainability of that form.
         """
@@ -30,8 +30,7 @@ class FormService:
         candidates = [
             p
             for p in elements
-            if float(p["form"]) > 3.5
-            or (float(p["event_points"]) >= 8)  # High form or recent haul
+            if float(p["form"]) > 3.5 or (float(p["event_points"]) >= 8)  # High form or recent haul
         ]
 
         logger.info(f"Analyzing form for {len(candidates)} candidates")
@@ -52,9 +51,7 @@ class FormService:
                         return None
 
                     # Reverse history to look from most recent backwards
-                    history_rev = sorted(
-                        history, key=lambda x: x["round"], reverse=True
-                    )
+                    history_rev = sorted(history, key=lambda x: x["round"], reverse=True)
 
                     # 1. Calculate Streak Duration
                     streak_games = 0
@@ -145,9 +142,7 @@ class FormService:
                     if streak_games < 5:
                         predicted_end_gw = "Uncertain"
                     elif streak_games >= 10:
-                        predicted_end_gw = (
-                            f"GW{match_data_in_window[0]['round'] + 1}"  # Next game
-                        )
+                        predicted_end_gw = f"GW{match_data_in_window[0]['round'] + 1}"  # Next game
 
                     # Final Object
                     return {

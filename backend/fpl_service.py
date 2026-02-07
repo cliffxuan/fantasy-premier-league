@@ -1,7 +1,7 @@
 import asyncio
 import time
 from collections import Counter
-from typing import Any, Dict, List
+from typing import Any
 
 import httpx
 import pulp
@@ -10,7 +10,6 @@ from pydantic import ValidationError
 
 from .models import Fixture, Team
 from .team_details import NAME_TO_FULL_NAME, TEAM_MAPPINGS
-
 
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
 
@@ -48,8 +47,8 @@ def calculate_match_result(home_score: int, away_score: int, is_home: bool) -> s
 
 class FPLService:
     # Class-level cache to persist across request instances
-    _cache: Dict[str, Any] = {}
-    _last_updated: Dict[str, float] = {}
+    _cache: dict[str, Any] = {}
+    _last_updated: dict[str, float] = {}
     _cache_lock = asyncio.Lock()
     CACHE_TTL = BOOTSTRAP_CACHE_TTL
 
@@ -73,7 +72,7 @@ class FPLService:
         )
         return f"{PINGONE_AUTH_URL}/as/authorize?{params}"
 
-    async def exchange_code(self, code: str) -> Dict[str, Any]:
+    async def exchange_code(self, code: str) -> dict[str, Any]:
         """Exchanges a PingOne authorization code for access/refresh tokens."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -94,7 +93,7 @@ class FPLService:
 
             return response.json()
 
-    async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
+    async def refresh_access_token(self, refresh_token: str) -> dict[str, Any]:
         """Uses a refresh token to get a new access token."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -114,13 +113,10 @@ class FPLService:
 
             return response.json()
 
-    async def get_bootstrap_static(self) -> Dict[str, Any]:
+    async def get_bootstrap_static(self) -> dict[str, Any]:
         async with self._cache_lock:
             now = time.time()
-            if (
-                "bootstrap" in self._cache
-                and (now - self._last_updated.get("bootstrap", 0)) < self.CACHE_TTL
-            ):
+            if "bootstrap" in self._cache and (now - self._last_updated.get("bootstrap", 0)) < self.CACHE_TTL:
                 return self._cache["bootstrap"]
 
             async with httpx.AsyncClient() as client:
@@ -130,25 +126,21 @@ class FPLService:
 
                 # Populate full_name from overrides
                 for team in data.get("teams", []):
-                    team["full_name"] = NAME_TO_FULL_NAME.get(
-                        team["name"], team["name"]
-                    )
+                    team["full_name"] = NAME_TO_FULL_NAME.get(team["name"], team["name"])
 
                 self._cache["bootstrap"] = data
                 self._last_updated["bootstrap"] = now
                 return data
 
-    async def get_entry_history(self, team_id: int) -> Dict[str, Any]:
+    async def get_entry_history(self, team_id: int) -> dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/history/")
             response.raise_for_status()
             return response.json()
 
-    async def get_entry_picks(self, team_id: int, gw: int) -> Dict[str, Any]:
+    async def get_entry_picks(self, team_id: int, gw: int) -> dict[str, Any]:
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{FPL_BASE_URL}/entry/{team_id}/event/{gw}/picks/"
-            )
+            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/event/{gw}/picks/")
             response.raise_for_status()
             return response.json()
 
@@ -158,10 +150,13 @@ class FPLService:
             response.raise_for_status()
             return response.json()
 
-    async def get_me(self, auth_token: str) -> Dict[str, Any]:
+    async def get_me(self, auth_token: str) -> dict[str, Any]:
         headers = {
             "x-api-authorization": auth_token,
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
         }
         if not auth_token.startswith("Bearer "):
             auth_token = f"Bearer {auth_token}"
@@ -172,10 +167,13 @@ class FPLService:
             response.raise_for_status()
             return response.json()
 
-    async def get_my_team(self, team_id: int, auth_token: str) -> Dict[str, Any]:
+    async def get_my_team(self, team_id: int, auth_token: str) -> dict[str, Any]:
         headers = {
             "x-api-authorization": auth_token,
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
         }
         # The token provided in fetch.sh is a Bearer token, but the header key is 'x-api-authorization'.
         # The curl command uses: -H 'x-api-authorization: Bearer ...'
@@ -188,19 +186,17 @@ class FPLService:
         headers["x-api-authorization"] = auth_token
 
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{FPL_BASE_URL}/my-team/{team_id}/", headers=headers
-            )
+            response = await client.get(f"{FPL_BASE_URL}/my-team/{team_id}/", headers=headers)
             response.raise_for_status()
             return response.json()
 
-    async def get_entry(self, team_id: int) -> Dict[str, Any]:
+    async def get_entry(self, team_id: int) -> dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/")
             response.raise_for_status()
             return response.json()
 
-    async def get_event_live(self, gw: int) -> Dict[str, Any]:
+    async def get_event_live(self, gw: int) -> dict[str, Any]:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{FPL_BASE_URL}/event/{gw}/live/")
             response.raise_for_status()
@@ -208,10 +204,8 @@ class FPLService:
 
     async def get_enriched_squad(
         self, team_id: int, gw: int | None = None, auth_token: str | None = None
-    ) -> Dict[str, Any]:
-        logger.debug(
-            f"get_enriched_squad called for team {team_id} with gw={gw} auth={bool(auth_token)}"
-        )
+    ) -> dict[str, Any]:
+        logger.debug(f"get_enriched_squad called for team {team_id} with gw={gw} auth={bool(auth_token)}")
         bootstrap = await self.get_bootstrap_static()
 
         # Determine Gameweek
@@ -235,7 +229,7 @@ class FPLService:
 
         try:
             entry = await self.get_entry(team_id)
-            if "favourite_team" in entry and entry["favourite_team"]:
+            if entry.get("favourite_team"):
                 fav_team_id = entry["favourite_team"]
                 teams = {t["id"]: t for t in bootstrap["teams"]}
                 if fav_team_id in teams:
@@ -333,9 +327,7 @@ class FPLService:
         try:
             live_data = await self.get_event_live(gw)
             live_elements = {e["id"]: e["stats"] for e in live_data["elements"]}
-            logger.debug(
-                f"Fetched live data for GW{gw}, {len(live_elements)} elements found."
-            )
+            logger.debug(f"Fetched live data for GW{gw}, {len(live_elements)} elements found.")
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             logger.debug(f"Failed to fetch live data for GW{gw}: {e}")
             live_elements = {}
@@ -374,9 +366,7 @@ class FPLService:
 
                 # 1. Try to find purchase price from transfers (latest transfer in)
                 if all_transfers:
-                    player_transfers = [
-                        t for t in all_transfers if t["element_in"] == player["id"]
-                    ]
+                    player_transfers = [t for t in all_transfers if t["element_in"] == player["id"]]
                     if player_transfers:
                         player_transfers.sort(key=lambda x: x["time"], reverse=True)
                         purchase_price = player_transfers[0]["element_in_cost"]
@@ -390,7 +380,8 @@ class FPLService:
                 # then their purchase price is their price at GW1.
 
                 # NOTE: This is an optimization. Ideally we should check if they were actually in the team at GW1.
-                # But if they are in the current squad and have NO transfer in record, they MUST be from GW1 (or a wildcard/freehit that wiped history? unlikely for 'transfers' endpoint).
+                # But if they are in the current squad and have NO transfer in record, they MUST be from GW1
+                # (or a wildcard/freehit that wiped history? unlikely for 'transfers' endpoint).
                 # Actually, 'transfers' endpoint covers all transfers.
                 # So if no transfer IN, they are original squad.
 
@@ -423,9 +414,7 @@ class FPLService:
                         "team_short": team["short_name"] if team else "UNK",
                         "team_code": team["code"] if team else 0,
                         "cost": current_price / 10,
-                        "purchase_price": purchase_price / 10
-                        if purchase_price
-                        else None,
+                        "purchase_price": purchase_price / 10 if purchase_price else None,
                         "selling_price": selling_price / 10 if selling_price else None,
                         "status": player["status"],
                         "news": player["news"],
@@ -434,12 +423,8 @@ class FPLService:
                         "form": player["form"],
                         "event_points": event_points,
                         "minutes": minutes,
-                        "match_started": fixture_info["started"]
-                        if fixture_info
-                        else False,
-                        "match_finished": fixture_info["finished"]
-                        if fixture_info
-                        else False,
+                        "match_started": fixture_info["started"] if fixture_info else False,
+                        "match_finished": fixture_info["finished"] if fixture_info else False,
                         "total_points": player["total_points"],
                         "fixture": fixture_str,
                         "fixture_difficulty": difficulty,
@@ -475,9 +460,7 @@ class FPLService:
         # If we are viewing history, maybe we want to know how many FTs they had at that time?
         # For now, let's just use the current next_gw logic, or maybe pass the viewed gw + 1?
         next_gw_for_calc = gw + 1
-        free_transfers = self.calculate_free_transfers(
-            history, all_transfers, next_gw_for_calc
-        )
+        free_transfers = self.calculate_free_transfers(history, all_transfers, next_gw_for_calc)
 
         if my_team_data and "transfers" in my_team_data:
             transfer_details = my_team_data["transfers"]
@@ -510,10 +493,10 @@ class FPLService:
     def calculate_chip_status(
         self,
         gw: int,
-        history: Dict[str, Any],
-        picks: Dict[str, Any] = None,
-        my_team_data: Dict[str, Any] = None,
-    ) -> List[Dict[str, Any]]:
+        history: dict[str, Any],
+        picks: dict[str, Any] = None,
+        my_team_data: dict[str, Any] = None,
+    ) -> list[dict[str, Any]]:
         chip_labels = {
             "bboost": "Bench Boost",
             "3xc": "Triple Captain",
@@ -536,7 +519,7 @@ class FPLService:
                     c_data = my_chips[name]
                     status = c_data.get("status_for_entry", "available")
 
-                    if "played_by_entry" in c_data and c_data["played_by_entry"]:
+                    if c_data.get("played_by_entry"):
                         events = c_data["played_by_entry"]
 
                     # Convert to ints if needed, though they might be ints already
@@ -583,9 +566,7 @@ class FPLService:
                             status = "available"
                     else:
                         # Second Half (GW >= 20)
-                        post_reset_usage = [
-                            e for e in used_events if e >= start_gw_period_2
-                        ]
+                        post_reset_usage = [e for e in used_events if e >= start_gw_period_2]
 
                         if len(post_reset_usage) > 0:
                             status = "played"
@@ -603,9 +584,7 @@ class FPLService:
 
         return chips_status
 
-    def calculate_free_transfers(
-        self, history: Dict[str, Any], transfers: list, next_gw: int
-    ) -> int:
+    def calculate_free_transfers(self, history: dict[str, Any], transfers: list, next_gw: int) -> int:
         # Algorithm to calculate available free transfers
         # 1. Start with 0 (before GW1)
         # 2. Iterate through history
@@ -661,13 +640,10 @@ class FPLService:
 
         return ft
 
-    async def get_fixtures(self) -> List[Fixture]:
+    async def get_fixtures(self) -> list[Fixture]:
         async with self._cache_lock:
             now = time.time()
-            if (
-                "fixtures" in self._cache
-                and (now - self._last_updated.get("fixtures", 0)) < self.CACHE_TTL
-            ):
+            if "fixtures" in self._cache and (now - self._last_updated.get("fixtures", 0)) < self.CACHE_TTL:
                 return self._cache["fixtures"]
 
             async with httpx.AsyncClient() as client:
@@ -687,7 +663,7 @@ class FPLService:
                 self._last_updated["fixtures"] = now
                 return fixtures
 
-    async def get_live_fixtures(self, gw: int) -> List[Fixture]:
+    async def get_live_fixtures(self, gw: int) -> list[Fixture]:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
@@ -698,9 +674,7 @@ class FPLService:
         await history_service._ensure_history_data()
 
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{FPL_BASE_URL}/fixtures/", params={"event": gw}
-            )
+            response = await client.get(f"{FPL_BASE_URL}/fixtures/", params={"event": gw})
             response.raise_for_status()
             data = response.json()
 
@@ -792,13 +766,11 @@ class FPLService:
                             "total": venue_total,
                         }
             except (httpx.HTTPStatusError, httpx.RequestError, KeyError) as e:
-                logger.debug(
-                    f"Failed to calc stats for {f.team_h_name} vs {f.team_a_name}: {e}"
-                )
+                logger.debug(f"Failed to calc stats for {f.team_h_name} vs {f.team_a_name}: {e}")
 
         return fixtures
 
-    async def get_pulse_lineup(self, pulse_match_id: int) -> Dict[str, Any]:
+    async def get_pulse_lineup(self, pulse_match_id: int) -> dict[str, Any]:
         url = f"https://sdp-prem-prod.premier-league-prod.pulselive.com/api/v3/matches/{pulse_match_id}/lineups"
         try:
             async with httpx.AsyncClient() as client:
@@ -809,13 +781,11 @@ class FPLService:
             logger.debug(f"Failed to fetch pulse lineup for {pulse_match_id}: {e}")
         return {}
 
-    async def get_teams(self) -> List[Team]:
+    async def get_teams(self) -> list[Team]:
         bootstrap = await self.get_bootstrap_static()
         return [Team(**t) for t in bootstrap["teams"]]
 
-    async def get_club_squad(
-        self, club_id: int, gw: int | None = None
-    ) -> Dict[str, Any]:
+    async def get_club_squad(self, club_id: int, gw: int | None = None) -> dict[str, Any]:
         logger.debug(f"get_club_squad called for club {club_id} with gw={gw}")
         bootstrap = await self.get_bootstrap_static()
         current_gw = await self.get_current_gameweek()
@@ -844,11 +814,7 @@ class FPLService:
         # Fetch fixtures for this GW
         fixtures = await self.get_fixtures()
         # Filter for club fixtures in this GW
-        club_fixtures = [
-            f
-            for f in fixtures
-            if f.event == gw and (f.team_h == club_id or f.team_a == club_id)
-        ]
+        club_fixtures = [f for f in fixtures if f.event == gw and (f.team_h == club_id or f.team_a == club_id)]
 
         # Attempt to get Official Lineup from Pulse API
         starting_xi_codes = []
@@ -867,7 +833,8 @@ class FPLService:
             # I replaced the cache with objects. I lost 'code'.
             # CRITICAL: I need to add 'code' to Fixture model.
 
-            # Reverting strategy: I need to add 'code' to Fixture model in models.py BEFORE updating usage, or I lose data.
+            # Reverting strategy: I need to add 'code' to Fixture model in models.py BEFORE updating usage,
+            # or I lose data.
             pulse_id = match.code
             if pulse_id:
                 lineup_data = await self.get_pulse_lineup(pulse_id)
@@ -898,9 +865,7 @@ class FPLService:
 
                         # Extract Lineup (Nested Arrays)
                         # "lineup": [["GK_ID"], ["DEF...], ...]
-                        lineup_groups = target_team_data.get("formation", {}).get(
-                            "lineup", []
-                        )
+                        lineup_groups = target_team_data.get("formation", {}).get("lineup", [])
                         for group in lineup_groups:
                             for player_id_str in group:
                                 try:
@@ -910,9 +875,7 @@ class FPLService:
 
                         # Extract Subs (Simple List)
                         # "subs": ["ID", ...]
-                        subs_list = target_team_data.get("formation", {}).get(
-                            "subs", []
-                        )
+                        subs_list = target_team_data.get("formation", {}).get("subs", [])
                         for player_id_str in subs_list:
                             try:
                                 subs_codes.append(int(player_id_str))
@@ -1023,9 +986,7 @@ class FPLService:
         # Process all fixtures for the club (Season Schedule)
         club_schedule = []
         all_fixtures = await self.get_fixtures()
-        relevant_fixtures = [
-            f for f in all_fixtures if f.team_h == club_id or f.team_a == club_id
-        ]
+        relevant_fixtures = [f for f in all_fixtures if f.team_h == club_id or f.team_a == club_id]
         # Sort by event/kickoff
         relevant_fixtures.sort(key=lambda x: x.event or 999)
 
@@ -1067,7 +1028,7 @@ class FPLService:
             "fixtures": club_schedule,
         }
 
-    async def get_club_summary(self, club_id: int) -> Dict[str, Any]:
+    async def get_club_summary(self, club_id: int) -> dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         teams_map = {t["id"]: t for t in bootstrap["teams"]}
         team = teams_map.get(club_id)
@@ -1109,22 +1070,16 @@ class FPLService:
         # Note: fixtures are sorted by event ascending (1, 2, 3...)
 
         # 1. Collect all club fixtures
-        club_fixtures = [
-            f for f in fixtures if f.team_h == club_id or f.team_a == club_id
-        ]
+        club_fixtures = [f for f in fixtures if f.team_h == club_id or f.team_a == club_id]
 
         # 2. Upcoming (first 3 that are not finished)
-        future_fixtures = [
-            f for f in club_fixtures if not f.finished and not f.finished_provisional
-        ][:5]
+        future_fixtures = [f for f in club_fixtures if not f.finished and not f.finished_provisional][:5]
 
         # 3. Recent (last 3 that ARE finished or provisionally finished)
         past_fixtures = [
             f
             for f in club_fixtures
-            if (f.finished or f.finished_provisional)
-            and f.team_h_score is not None
-            and f.team_a_score is not None
+            if (f.finished or f.finished_provisional) and f.team_h_score is not None and f.team_a_score is not None
         ]
         past_fixtures.sort(key=lambda x: x.event or 0, reverse=True)  # Sort desc
         recent_fixtures = past_fixtures
@@ -1188,7 +1143,7 @@ class FPLService:
                 return max(1, event["id"] - 1)
         return 38
 
-    async def get_gameweek_status(self) -> Dict[str, Any]:
+    async def get_gameweek_status(self) -> dict[str, Any]:
         data = await self.get_bootstrap_static()
         now = time.time()
 
@@ -1323,7 +1278,7 @@ class FPLService:
 
         # Convert to list and calculate derived stats
         table = []
-        for team_id, stats in teams.items():
+        for _team_id, stats in teams.items():
             stats["goal_difference"] = stats["goals_for"] - stats["goals_against"]
             # Format form (last 5)
             recent_form = stats["form"][-5:]
@@ -1342,9 +1297,7 @@ class FPLService:
 
         return table
 
-    async def get_player_summary(
-        self, player_id: int, opponent_id: int | None = None
-    ) -> Dict[str, Any]:
+    async def get_player_summary(self, player_id: int, opponent_id: int | None = None) -> dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
         elements = {p["id"]: p for p in bootstrap["elements"]}
@@ -1357,20 +1310,14 @@ class FPLService:
             # Enrich history
             for fixture in data.get("history", []):
                 opp_id = fixture["opponent_team"]
-                fixture["opponent_short_name"] = (
-                    teams[opp_id]["short_name"] if opp_id in teams else "UNK"
-                )
+                fixture["opponent_short_name"] = teams[opp_id]["short_name"] if opp_id in teams else "UNK"
 
             # Enrich fixtures
             for fixture in data.get("fixtures", []):
                 h_id = fixture["team_h"]
                 a_id = fixture["team_a"]
-                fixture["team_h_short"] = (
-                    teams[h_id]["short_name"] if h_id in teams else "UNK"
-                )
-                fixture["team_a_short"] = (
-                    teams[a_id]["short_name"] if a_id in teams else "UNK"
-                )
+                fixture["team_h_short"] = teams[h_id]["short_name"] if h_id in teams else "UNK"
+                fixture["team_a_short"] = teams[a_id]["short_name"] if a_id in teams else "UNK"
 
             # Get History vs Opponent (Next or Specific)
             try:
@@ -1394,17 +1341,13 @@ class FPLService:
 
                     if opponent and player:
                         opponent_name = opponent["name"]
-                        player_full_name = (
-                            f"{player['first_name']} {player['second_name']}"
-                        )
+                        player_full_name = f"{player['first_name']} {player['second_name']}"
 
                         from .history_service import HistoryService
 
                         history_service = HistoryService()
 
-                        vs_history = await history_service.get_player_history_vs_team(
-                            player_full_name, opponent_name
-                        )
+                        vs_history = await history_service.get_player_history_vs_team(player_full_name, opponent_name)
                         data["history_vs_opponent"] = vs_history
                         data["next_opponent_name"] = opponent_name
             except (httpx.HTTPStatusError, httpx.RequestError, KeyError) as e:
@@ -1412,7 +1355,7 @@ class FPLService:
 
             return data
 
-    async def get_dream_team(self, gw: int) -> Dict[str, Any]:
+    async def get_dream_team(self, gw: int) -> dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = {p["id"]: p for p in bootstrap["elements"]}
         teams = {t["id"]: t for t in bootstrap["teams"]}
@@ -1502,9 +1445,7 @@ class FPLService:
                     "name": tp["web_name"],
                     "points": data["top_player"]["points"],
                     "code": tp["code"],
-                    "team_code": teams[tp["team"]]["code"]
-                    if tp["team"] in teams
-                    else 0,
+                    "team_code": teams[tp["team"]]["code"] if tp["team"] in teams else 0,
                 }
 
         return {
@@ -1514,9 +1455,7 @@ class FPLService:
             "gameweek": gw,
         }
 
-    async def get_top_managers_ownership(
-        self, gw: int | None = None, count: int = 1000
-    ) -> Dict[str, Any]:
+    async def get_top_managers_ownership(self, gw: int | None = None, count: int = 1000) -> dict[str, Any]:
         if gw is None:
             gw = await self.get_current_gameweek()
 
@@ -1527,10 +1466,7 @@ class FPLService:
         cache_key = f"top_{count}_ownership_{gw}"
         now = time.time()
         # Cache for 1 hour
-        if (
-            cache_key in self._cache
-            and (now - self._last_updated.get(cache_key, 0)) < TOP_MANAGERS_CACHE_TTL
-        ):
+        if cache_key in self._cache and (now - self._last_updated.get(cache_key, 0)) < TOP_MANAGERS_CACHE_TTL:
             return self._cache[cache_key]
 
         # 1. Raw Cache Check
@@ -1578,10 +1514,7 @@ class FPLService:
                     return None
 
             async with httpx.AsyncClient() as client:
-                tasks = [
-                    fetch_standings_page(client, page)
-                    for page in range(1, num_pages + 1)
-                ]
+                tasks = [fetch_standings_page(client, page) for page in range(1, num_pages + 1)]
                 results = await asyncio.gather(*tasks)
 
                 for res in results:
@@ -1608,9 +1541,7 @@ class FPLService:
                     chunk = team_ids[i : i + chunk_size]
                     tasks = []
                     for tid in chunk:
-                        tasks.append(
-                            client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/")
-                        )
+                        tasks.append(client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/"))
 
                     responses = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -1682,9 +1613,7 @@ class FPLService:
                     "full_name": f"{player['first_name']} {player['second_name']}",
                     "team_short": team["short_name"] if team else "UNK",
                     "team_code": team["code"] if team else 0,
-                    "element_type": player[
-                        "element_type"
-                    ],  # 1=GKP, 2=DEF, 3=MID, 4=FWD
+                    "element_type": player["element_type"],  # 1=GKP, 2=DEF, 3=MID, 4=FWD
                     "cost": player["now_cost"] / 10,
                     "total_points": player["total_points"],
                     "code": player["code"],
@@ -1692,9 +1621,7 @@ class FPLService:
                     "ownership_top_1000": round(ownership, 1),
                     "captain_top_1000": round(cap_ownership, 1),
                     "global_ownership": float(player["selected_by_percent"]),
-                    "rank_diff": round(
-                        ownership - float(player["selected_by_percent"]), 1
-                    ),
+                    "rank_diff": round(ownership - float(player["selected_by_percent"]), 1),
                 }
             )
 
@@ -1716,9 +1643,7 @@ class FPLService:
 
         return result
 
-    async def get_aggregated_player_stats(
-        self, min_gw: int, max_gw: int, venue: str = "both"
-    ) -> list[dict]:
+    async def get_aggregated_player_stats(self, min_gw: int, max_gw: int, venue: str = "both") -> list[dict]:
         """
         Aggregates player stats (points) over a range of gameweeks, optionally filtering by venue.
         venue: 'both', 'home', 'away'
@@ -1787,7 +1712,8 @@ class FPLService:
 
                 # If filter is 'both', we take the total points for this GW directly (easiest)
                 # UNLESS we want to support 'home' or 'away'
-                # If venue != 'both', we must inspect 'explain' to separate points from Home vs Away games in this GW (DGW support)
+                # If venue != 'both', we must inspect 'explain' to separate points
+                # from Home vs Away games in this GW (DGW support)
 
                 points_to_add = 0
                 matches_to_add = 0
@@ -1798,11 +1724,7 @@ class FPLService:
                     explains = el.get("explain", [])
                     for expl in explains:
                         mins = next(
-                            (
-                                s["value"]
-                                for s in expl.get("stats", [])
-                                if s["identifier"] == "minutes"
-                            ),
+                            (s["value"] for s in expl.get("stats", []) if s["identifier"] == "minutes"),
                             0,
                         )
                         if mins > 0:
@@ -1821,20 +1743,14 @@ class FPLService:
                         target_venue = venue.lower()
                         should_include = False
 
-                        if target_venue == "home" and is_home:
-                            should_include = True
-                        elif target_venue == "away" and not is_home:
+                        if (target_venue == "home" and is_home) or (target_venue == "away" and not is_home):
                             should_include = True
 
                         if should_include:
                             fix_points = sum(s["points"] for s in expl.get("stats", []))
                             points_to_add += fix_points
                             mins = next(
-                                (
-                                    s["value"]
-                                    for s in expl.get("stats", [])
-                                    if s["identifier"] == "minutes"
-                                ),
+                                (s["value"] for s in expl.get("stats", []) if s["identifier"] == "minutes"),
                                 0,
                             )
                             if mins > 0:
@@ -1875,9 +1791,7 @@ class FPLService:
                 "web_name": p["web_name"],
                 "full_name": f"{p['first_name']} {p['second_name']}",
                 "team_code": teams[p["team"]]["code"] if p["team"] in teams else 0,
-                "team_short": teams[p["team"]]["short_name"]
-                if p["team"] in teams
-                else "UNK",
+                "team_short": teams[p["team"]]["short_name"] if p["team"] in teams else "UNK",
                 "element_type": p["element_type"],  # Position
                 "now_cost": p["now_cost"] / 10.0,
                 "total_points": p["total_points"],  # Season total
@@ -1906,10 +1820,7 @@ class FPLService:
         cache_key = "polymarket_premier_league_v10"  # Bump version
         now = time.time()
         # Cache for 10 minutes
-        if (
-            cache_key in self._cache
-            and (now - self._last_updated.get(cache_key, 0)) < POLYMARKET_CACHE_TTL
-        ):
+        if cache_key in self._cache and (now - self._last_updated.get(cache_key, 0)) < POLYMARKET_CACHE_TTL:
             return self._cache[cache_key]
 
         url = "https://gamma-api.polymarket.com/events"
@@ -1970,21 +1881,11 @@ class FPLService:
 
                         # If not found, try simple cleaning (removing FC/AFC)
                         if not home_fpl:
-                            clean = (
-                                home_raw.replace(" FC", "")
-                                .replace(" AFC", "")
-                                .strip()
-                                .lower()
-                            )
+                            clean = home_raw.replace(" FC", "").replace(" AFC", "").strip().lower()
                             home_fpl = TEAM_MAPPINGS.get(clean)
 
                         if not away_fpl:
-                            clean = (
-                                away_raw.replace(" FC", "")
-                                .replace(" AFC", "")
-                                .strip()
-                                .lower()
-                            )
+                            clean = away_raw.replace(" FC", "").replace(" AFC", "").strip().lower()
                             away_fpl = TEAM_MAPPINGS.get(clean)
 
                         # Display Names (use mapped name if available, else raw)
@@ -2013,16 +1914,12 @@ class FPLService:
 
                     home_data = {
                         "name": home_clean,
-                        "short_name": home_fpl["short_name"]
-                        if home_fpl
-                        else home_clean[:3].upper(),
+                        "short_name": home_fpl["short_name"] if home_fpl else home_clean[:3].upper(),
                         "code": home_fpl["code"] if home_fpl else None,
                     }
                     away_data = {
                         "name": away_clean,
-                        "short_name": away_fpl["short_name"]
-                        if away_fpl
-                        else away_clean[:3].upper(),
+                        "short_name": away_fpl["short_name"] if away_fpl else away_clean[:3].upper(),
                         "code": away_fpl["code"] if away_fpl else None,
                     }
 
@@ -2062,11 +1959,10 @@ class FPLService:
                         elif away_name in question:
                             away_price = yes_price
 
-                    # Strict check: Must have at least Home and Away prices (Draw sometimes missing in rare formats, but for EPL 1x2 it should be there)
+                    # Strict check: Must have at least Home and Away prices
+                    # (Draw sometimes missing in rare formats, but for EPL 1x2 it should be there)
                     # Let's say we need at least 2 non-zero prices to correspond to a valid market match
-                    valid_prices = sum(
-                        [1 for p in [home_price, draw_price, away_price] if p > 0]
-                    )
+                    valid_prices = sum([1 for p in [home_price, draw_price, away_price] if p > 0])
                     if valid_prices < 2:
                         continue
 
@@ -2084,14 +1980,10 @@ class FPLService:
                     markets.append(
                         {
                             "id": item.get("id"),
-                            "question": item.get("title")
-                            or item.get("question")
-                            or f"{home_clean} vs {away_clean}",
+                            "question": item.get("title") or item.get("question") or f"{home_clean} vs {away_clean}",
                             "slug": item.get("slug"),
                             "outcomes": market_outcomes,
-                            "volume": float(item.get("volume"))
-                            if item.get("volume")
-                            else 0.0,
+                            "volume": float(item.get("volume")) if item.get("volume") else 0.0,
                             "endDate": item.get("endDate"),
                             "image": item.get("image") or item.get("icon"),
                             "group": item.get("group"),
@@ -2119,8 +2011,8 @@ class FPLService:
         max_gw: int | None = None,
         exclude_bench: bool = False,
         exclude_unavailable: bool = False,
-        predictions: Dict[int, float] | None = None,
-    ) -> Dict[str, Any]:
+        predictions: dict[int, float] | None = None,
+    ) -> dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = bootstrap["elements"]
         current_gw = await self.get_current_gameweek()
@@ -2139,7 +2031,9 @@ class FPLService:
             use_history = True
 
         logger.info(
-            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, Use History={use_history}, Exclude Bench={exclude_bench}, Exclude Unavailable={exclude_unavailable}, Use Predictions={bool(predictions)}"
+            f"Optimization: Budget={budget}, GW {min_gw}-{max_gw}, "
+            f"Use History={use_history}, Exclude Bench={exclude_bench}, "
+            f"Exclude Unavailable={exclude_unavailable}, Use Predictions={bool(predictions)}"
         )
 
         players = []
@@ -2177,7 +2071,8 @@ class FPLService:
                     # Usually chance overrides status. If chance is None (100) but status is 'i', it's weird.
                     # Let's trust chance if it exists.
                     if chance is None:
-                        # If chance is None, it implies 100%. But if status is 'i', maybe they just got injured and chance hasn't updated?
+                        # If chance is None, it implies 100%. But if status is 'i',
+                        # maybe they just got injured and chance hasn't updated?
                         # Safest to exclude if status implies definitely out. 'i' might be short term.
                         # 's' (suspended) is definite.
                         # 'u' (unavailable) is definite.
@@ -2218,18 +2113,12 @@ class FPLService:
             async def fetch_player_points(client, pid):
                 async with sem:
                     try:
-                        resp = await client.get(
-                            f"{FPL_BASE_URL}/element-summary/{pid}/"
-                        )
+                        resp = await client.get(f"{FPL_BASE_URL}/element-summary/{pid}/")
                         resp.raise_for_status()
                         data = resp.json()
                         history = data.get("history", [])
                         # Sum points in range
-                        pts = sum(
-                            h["total_points"]
-                            for h in history
-                            if min_gw <= h["round"] <= max_gw
-                        )
+                        pts = sum(h["total_points"] for h in history if min_gw <= h["round"] <= max_gw)
                         return pid, pts
                     except Exception as e:
                         logger.error(f"Failed to fetch history for {pid}: {e}")
@@ -2286,17 +2175,13 @@ class FPLService:
 
         # Decision Variables
         # x[i] = 1 if player i is selected, 0 otherwise
-        player_vars = pulp.LpVariable.dicts(
-            "Player", [p["id"] for p in players], cat="Binary"
-        )
+        player_vars = pulp.LpVariable.dicts("Player", [p["id"] for p in players], cat="Binary")
 
         # Objective Function
         if exclude_bench:
             # If excluding bench points, we verify optimization based on Starting XI only.
             # We need additional variables for "Starter".
-            starter_vars = pulp.LpVariable.dicts(
-                "Starter", [p["id"] for p in players], cat="Binary"
-            )
+            starter_vars = pulp.LpVariable.dicts("Starter", [p["id"] for p in players], cat="Binary")
 
             # Link Starter to Squad: if starter, must be in squad
             for p in players:
@@ -2311,34 +2196,24 @@ class FPLService:
             # Formation Constraints (Starters)
             # 1 GK
             prob += (
-                pulp.lpSum(
-                    [starter_vars[p["id"]] for p in players if p["position"] == 1]
-                )
-                == 1,
+                pulp.lpSum([starter_vars[p["id"]] for p in players if p["position"] == 1]) == 1,
                 "Starter GKP",
             )
             # Min 3 DEF
             prob += (
-                pulp.lpSum(
-                    [starter_vars[p["id"]] for p in players if p["position"] == 2]
-                )
-                >= 3,
+                pulp.lpSum([starter_vars[p["id"]] for p in players if p["position"] == 2]) >= 3,
                 "Starter Min DEF",
             )
             # Min 1 FWD
             prob += (
-                pulp.lpSum(
-                    [starter_vars[p["id"]] for p in players if p["position"] == 4]
-                )
-                >= 1,
+                pulp.lpSum([starter_vars[p["id"]] for p in players if p["position"] == 4]) >= 1,
                 "Starter Min FWD",
             )
 
             # Objective: Maximize Starter Points - 0.001 * Total Cost (to prefer cheaper bench/squad)
             prob += (
                 pulp.lpSum([p["points"] * starter_vars[p["id"]] for p in players])
-                - 0.001
-                * pulp.lpSum([p["cost"] * player_vars[p["id"]] for p in players]),
+                - 0.001 * pulp.lpSum([p["cost"] * player_vars[p["id"]] for p in players]),
                 "Total Points",
             )
 
@@ -2363,26 +2238,22 @@ class FPLService:
         # 3. Position Constraints
         # GKP: 2
         prob += (
-            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 1])
-            == 2,
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 1]) == 2,
             "GKP Count",
         )
         # DEF: 5
         prob += (
-            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 2])
-            == 5,
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 2]) == 5,
             "DEF Count",
         )
         # MID: 5
         prob += (
-            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 3])
-            == 5,
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 3]) == 5,
             "MID Count",
         )
         # FWD: 3
         prob += (
-            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 4])
-            == 3,
+            pulp.lpSum([player_vars[p["id"]] for p in players if p["position"] == 4]) == 3,
             "FWD Count",
         )
 
@@ -2390,8 +2261,7 @@ class FPLService:
         teams = set(p["team"] for p in players)
         for t in teams:
             prob += (
-                pulp.lpSum([player_vars[p["id"]] for p in players if p["team"] == t])
-                <= 3,
+                pulp.lpSum([player_vars[p["id"]] for p in players if p["team"] == t]) <= 3,
                 f"Max Players Team {t}",
             )
 
@@ -2503,9 +2373,7 @@ class FPLService:
             team_stats[t["id"]] = {
                 "name": t["name"],
                 "short_name": t["short_name"],
-                "attack": t[
-                    "strength_attack_home"
-                ],  # Simplified, use official for now as baseline
+                "attack": t["strength_attack_home"],  # Simplified, use official for now as baseline
                 "defence": t["strength_defence_home"],
                 "overall": t["strength_overall_home"],
                 "form": t["form"],
@@ -2516,9 +2384,7 @@ class FPLService:
         # Calculates a custom difficulty score for each fixture.
 
         # Filter futures - allow finished if it's within our target range (to align grid)
-        future_fixtures = [
-            f for f in fixtures if f.event is not None and f.event >= start_gw
-        ]
+        future_fixtures = [f for f in fixtures if f.event is not None and f.event >= start_gw]
 
         # Group by team
         team_fixtures = {t_id: [] for t_id in teams}
@@ -2756,12 +2622,8 @@ class FPLService:
                     "team_code": teams[t_id]["code"],
                     "next_5": aligned_next_5,
                     "avg_difficulty_official": round(avg_diff_off, 2),
-                    "avg_difficulty_attack": round(
-                        avg_diff_att, 2
-                    ),  # Lower is better (easier opponent defense)
-                    "avg_difficulty_defend": round(
-                        avg_diff_def, 2
-                    ),  # Lower is better (weaker opponent attack)
+                    "avg_difficulty_attack": round(avg_diff_att, 2),  # Lower is better (easier opponent defense)
+                    "avg_difficulty_defend": round(avg_diff_def, 2),  # Lower is better (weaker opponent attack)
                     "avg_difficulty_market": round(avg_diff_mkt, 2),
                 }
             )

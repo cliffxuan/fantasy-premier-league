@@ -1,0 +1,36 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+        types_or: [python]
+      - id: ruff-format
+        types_or: [python]
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^frontend/src/.*\.(js|jsx|css)$
+        additional_dependencies:
+          - prettier@3
+
+  - repo: local
+    hooks:
+      - id: flutter-analyze
+        name: flutter analyze
+        entry: bash -c 'cd mobile && dart analyze --fatal-infos lib/'
+        language: system
+        files: ^mobile/lib/.*\.dart$
+        pass_filenames: false

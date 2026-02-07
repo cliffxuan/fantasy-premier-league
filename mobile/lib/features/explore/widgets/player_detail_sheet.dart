@@ -106,7 +106,7 @@ class PlayerDetailSheet extends ConsumerWidget {
                   height: 200,
                   child: LoadingIndicator(),
                 ),
-                error: (e, _) => Text(
+                error: (e, _) => const Text(
                   'Failed to load details',
                   style: TextStyle(color: AppColors.danger),
                 ),

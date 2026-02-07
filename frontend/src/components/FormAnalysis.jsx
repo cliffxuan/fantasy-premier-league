@@ -1,12 +1,5 @@
-import React, { useState, useEffect } from "react";
-import {
-	RefreshCw,
-	Flame,
-	TrendingDown,
-	CheckCircle2,
-	AlertTriangle,
-	Info
-} from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, Flame, TrendingDown, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { getPositionName } from './utils';
 
 const FormAnalysis = () => {
@@ -18,9 +11,9 @@ const FormAnalysis = () => {
 		setLoading(true);
 		setError(null);
 		try {
-			const response = await fetch("/api/analysis/form");
+			const response = await fetch('/api/analysis/form');
 			if (!response.ok) {
-				throw new Error("Failed to fetch form analysis");
+				throw new Error('Failed to fetch form analysis');
 			}
 			const result = await response.json();
 			setData(result);
@@ -36,27 +29,27 @@ const FormAnalysis = () => {
 	}, []);
 
 	const getSustainabilityColor = (score) => {
-		if (score >= 70) return "bg-green-500";
-		if (score >= 40) return "bg-yellow-500";
-		return "bg-red-500";
+		if (score >= 70) return 'bg-green-500';
+		if (score >= 40) return 'bg-yellow-500';
+		return 'bg-red-500';
 	};
 
 	const getSustainabilityTextColor = (score) => {
-		if (score >= 70) return "text-green-500";
-		if (score >= 40) return "text-yellow-500";
-		return "text-red-500";
+		if (score >= 70) return 'text-green-500';
+		if (score >= 40) return 'text-yellow-500';
+		return 'text-red-500';
 	};
 
 	const getClassificationIcon = (classification) => {
-		if (classification.includes("Sustainable")) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-		if (classification.includes("Regression")) return <TrendingDown className="w-4 h-4 text-red-500" />;
+		if (classification.includes('Sustainable')) return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+		if (classification.includes('Regression')) return <TrendingDown className="w-4 h-4 text-red-500" />;
 		return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
 	};
 
 	const getClassificationStyles = (classification) => {
-		if (classification.includes("Sustainable")) return "bg-green-500/10 text-green-500 border-green-500/20";
-		if (classification.includes("Regression")) return "bg-red-500/10 text-red-500 border-red-500/20";
-		return "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
+		if (classification.includes('Sustainable')) return 'bg-green-500/10 text-green-500 border-green-500/20';
+		if (classification.includes('Regression')) return 'bg-red-500/10 text-red-500 border-red-500/20';
+		return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
 	};
 
 	return (
@@ -80,8 +73,8 @@ const FormAnalysis = () => {
 				<Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
 				<p className="text-sm text-blue-100/90 leading-relaxed">
 					Analysis based on <span className="font-semibold text-blue-300">"The Dynamics of Transience"</span> model.
-					Identifies if player form is sustainable (supported by xG) or lucky variance.
-					Streaks typically last 8-12 games before regression.
+					Identifies if player form is sustainable (supported by xG) or lucky variance. Streaks typically last 8-12
+					games before regression.
 				</p>
 			</div>
 
@@ -109,7 +102,10 @@ const FormAnalysis = () => {
 					{/* Mobile Card View */}
 					<div className="md:hidden flex flex-col gap-3">
 						{data.map((player) => (
-							<div key={player.id} className="bg-ds-card border border-ds-border rounded-xl p-4 shadow-sm relative overflow-hidden group">
+							<div
+								key={player.id}
+								className="bg-ds-card border border-ds-border rounded-xl p-4 shadow-sm relative overflow-hidden group"
+							>
 								{/* Header */}
 								<div className="flex justify-between items-start mb-4">
 									<div className="flex gap-3">
@@ -122,7 +118,9 @@ const FormAnalysis = () => {
 											</span>
 										</div>
 									</div>
-									<div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${player.streak_games > 5 ? 'bg-ds-primary/10 text-ds-primary border border-ds-primary/20' : 'bg-ds-surface text-ds-text-muted border border-ds-border'}`}>
+									<div
+										className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${player.streak_games > 5 ? 'bg-ds-primary/10 text-ds-primary border border-ds-primary/20' : 'bg-ds-surface text-ds-text-muted border border-ds-border'}`}
+									>
 										<Flame className={`w-3.5 h-3.5 ${player.streak_games > 5 ? 'fill-ds-primary' : ''}`} />
 										{player.streak_games}
 									</div>
@@ -142,8 +140,11 @@ const FormAnalysis = () => {
 									</div>
 									<div className="bg-ds-surface/50 p-2.5 rounded-lg border border-ds-border/50">
 										<div className="text-[10px] uppercase text-ds-text-muted mb-1 font-semibold">xG Delta</div>
-										<div className={`font-mono font-bold text-sm ${player.xg_delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
-											{player.xg_delta > 0 ? "+" : ""}{player.xg_delta}
+										<div
+											className={`font-mono font-bold text-sm ${player.xg_delta > 0 ? 'text-green-400' : 'text-red-400'}`}
+										>
+											{player.xg_delta > 0 ? '+' : ''}
+											{player.xg_delta}
 										</div>
 									</div>
 								</div>
@@ -166,7 +167,9 @@ const FormAnalysis = () => {
 
 								{/* Footer: Verdict & Prediction */}
 								<div className="flex items-center justify-between pt-3 border-t border-ds-border/50">
-									<div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border uppercase tracking-wider ${getClassificationStyles(player.classification)}`}>
+									<div
+										className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold border uppercase tracking-wider ${getClassificationStyles(player.classification)}`}
+									>
 										{getClassificationIcon(player.classification)}
 										{player.classification}
 									</div>
@@ -201,13 +204,15 @@ const FormAnalysis = () => {
 													<span className="font-bold text-ds-text">{player.web_name}</span>
 													<span className="text-[10px] uppercase text-ds-text-muted font-mono">
 														{getPositionName(player.position)}
-														{" • "}
+														{' • '}
 														GW{player.last_match_gw}
 													</span>
 												</div>
 											</td>
 											<td className="px-3 py-2 text-center">
-												<div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${player.streak_games > 5 ? 'bg-ds-primary/10 text-ds-primary border border-ds-primary/20' : 'bg-ds-surface text-ds-text-muted border border-ds-border'}`}>
+												<div
+													className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${player.streak_games > 5 ? 'bg-ds-primary/10 text-ds-primary border border-ds-primary/20' : 'bg-ds-surface text-ds-text-muted border border-ds-border'}`}
+												>
 													<Flame className={`w-3.5 h-3.5 ${player.streak_games > 5 ? 'fill-ds-primary' : ''}`} />
 													{player.streak_games}
 												</div>
@@ -218,8 +223,11 @@ const FormAnalysis = () => {
 												<span>{player.expected_goals}</span>
 											</td>
 											<td className="px-3 py-2 text-center">
-												<span className={`font-mono font-bold text-sm ${player.xg_delta > 0 ? 'text-green-400' : 'text-red-400'}`}>
-													{player.xg_delta > 0 ? "+" : ""}{player.xg_delta}
+												<span
+													className={`font-mono font-bold text-sm ${player.xg_delta > 0 ? 'text-green-400' : 'text-red-400'}`}
+												>
+													{player.xg_delta > 0 ? '+' : ''}
+													{player.xg_delta}
 												</span>
 											</td>
 											<td className="px-3 py-2">
@@ -230,28 +238,30 @@ const FormAnalysis = () => {
 															style={{ width: `${player.sustainability_score}%` }}
 														/>
 													</div>
-													<span className={`text-xs font-bold font-mono w-8 ${getSustainabilityTextColor(player.sustainability_score)}`}>
+													<span
+														className={`text-xs font-bold font-mono w-8 ${getSustainabilityTextColor(player.sustainability_score)}`}
+													>
 														{player.sustainability_score}%
 													</span>
 												</div>
 											</td>
 											<td className="px-3 py-2">
 												<div className="group relative inline-block">
-													<div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${getClassificationStyles(player.classification)}`}>
+													<div
+														className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold border ${getClassificationStyles(player.classification)}`}
+													>
 														{getClassificationIcon(player.classification)}
 														{player.classification}
 													</div>
 													{/* Tooltip */}
 													<div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-ds-card border border-ds-border rounded shadow-xl text-xs text-ds-text-muted opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 pointer-events-none">
-														{player.reasons.join(", ")}
+														{player.reasons.join(', ')}
 														<div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-ds-card border-b border-r border-ds-border rotate-45"></div>
 													</div>
 												</div>
 											</td>
 											<td className="px-3 py-2 text-right">
-												<span className="font-mono text-sm text-ds-text-muted">
-													{player.predicted_end_gw}
-												</span>
+												<span className="font-mono text-sm text-ds-text-muted">{player.predicted_end_gw}</span>
 											</td>
 										</tr>
 									))}

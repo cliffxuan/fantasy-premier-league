@@ -36,7 +36,7 @@ const TopManagersAnalysis = () => {
 
 	const getRowStyle = (ownership) => {
 		if (ownership >= 80) return 'bg-ds-primary/10'; // Super Template
-		if (ownership >= 50) return 'bg-ds-primary/5';  // Template
+		if (ownership >= 50) return 'bg-ds-primary/5'; // Template
 		return '';
 	};
 
@@ -47,15 +47,23 @@ const TopManagersAnalysis = () => {
 				<div>
 					<h2 className="text-xl font-bold text-ds-text flex items-center gap-2">
 						<span className="text-ds-primary">🧠</span> Top Managers Analysis
-						{data && <span className="text-xs font-mono font-normal bg-ds-surface px-2 py-1 rounded text-ds-text-muted">GW{data.gameweek}</span>}
+						{data && (
+							<span className="text-xs font-mono font-normal bg-ds-surface px-2 py-1 rounded text-ds-text-muted">
+								GW{data.gameweek}
+							</span>
+						)}
 					</h2>
 					<p className="text-sm text-ds-text-muted mt-1">
-						{data ? `Ownership stats from ${data.sample_size} top-performing managers.` : 'Analyze ownership stats from top-performing managers.'}
+						{data
+							? `Ownership stats from ${data.sample_size} top-performing managers.`
+							: 'Analyze ownership stats from top-performing managers.'}
 					</p>
 				</div>
 
 				<div className="flex items-center gap-2">
-					<label htmlFor="position-filter" className="text-sm font-medium text-ds-text-muted">Pos:</label>
+					<label htmlFor="position-filter" className="text-sm font-medium text-ds-text-muted">
+						Pos:
+					</label>
 					<select
 						id="position-filter"
 						value={positionFilter}
@@ -69,7 +77,9 @@ const TopManagersAnalysis = () => {
 						<option value="FWD">FWD</option>
 					</select>
 
-					<label htmlFor="manager-count" className="text-sm font-medium text-ds-text-muted ml-2">Top:</label>
+					<label htmlFor="manager-count" className="text-sm font-medium text-ds-text-muted ml-2">
+						Top:
+					</label>
 					<select
 						id="manager-count"
 						value={managerCount}
@@ -78,7 +88,9 @@ const TopManagersAnalysis = () => {
 						className="bg-ds-bg border border-ds-border text-ds-text text-sm rounded-lg focus:ring-ds-primary focus:border-ds-primary block w-32 p-2.5 font-mono"
 					>
 						{[5, 10, 25, 50, 100, 200, 500, 750, 1000].map((v) => (
-							<option key={v} value={v}>{v}</option>
+							<option key={v} value={v}>
+								{v}
+							</option>
 						))}
 					</select>
 
@@ -98,7 +110,8 @@ const TopManagersAnalysis = () => {
 					<div className="w-12 h-12 border-4 border-ds-primary border-t-transparent rounded-full animate-spin mb-4"></div>
 					<h3 className="text-xl font-bold text-ds-text mb-2">Analyzing Top {managerCount} Teams</h3>
 					<p className="text-ds-text-muted max-w-md">
-						Fetching and processing {managerCount} squads to determine the "Elite Template". This may take 20-30 seconds to avoid API rate limits.
+						Fetching and processing {managerCount} squads to determine the "Elite Template". This may take 20-30 seconds
+						to avoid API rate limits.
 					</p>
 				</div>
 			)}
@@ -138,33 +151,39 @@ const TopManagersAnalysis = () => {
 							</thead>
 							<tbody>
 								{data.players
-									.filter(player => {
+									.filter((player) => {
 										if (positionFilter === 'ALL') return true;
-										const typeMap = { 'GKP': 1, 'DEF': 2, 'MID': 3, 'FWD': 4 };
+										const typeMap = { GKP: 1, DEF: 2, MID: 3, FWD: 4 };
 										return player.element_type === typeMap[positionFilter];
 									})
 									.slice(0, 50)
 									.map((player, index) => {
-										const isDiff = player.ownership_top_1000 > 10 && player.ownership_top_1000 > (player.global_ownership * 2);
+										const isDiff =
+											player.ownership_top_1000 > 10 && player.ownership_top_1000 > player.global_ownership * 2;
 
 										return (
-											<tr key={player.id} className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none ${getRowStyle(player.ownership_top_1000)}`}>
+											<tr
+												key={player.id}
+												className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors last:border-none ${getRowStyle(player.ownership_top_1000)}`}
+											>
 												<td className="px-3 py-3 text-ds-text-muted font-bold">{index + 1}</td>
 												<td className="px-3 py-3 font-sans font-medium text-ds-text">
-													<PlayerPopover player={{
-														id: player.id,
-														code: player.code,
-														name: player.web_name,
-														full_name: player.full_name,
-														team: player.team_short,
-														position: player.element_type,
-														total_points: player.total_points,
-														cost: player.cost,
-														// Approximations as we don't have user-specific purchase data
-														purchase_price: player.cost,
-														selling_price: player.cost,
-														news: player.news
-													}}>
+													<PlayerPopover
+														player={{
+															id: player.id,
+															code: player.code,
+															name: player.web_name,
+															full_name: player.full_name,
+															team: player.team_short,
+															position: player.element_type,
+															total_points: player.total_points,
+															cost: player.cost,
+															// Approximations as we don't have user-specific purchase data
+															purchase_price: player.cost,
+															selling_price: player.cost,
+															news: player.news,
+														}}
+													>
 														<div className="flex flex-col cursor-pointer hover:text-ds-primary transition-colors">
 															<span>{player.web_name}</span>
 															{player.captain_top_1000 > 5 && (
@@ -181,7 +200,9 @@ const TopManagersAnalysis = () => {
 															src={`https://resources.premierleague.com/premierleague/badges/70/t${player.team_code}.png`}
 															alt={player.team_short}
 															className="w-5 h-5 object-contain"
-															onError={(e) => { e.target.style.display = 'none'; }}
+															onError={(e) => {
+																e.target.style.display = 'none';
+															}}
 														/>
 														<span className="text-[10px]">{player.team_short}</span>
 													</div>
@@ -193,11 +214,12 @@ const TopManagersAnalysis = () => {
 												<td className="px-3 py-3 text-right font-bold text-ds-primary text-base">
 													{player.ownership_top_1000}%
 												</td>
-												<td className="px-3 py-3 text-right text-ds-text-muted">
-													{player.global_ownership}%
-												</td>
-												<td className={`px-3 py-3 text-right font-bold ${isDiff ? 'text-green-400' : 'text-ds-text-muted'}`}>
-													{player.rank_diff > 0 ? '+' : ''}{player.rank_diff}%
+												<td className="px-3 py-3 text-right text-ds-text-muted">{player.global_ownership}%</td>
+												<td
+													className={`px-3 py-3 text-right font-bold ${isDiff ? 'text-green-400' : 'text-ds-text-muted'}`}
+												>
+													{player.rank_diff > 0 ? '+' : ''}
+													{player.rank_diff}%
 												</td>
 												<td className="px-3 py-3 text-right text-ds-text-muted">{player.total_points}</td>
 											</tr>
@@ -208,7 +230,8 @@ const TopManagersAnalysis = () => {
 					</div>
 
 					<div className="text-center text-xs text-ds-text-muted italic">
-						Showing top 50 {positionFilter !== 'ALL' ? positionFilter : ''} players sorted by ownership among the Top {data.sample_size}.
+						Showing top 50 {positionFilter !== 'ALL' ? positionFilter : ''} players sorted by ownership among the Top{' '}
+						{data.sample_size}.
 					</div>
 				</>
 			)}

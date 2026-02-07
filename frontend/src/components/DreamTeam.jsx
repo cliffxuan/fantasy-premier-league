@@ -26,7 +26,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 				const result = await getDreamTeam(gw);
 				setData(result);
 			} catch (error) {
-				console.error("Failed to fetch dream team", error);
+				console.error('Failed to fetch dream team', error);
 			} finally {
 				setLoading(false);
 			}
@@ -42,7 +42,6 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 		const maxGw = currentGw || fetchedStatus?.id || 38;
 		if (gw < maxGw && onGwChange) onGwChange(gw + 1);
 	};
-
 
 	if (!data && loading) return <div className="text-center p-8 text-ds-text-muted">Loading Dream Team...</div>;
 	if (!data) {
@@ -102,7 +101,8 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 
 					{/* Status Indicator */}
 					{player.status !== 'a' && (
-						<div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
+						<div
+							className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
                             ${getStatusBadgeClass(player.status)}`}
 						>
 							!
@@ -113,9 +113,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 				<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
 					<div className="text-xs font-bold truncate px-1 font-sans">{player.name}</div>
 					<div className="flex justify-center items-center gap-1 mt-0.5">
-						<span className="text-[9px] text-ds-text-muted font-bold px-1">
-							{player.fixture}
-						</span>
+						<span className="text-[9px] text-ds-text-muted font-bold px-1">{player.fixture}</span>
 					</div>
 				</div>
 			</div>
@@ -135,9 +133,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 						<ChevronLeft size={24} />
 					</button>
 					<div className="flex flex-col items-center min-w-[200px]">
-						<h2 className="text-2xl font-bold text-center">
-							Gameweek {gw}
-						</h2>
+						<h2 className="text-2xl font-bold text-center">Gameweek {gw}</h2>
 						{onTabSwitch && (
 							<button
 								onClick={onTabSwitch}
@@ -182,10 +178,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 			</div>
 
 			{/* Pitch View */}
-			<PitchView
-				players={squad}
-				renderCard={(player) => <PlayerCard player={player} />}
-			/>
+			<PitchView players={squad} renderCard={(player) => <PlayerCard player={player} />} />
 		</div>
 	);
 };

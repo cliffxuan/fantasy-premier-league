@@ -31,7 +31,7 @@ class PointsHistoryChart extends StatelessWidget {
               show: true,
               drawVerticalLine: false,
               horizontalInterval: (maxPts / 4).ceilToDouble().clamp(10, 50),
-              getDrawingHorizontalLine: (value) => FlLine(
+              getDrawingHorizontalLine: (value) => const FlLine(
                 color: AppColors.border,
                 strokeWidth: 0.5,
               ),

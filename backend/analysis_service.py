@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import traceback
-from typing import Any, Dict, List
+from typing import Any
 
 import dspy
 
@@ -30,28 +30,14 @@ class FPLTeamAnalysis(dspy.Signature):
     team_context = dspy.InputField(
         desc="User's current squad, budget, chips (including active ones), and next 3 fixtures."
     )
-    market_insights = dspy.InputField(
-        desc="Top 50 managers' ownership stats and key differentials."
-    )
-    dream_team_stats = dspy.InputField(
-        desc="Best performing players from the previous gameweek."
-    )
-    solver_recommendation = dspy.InputField(
-        desc="Theoretically optimal squad for the upcoming gameweek."
-    )
+    market_insights = dspy.InputField(desc="Top 50 managers' ownership stats and key differentials.")
+    dream_team_stats = dspy.InputField(desc="Best performing players from the previous gameweek.")
+    solver_recommendation = dspy.InputField(desc="Theoretically optimal squad for the upcoming gameweek.")
 
-    immediate_action = dspy.OutputField(
-        desc="Urgent action needed (e.g., injuries, deadlines)."
-    )
-    transfer_conservative = dspy.OutputField(
-        desc="A low-risk transfer move aligning with template/solver."
-    )
-    transfer_aggressive = dspy.OutputField(
-        desc="A high-risk/high-reward differential move."
-    )
-    captaincy_choice = dspy.OutputField(
-        desc="Best captaincy option with reasoning vs Solver/Market."
-    )
+    immediate_action = dspy.OutputField(desc="Urgent action needed (e.g., injuries, deadlines).")
+    transfer_conservative = dspy.OutputField(desc="A low-risk transfer move aligning with template/solver.")
+    transfer_aggressive = dspy.OutputField(desc="A high-risk/high-reward differential move.")
+    captaincy_choice = dspy.OutputField(desc="Best captaincy option with reasoning vs Solver/Market.")
     future_watch_list = dspy.OutputField(desc="Players or trends to monitor.")
 
 
@@ -91,9 +77,7 @@ class AnalysisService:
         # Try to use authenticated data if available
         if request.auth_token:
             try:
-                picks = await self.fpl_service.get_my_team(
-                    request.team_id, request.auth_token
-                )
+                picks = await self.fpl_service.get_my_team(request.team_id, request.auth_token)
                 # If we have private data, it's usually for the *next* deadline or current live state.
                 # The structure is slightly different but get_my_team follows picks structure roughly?
                 # Actually get_my_team returns { "picks": [...], "chips": [...] }
@@ -169,17 +153,11 @@ class AnalysisService:
         if request.auth_token and picks and "chips" in picks:
             my_team_data = picks
 
-        chips_status = self.fpl_service.calculate_chip_status(
-            gw, history, picks, my_team_data or {}
-        )
+        chips_status = self.fpl_service.calculate_chip_status(gw, history, picks, my_team_data or {})
 
         # Extract available chips and active chip
-        chips_available = [
-            c["label"] for c in chips_status if c["status"] == "available"
-        ]
-        active_chip = next(
-            (c["name"] for c in chips_status if c["status"] == "active"), None
-        )
+        chips_available = [c["label"] for c in chips_status if c["status"] == "available"]
+        active_chip = next((c["name"] for c in chips_status if c["status"] == "active"), None)
 
         # Override free transfers if chip active
         free_transfers_display = request.knowledge_gap.free_transfers
@@ -198,9 +176,7 @@ class AnalysisService:
         # Use previous GW for stats/market (since current/next is hidden/unplayed)
         reference_gw = max(1, gw - 1)
 
-        task_top = self.fpl_service.get_top_managers_ownership(
-            gw=reference_gw, count=50
-        )
+        task_top = self.fpl_service.get_top_managers_ownership(gw=reference_gw, count=50)
         task_dream = self.fpl_service.get_dream_team(gw=reference_gw)
 
         # Get ML Predictions for upcoming GW
@@ -216,9 +192,7 @@ class AnalysisService:
             predictions=predictions,  # Pass ML predictions
         )
 
-        results = await asyncio.gather(
-            task_top, task_dream, task_solver, return_exceptions=True
-        )
+        results = await asyncio.gather(task_top, task_dream, task_solver, return_exceptions=True)
 
         # Process Top Managers
         top_data = results[0]
@@ -227,9 +201,7 @@ class AnalysisService:
             # Extract top 10 owned players by top 50 managers
             top_owned = top_data["players"][:10]
             market_summary = {
-                "top_10_template_players": [
-                    f"{p['web_name']} ({p['ownership_top_1000']}%)" for p in top_owned
-                ],
+                "top_10_template_players": [f"{p['web_name']} ({p['ownership_top_1000']}%)" for p in top_owned],
                 "sample_size": top_data.get("sample_size"),
             }
 
@@ -238,14 +210,10 @@ class AnalysisService:
         dream_summary = "Dream team data unavailable."
         if isinstance(dream_data, dict) and "squad" in dream_data:
             # Top 3 highest scorers
-            sorted_dream = sorted(
-                dream_data["squad"], key=lambda x: x["event_points"], reverse=True
-            )
+            sorted_dream = sorted(dream_data["squad"], key=lambda x: x["event_points"], reverse=True)
             dream_summary = {
                 "gameweek": dream_data.get("gameweek"),
-                "top_performers": [
-                    f"{p['name']} ({p['event_points']} pts)" for p in sorted_dream[:5]
-                ],
+                "top_performers": [f"{p['name']} ({p['event_points']} pts)" for p in sorted_dream[:5]],
             }
 
         # Process Solver
@@ -287,9 +255,7 @@ Please provide the output in the specified format logic.
 """
 
         if request.return_prompt:
-            return AnalysisResponse(
-                squad=current_squad, generated_prompt=prompt_content
-            )
+            return AnalysisResponse(squad=current_squad, generated_prompt=prompt_content)
 
         # 4. DSPy Prediction
         if not self.has_api_key:
@@ -325,7 +291,7 @@ Please provide the output in the specified format logic.
                 raw_analysis=str(e),
             )
 
-    def _get_mock_response(self, squad: List[Dict[str, Any]]) -> AnalysisResponse:
+    def _get_mock_response(self, squad: list[dict[str, Any]]) -> AnalysisResponse:
         return AnalysisResponse(
             immediate_action="🚨 Missing API Key. Enable OpenAI for AI insights.",
             transfer_plan={
@@ -338,7 +304,7 @@ Please provide the output in the specified format logic.
             raw_analysis="This is a mock response because the OPENAI_API_KEY environment variable is not set.",
         )
 
-    def _log_interaction(self, team_id: int, gw: int, context: Dict[str, Any]):
+    def _log_interaction(self, team_id: int, gw: int, context: dict[str, Any]):
         os.makedirs("logs", exist_ok=True)
 
         log_entry = {

@@ -40,7 +40,9 @@ const Solver = () => {
 		setResult(null);
 
 		try {
-			const response = await fetch(`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}&use_ml=${useAI}`);
+			const response = await fetch(
+				`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}&use_ml=${useAI}`,
+			);
 			if (!response.ok) {
 				const err = await response.json();
 				throw new Error(err.detail || 'Solver failed');
@@ -60,14 +62,17 @@ const Solver = () => {
 				<h2 className="text-xl font-bold text-ds-text flex items-center gap-2">
 					<span className="text-ds-primary">🤖</span> Linear Optimization Solver
 				</h2>
-				<p className="text-sm text-ds-text-muted">
-					Mathematically optimal squad based on total season points.
-				</p>
+				<p className="text-sm text-ds-text-muted">Mathematically optimal squad based on total season points.</p>
 			</div>
 
-			<form onSubmit={handleSolve} className="flex flex-wrap items-end gap-4 bg-ds-bg p-4 rounded-lg border border-ds-border">
+			<form
+				onSubmit={handleSolve}
+				className="flex flex-wrap items-end gap-4 bg-ds-bg p-4 rounded-lg border border-ds-border"
+			>
 				<div className="flex flex-col gap-1 w-full sm:flex-1 min-w-[150px] max-w-xs">
-					<label htmlFor="budget" className="text-xs uppercase font-bold text-ds-text-muted">Budget (£m)</label>
+					<label htmlFor="budget" className="text-xs uppercase font-bold text-ds-text-muted">
+						Budget (£m)
+					</label>
 					<input
 						type="number"
 						id="budget"
@@ -132,7 +137,10 @@ const Solver = () => {
 							end={maxGw}
 							min={1}
 							max={sliderMax}
-							onChange={({ start, end }) => { setMinGw(start); setMaxGw(end); }}
+							onChange={({ start, end }) => {
+								setMinGw(start);
+								setMaxGw(end);
+							}}
 						/>
 					)}
 				</div>
@@ -155,7 +163,9 @@ const Solver = () => {
 				<div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 						<div className="bg-ds-surface p-3 rounded border border-ds-border text-center">
-							<div className="text-xs text-ds-text-muted uppercase">Total Points {result.gameweek_range ? `(GW ${result.gameweek_range})` : ''}</div>
+							<div className="text-xs text-ds-text-muted uppercase">
+								Total Points {result.gameweek_range ? `(GW ${result.gameweek_range})` : ''}
+							</div>
 							<div className="text-2xl font-bold text-ds-primary">{result.total_points}</div>
 						</div>
 						<div className="bg-ds-surface p-3 rounded border border-ds-border text-center">
@@ -185,24 +195,27 @@ const Solver = () => {
 							</thead>
 							<tbody>
 								{result.squad.map((p) => (
-									<tr key={p.id} className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors ${p.is_starter === false ? 'opacity-60 bg-ds-surface/50' : ''}`}>
-										<td className="px-3 py-2 text-ds-text-muted">
-											{getPositionName(p.position)}
-										</td>
+									<tr
+										key={p.id}
+										className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors ${p.is_starter === false ? 'opacity-60 bg-ds-surface/50' : ''}`}
+									>
+										<td className="px-3 py-2 text-ds-text-muted">{getPositionName(p.position)}</td>
 										<td className="px-3 py-2 font-bold hover:text-ds-primary cursor-pointer transition-colors">
-											<PlayerPopover player={{
-												id: p.id,
-												code: p.code,
-												name: p.name,
-												full_name: p.full_name,
-												team: p.team_short,
-												position: p.position,
-												total_points: p.points,
-												cost: p.cost,
-												purchase_price: p.cost,
-												selling_price: p.cost,
-												news: p.news
-											}}>
+											<PlayerPopover
+												player={{
+													id: p.id,
+													code: p.code,
+													name: p.name,
+													full_name: p.full_name,
+													team: p.team_short,
+													position: p.position,
+													total_points: p.points,
+													cost: p.cost,
+													purchase_price: p.cost,
+													selling_price: p.cost,
+													news: p.news,
+												}}
+											>
 												{p.name}
 											</PlayerPopover>
 										</td>
@@ -212,7 +225,9 @@ const Solver = () => {
 													src={`https://resources.premierleague.com/premierleague/badges/70/t${p.team_code}.png`}
 													alt={p.team_short}
 													className="w-5 h-5 object-contain"
-													onError={(e) => { e.target.style.display = 'none'; }}
+													onError={(e) => {
+														e.target.style.display = 'none';
+													}}
 												/>
 												<span>{p.team_short}</span>
 											</div>

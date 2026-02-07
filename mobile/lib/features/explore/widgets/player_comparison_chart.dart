@@ -82,7 +82,7 @@ class PlayerComparisonChart extends StatelessWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: (maxY / 4).ceilToDouble().clamp(1, 500),
-            getDrawingHorizontalLine: (value) => FlLine(
+            getDrawingHorizontalLine: (value) => const FlLine(
               color: AppColors.border,
               strokeWidth: 0.5,
             ),

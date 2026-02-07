@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const TeamHeader = ({ entry, freeTransfers, isPrivate, transferDetails }) => {
@@ -12,7 +11,7 @@ const TeamHeader = ({ entry, freeTransfers, isPrivate, transferDetails }) => {
 		last_deadline_bank,
 		summary_overall_points,
 		summary_overall_rank,
-		club_badge_src
+		club_badge_src,
 	} = entry;
 
 	let teamValue = last_deadline_value;
@@ -39,18 +38,14 @@ const TeamHeader = ({ entry, freeTransfers, isPrivate, transferDetails }) => {
 			<div className="flex items-center gap-4">
 				{club_badge_src && (
 					<div className="w-16 h-16 bg-ds-bg rounded-full flex items-center justify-center border border-ds-border p-2">
-						<img
-							src={club_badge_src}
-							alt="Club Badge"
-							className="w-full h-full object-contain"
-						/>
+						<img src={club_badge_src} alt="Club Badge" className="w-full h-full object-contain" />
 					</div>
 				)}
 				<div className="text-center md:text-left">
-					<h2 className="text-2xl font-bold text-ds-text flex items-center gap-2">
-						{name}
-					</h2>
-					<p className="text-ds-text-muted font-mono text-sm">{player_first_name} {player_last_name}</p>
+					<h2 className="text-2xl font-bold text-ds-text flex items-center gap-2">{name}</h2>
+					<p className="text-ds-text-muted font-mono text-sm">
+						{player_first_name} {player_last_name}
+					</p>
 				</div>
 			</div>
 

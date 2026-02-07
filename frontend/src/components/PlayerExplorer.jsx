@@ -18,7 +18,7 @@ const PlayerExplorer = () => {
 		venue: [], // Default none selected (implies all/both in logic usually)
 		search: '',
 		position: [], // Default none selected (implies all)
-		team: [] // Empty means all
+		team: [], // Empty means all
 	});
 	const [teamInput, setTeamInput] = useState('');
 	const inputRef = useRef(null);
@@ -41,14 +41,14 @@ const PlayerExplorer = () => {
 					const data = await gwRes.json();
 					const gw = data.gameweek || 38;
 					setCurrentGw(gw);
-					setFilters(prev => ({ ...prev, maxGw: gw }));
+					setFilters((prev) => ({ ...prev, maxGw: gw }));
 				}
 
 				// Fetch Teams
 				const teamsData = await getTeams();
 				setTeams(teamsData);
 			} catch (e) {
-				console.error("Failed to fetch initial data", e);
+				console.error('Failed to fetch initial data', e);
 			}
 		};
 		init();
@@ -59,15 +59,15 @@ const PlayerExplorer = () => {
 		const fetchPlayers = async () => {
 			setLoading(true);
 			try {
-				const venueParam = (filters.venue.length === 0 || filters.venue.length === 2) ? 'both' : filters.venue[0];
+				const venueParam = filters.venue.length === 0 || filters.venue.length === 2 ? 'both' : filters.venue[0];
 				const query = new URLSearchParams({
 					min_gw: filters.minGw,
 					max_gw: filters.maxGw,
-					venue: venueParam
+					venue: venueParam,
 				});
 
 				const res = await fetch(`/api/players/aggregated?${query.toString()}`);
-				if (!res.ok) throw new Error("Failed to fetch player stats");
+				if (!res.ok) throw new Error('Failed to fetch player stats');
 
 				const data = await res.json();
 				setPlayers(data);
@@ -91,13 +91,11 @@ const PlayerExplorer = () => {
 				const data = {};
 
 				// Identify missing data to fetch
-				const missing = selectedPlayers.filter(pid => !comparisonData[pid]);
+				const missing = selectedPlayers.filter((pid) => !comparisonData[pid]);
 
 				if (missing.length > 0) {
 					try {
-						const results = await Promise.all(
-							missing.map(pid => getPlayerSummary(pid).catch(e => null))
-						);
+						const results = await Promise.all(missing.map((pid) => getPlayerSummary(pid).catch((e) => null)));
 
 						results.forEach((res, index) => {
 							if (res && res.history) {
@@ -105,9 +103,9 @@ const PlayerExplorer = () => {
 							}
 						});
 
-						setComparisonData(prev => ({ ...prev, ...data }));
+						setComparisonData((prev) => ({ ...prev, ...data }));
 					} catch (e) {
-						console.error("Failed to fetch comparison details", e);
+						console.error('Failed to fetch comparison details', e);
 					}
 				}
 				setLoadingComparison(false);
@@ -123,22 +121,21 @@ const PlayerExplorer = () => {
 
 		if (filters.search) {
 			const term = filters.search.toLowerCase();
-			result = result.filter(p =>
-				p.web_name.toLowerCase().includes(term) ||
-				p.full_name.toLowerCase().includes(term)
+			result = result.filter(
+				(p) => p.web_name.toLowerCase().includes(term) || p.full_name.toLowerCase().includes(term),
 			);
 		}
 
 		if (Array.isArray(filters.position) ? filters.position.length > 0 : filters.position !== 'all') {
 			if (Array.isArray(filters.position)) {
-				result = result.filter(p => filters.position.includes(p.element_type));
+				result = result.filter((p) => filters.position.includes(p.element_type));
 			} else {
-				result = result.filter(p => p.element_type === parseInt(filters.position));
+				result = result.filter((p) => p.element_type === parseInt(filters.position));
 			}
 		}
 
 		if (filters.team.length > 0) {
-			result = result.filter(p => filters.team.includes(p.team_code));
+			result = result.filter((p) => filters.team.includes(p.team_code));
 		}
 
 		// Sort
@@ -160,9 +157,9 @@ const PlayerExplorer = () => {
 	}, [players, filters.search, filters.position, filters.team, sortConfig]);
 
 	const handleSort = (key) => {
-		setSortConfig(prev => ({
+		setSortConfig((prev) => ({
 			key,
-			direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+			direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc',
 		}));
 	};
 
@@ -170,10 +167,10 @@ const PlayerExplorer = () => {
 	const [playerColors, setPlayerColors] = useState({});
 
 	const handleSelect = (id) => {
-		setSelectedPlayers(prev => {
+		setSelectedPlayers((prev) => {
 			if (prev.includes(id)) {
 				// Begin removal
-				const newSelection = prev.filter(p => p !== id);
+				const newSelection = prev.filter((p) => p !== id);
 
 				// Free up color
 				const newColors = { ...playerColors };
@@ -186,9 +183,9 @@ const PlayerExplorer = () => {
 
 			// Allocation
 			const assignedColors = Object.values(playerColors);
-			const availableColor = colors.find(c => !assignedColors.includes(c)) || colors[0];
+			const availableColor = colors.find((c) => !assignedColors.includes(c)) || colors[0];
 
-			setPlayerColors(c => ({ ...c, [id]: availableColor }));
+			setPlayerColors((c) => ({ ...c, [id]: availableColor }));
 
 			return [...prev, id];
 		});
@@ -196,15 +193,15 @@ const PlayerExplorer = () => {
 
 	// Helper mappings
 	const statusColorMap = {
-		'a': 'bg-green-500',
-		'd': 'bg-yellow-500',
-		'i': 'bg-red-500',
-		's': 'bg-red-600',
-		'u': 'bg-gray-500',
-		'n': 'bg-gray-400'
+		a: 'bg-green-500',
+		d: 'bg-yellow-500',
+		i: 'bg-red-500',
+		s: 'bg-red-600',
+		u: 'bg-gray-500',
+		n: 'bg-gray-400',
 	};
 
-	const selectedPlayersObjects = players.filter(p => selectedPlayers.includes(p.id));
+	const selectedPlayersObjects = players.filter((p) => selectedPlayers.includes(p.id));
 
 	return (
 		<div className="space-y-6">
@@ -212,7 +209,6 @@ const PlayerExplorer = () => {
 			<div className="w-full bg-ds-card rounded-xl border border-ds-border p-4 shadow-sm">
 				<h2 className="text-lg font-bold text-ds-text mb-4">Filters</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
 					{/* Search */}
 					<div>
 						<label className="text-xs text-ds-text-muted font-bold uppercase mb-1 block">Player Search</label>
@@ -220,7 +216,7 @@ const PlayerExplorer = () => {
 							type="text"
 							placeholder="Name..."
 							value={filters.search}
-							onChange={e => setFilters(prev => ({ ...prev, search: e.target.value }))}
+							onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
 							className="w-full bg-ds-bg border border-ds-border rounded p-2 text-ds-text focus:border-ds-primary outline-none"
 						/>
 					</div>
@@ -236,20 +232,23 @@ const PlayerExplorer = () => {
 								setTimeout(() => inputRef.current?.focus(), 0);
 							}}
 						>
-							{filters.team.map(teamCode => {
-								const t = teams.find(x => x.code === teamCode);
+							{filters.team.map((teamCode) => {
+								const t = teams.find((x) => x.code === teamCode);
 								if (!t) return null;
 								const logoUrl = `https://resources.premierleague.com/premierleague/badges/70/t${t.code}.png`;
 								return (
-									<span key={teamCode} className="bg-ds-primary/20 text-ds-primary border border-ds-primary/30 rounded px-1.5 py-0.5 text-xs flex items-center gap-1.5 animate-in zoom-in-90 duration-100">
+									<span
+										key={teamCode}
+										className="bg-ds-primary/20 text-ds-primary border border-ds-primary/30 rounded px-1.5 py-0.5 text-xs flex items-center gap-1.5 animate-in zoom-in-90 duration-100"
+									>
 										<img src={logoUrl} alt={t.short_name} className="w-4 h-4 object-contain" />
 										<span className="font-bold">{t.short_name}</span>
 										<button
 											onClick={(e) => {
 												e.stopPropagation();
-												setFilters(prev => ({
+												setFilters((prev) => ({
 													...prev,
-													team: prev.team.filter(c => c !== teamCode)
+													team: prev.team.filter((c) => c !== teamCode),
 												}));
 											}}
 											className="hover:text-ds-text focus:outline-none flex items-center"
@@ -269,7 +268,7 @@ const PlayerExplorer = () => {
 									if (!isTeamDropdownOpen) setIsTeamDropdownOpen(true);
 								}}
 								onFocus={() => setIsTeamDropdownOpen(true)}
-								placeholder={filters.team.length === 0 ? "Select Clubs..." : ""}
+								placeholder={filters.team.length === 0 ? 'Select Clubs...' : ''}
 								className="bg-transparent border-none outline-none text-sm text-ds-text flex-1 min-w-[60px] placeholder:text-ds-text-muted/50"
 							/>
 							<div className="flex items-center gap-1 ml-auto pr-1">
@@ -277,7 +276,7 @@ const PlayerExplorer = () => {
 									<button
 										onClick={(e) => {
 											e.stopPropagation();
-											setFilters(prev => ({ ...prev, team: [] }));
+											setFilters((prev) => ({ ...prev, team: [] }));
 											setTeamInput('');
 										}}
 										className="text-ds-text-muted hover:text-ds-text transition-colors p-0.5"
@@ -297,55 +296,59 @@ const PlayerExplorer = () => {
 										}
 									}}
 								>
-									<ChevronDown size={14} className={`text-ds-text-muted transform transition-transform pointer-events-none ${isTeamDropdownOpen ? 'rotate-180' : ''}`} />
+									<ChevronDown
+										size={14}
+										className={`text-ds-text-muted transform transition-transform pointer-events-none ${isTeamDropdownOpen ? 'rotate-180' : ''}`}
+									/>
 								</div>
 							</div>
 						</div>
 
 						{isTeamDropdownOpen && (
 							<>
-								<div
-									className="fixed inset-0 z-10"
-									onClick={() => setIsTeamDropdownOpen(false)}
-								/>
+								<div className="fixed inset-0 z-10" onClick={() => setIsTeamDropdownOpen(false)} />
 								<div className="absolute top-full left-0 mt-0 bg-ds-card border border-ds-border rounded-lg shadow-xl z-20 max-h-[300px] flex flex-col min-w-full w-80 overflow-hidden">
 									<div className="overflow-y-auto custom-scrollbar p-1">
-										{teams.filter(t => t.name.toLowerCase().includes(teamInput.toLowerCase())).map(t => {
-											const isSelected = filters.team.includes(t.code);
-											const logoUrl = `https://resources.premierleague.com/premierleague/badges/70/t${t.code}.png`;
-											return (
-												<div
-													key={t.id}
-													onClick={(e) => {
-														e.stopPropagation();
-														setTeamInput(''); // Clear input on selection
-														setFilters(prev => {
-															const current = prev.team;
-															return {
-																...prev,
-																team: isSelected
-																	? current.filter(c => c !== t.code)
-																	: [...current, t.code]
-															};
-														});
-													}}
-													className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors text-sm ${isSelected ? 'bg-ds-primary/10 text-ds-text font-medium' : 'text-ds-text-muted hover:bg-ds-surface hover:text-ds-text'
+										{teams
+											.filter((t) => t.name.toLowerCase().includes(teamInput.toLowerCase()))
+											.map((t) => {
+												const isSelected = filters.team.includes(t.code);
+												const logoUrl = `https://resources.premierleague.com/premierleague/badges/70/t${t.code}.png`;
+												return (
+													<div
+														key={t.id}
+														onClick={(e) => {
+															e.stopPropagation();
+															setTeamInput(''); // Clear input on selection
+															setFilters((prev) => {
+																const current = prev.team;
+																return {
+																	...prev,
+																	team: isSelected ? current.filter((c) => c !== t.code) : [...current, t.code],
+																};
+															});
+														}}
+														className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors text-sm ${
+															isSelected
+																? 'bg-ds-primary/10 text-ds-text font-medium'
+																: 'text-ds-text-muted hover:bg-ds-surface hover:text-ds-text'
 														}`}
-												>
-													<div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${isSelected ? 'bg-ds-primary border-ds-primary' : 'border-ds-border'
-														}`}>
-														{isSelected && <Check size={10} className="text-white" />}
+													>
+														<div
+															className={`w-4 h-4 rounded border flex items-center justify-center transition-colors flex-shrink-0 ${
+																isSelected ? 'bg-ds-primary border-ds-primary' : 'border-ds-border'
+															}`}
+														>
+															{isSelected && <Check size={10} className="text-white" />}
+														</div>
+														<img src={logoUrl} alt={t.short_name} className="w-5 h-5 object-contain" />
+														<span className="truncate flex-1">{t.name}</span>
+														<span className="text-xs text-ds-text-muted/50 font-mono">{t.short_name}</span>
 													</div>
-													<img src={logoUrl} alt={t.short_name} className="w-5 h-5 object-contain" />
-													<span className="truncate flex-1">{t.name}</span>
-													<span className="text-xs text-ds-text-muted/50 font-mono">{t.short_name}</span>
-												</div>
-											);
-										})}
-										{teams.filter(t => t.name.toLowerCase().includes(teamInput.toLowerCase())).length === 0 && (
-											<div className="p-3 text-center text-xs text-ds-text-muted">
-												No clubs found.
-											</div>
+												);
+											})}
+										{teams.filter((t) => t.name.toLowerCase().includes(teamInput.toLowerCase())).length === 0 && (
+											<div className="p-3 text-center text-xs text-ds-text-muted">No clubs found.</div>
 										)}
 									</div>
 								</div>
@@ -360,7 +363,7 @@ const PlayerExplorer = () => {
 							end={filters.maxGw}
 							min={1}
 							max={currentGw}
-							onChange={({ start, end }) => setFilters(prev => ({ ...prev, minGw: start, maxGw: end }))}
+							onChange={({ start, end }) => setFilters((prev) => ({ ...prev, minGw: start, maxGw: end }))}
 						/>
 					</div>
 
@@ -370,24 +373,23 @@ const PlayerExplorer = () => {
 						<div>
 							<label className="text-xs text-ds-text-muted font-bold uppercase mb-2 block">Venue</label>
 							<div className="flex flex-wrap gap-2">
-								{['home', 'away'].map(v => (
+								{['home', 'away'].map((v) => (
 									<button
 										key={v}
 										onClick={() => {
-											setFilters(prev => {
+											setFilters((prev) => {
 												const current = Array.isArray(prev.venue) ? prev.venue : [];
 												return {
 													...prev,
-													venue: current.includes(v)
-														? current.filter(x => x !== v)
-														: [...current, v]
+													venue: current.includes(v) ? current.filter((x) => x !== v) : [...current, v],
 												};
 											});
 										}}
-										className={`px-3 py-1 rounded border text-sm transition-all capitalize ${filters.venue.includes(v)
-											? 'bg-ds-primary border-ds-primary text-white'
-											: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
-											}`}
+										className={`px-3 py-1 rounded border text-sm transition-all capitalize ${
+											filters.venue.includes(v)
+												? 'bg-ds-primary border-ds-primary text-white'
+												: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
+										}`}
 									>
 										{v}
 									</button>
@@ -399,29 +401,29 @@ const PlayerExplorer = () => {
 						<div>
 							<label className="text-xs text-ds-text-muted font-bold uppercase mb-2 block">Position</label>
 							<div className="flex flex-wrap gap-2">
-								{[1, 2, 3, 4].map(p => (
+								{[1, 2, 3, 4].map((p) => (
 									<button
 										key={p}
 										onClick={() => {
 											if (p === 'all') {
-												setFilters(prev => ({ ...prev, position: [] }));
+												setFilters((prev) => ({ ...prev, position: [] }));
 											} else {
-												setFilters(prev => {
+												setFilters((prev) => {
 													const current = Array.isArray(prev.position) ? prev.position : [];
 													return {
 														...prev,
-														position: current.includes(p)
-															? current.filter(x => x !== p)
-															: [...current, p]
+														position: current.includes(p) ? current.filter((x) => x !== p) : [...current, p],
 													};
 												});
 											}
 										}}
-										className={`px-3 py-1 rounded border text-sm transition-all ${(p === 'all' && (!filters.position || filters.position.length === 0 || filters.position === 'all')) ||
+										className={`px-3 py-1 rounded border text-sm transition-all ${
+											(p === 'all' &&
+												(!filters.position || filters.position.length === 0 || filters.position === 'all')) ||
 											(Array.isArray(filters.position) && filters.position.includes(p))
-											? 'bg-ds-primary border-ds-primary text-white'
-											: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
-											}`}
+												? 'bg-ds-primary border-ds-primary text-white'
+												: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
+										}`}
 									>
 										{p === 'all' ? 'All' : getPositionName(p)}
 									</button>
@@ -429,7 +431,6 @@ const PlayerExplorer = () => {
 							</div>
 						</div>
 					</div>
-
 				</div>
 
 				{/* Active Selection Summary (Inside Filters or below?) */}
@@ -438,21 +439,32 @@ const PlayerExplorer = () => {
 						<div className="flex flex-wrap items-center gap-4">
 							<span className="text-sm font-bold text-ds-text">Selected ({selectedPlayers.length}/5):</span>
 							<div className="flex flex-wrap gap-2">
-								{selectedPlayers.map(pid => {
-									const p = players.find(x => x.id === pid);
+								{selectedPlayers.map((pid) => {
+									const p = players.find((x) => x.id === pid);
 									if (!p) return null;
 									// Find color
 									const color = playerColors[pid] || '#fff';
 									return (
-										<div key={pid} className="flex items-center gap-2 bg-ds-surface px-3 py-1 rounded-full border border-ds-border text-xs text-ds-text" style={{ borderColor: color }}>
+										<div
+											key={pid}
+											className="flex items-center gap-2 bg-ds-surface px-3 py-1 rounded-full border border-ds-border text-xs text-ds-text"
+											style={{ borderColor: color }}
+										>
 											<div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></div>
 											<span>{p.web_name}</span>
-											<button onClick={() => handleSelect(pid)} className="hover:text-red-400 ml-1">×</button>
+											<button onClick={() => handleSelect(pid)} className="hover:text-red-400 ml-1">
+												×
+											</button>
 										</div>
-									)
+									);
 								})}
 							</div>
-							<button onClick={() => setSelectedPlayers([])} className="text-xs text-red-400 hover:text-red-300 underline ml-auto">Clear All</button>
+							<button
+								onClick={() => setSelectedPlayers([])}
+								className="text-xs text-red-400 hover:text-red-300 underline ml-auto"
+							>
+								Clear All
+							</button>
 						</div>
 					</div>
 				)}
@@ -476,17 +488,36 @@ const PlayerExplorer = () => {
 								<th className="p-3 w-10 text-center">
 									<span className="sr-only">Select</span>
 								</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('web_name')}>Player</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('element_type')}>Pos</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('team_short')}>Club</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('now_cost')}>Price</th>
-								<th className="p-3 cursor-pointer hover:text-ds-primary text-right text-ds-primary" onClick={() => handleSort('points_in_range')}>
+								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('web_name')}>
+									Player
+								</th>
+								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('element_type')}>
+									Pos
+								</th>
+								<th className="p-3 cursor-pointer hover:text-ds-text" onClick={() => handleSort('team_short')}>
+									Club
+								</th>
+								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('now_cost')}>
+									Price
+								</th>
+								<th
+									className="p-3 cursor-pointer hover:text-ds-primary text-right text-ds-primary"
+									onClick={() => handleSort('points_in_range')}
+								>
 									Pts {sortConfig.key === 'points_in_range' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
 								</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('points_per_game')}>
+								<th
+									className="p-3 cursor-pointer hover:text-ds-text text-right"
+									onClick={() => handleSort('points_per_game')}
+								>
 									PPG {sortConfig.key === 'points_per_game' && (sortConfig.direction === 'desc' ? '▼' : '▲')}
 								</th>
-								<th className="p-3 cursor-pointer hover:text-ds-text text-right" onClick={() => handleSort('total_points')}>Total</th>
+								<th
+									className="p-3 cursor-pointer hover:text-ds-text text-right"
+									onClick={() => handleSort('total_points')}
+								>
+									Total
+								</th>
 								<th className="p-3 text-center">Status</th>
 							</tr>
 						</thead>
@@ -499,8 +530,11 @@ const PlayerExplorer = () => {
 									</td>
 								</tr>
 							) : (
-								filteredPlayers.slice(0, 100).map(player => (
-									<tr key={player.id} className={`hover:bg-ds-surface/50 transition-colors ${selectedPlayers.includes(player.id) ? 'bg-ds-primary/10' : ''}`}>
+								filteredPlayers.slice(0, 100).map((player) => (
+									<tr
+										key={player.id}
+										className={`hover:bg-ds-surface/50 transition-colors ${selectedPlayers.includes(player.id) ? 'bg-ds-primary/10' : ''}`}
+									>
 										<td className="p-3 text-center">
 											<input
 												type="checkbox"
@@ -535,7 +569,10 @@ const PlayerExplorer = () => {
 										<td className="p-3 text-right text-ds-text">{player.points_per_game}</td>
 										<td className="p-3 text-right text-ds-text-muted">{player.total_points}</td>
 										<td className="p-3 text-center">
-											<div className={`w-2 h-2 rounded-full mx-auto ${statusColorMap[player.status] || 'bg-green-500'}`} title={player.news || "Available"}></div>
+											<div
+												className={`w-2 h-2 rounded-full mx-auto ${statusColorMap[player.status] || 'bg-green-500'}`}
+												title={player.news || 'Available'}
+											></div>
 										</td>
 									</tr>
 								))
@@ -560,11 +597,15 @@ const PlayerExplorer = () => {
 			{/* Bottom: Inline Comparison Chart (if selected) */}
 			{selectedPlayers.length > 0 && !loadingComparison && (
 				<div className="animate-in fade-in slide-in-from-top-4 duration-500 w-full mb-8">
-					<ComparisonChart data={comparisonData} players={selectedPlayersObjects} filters={filters} playerColors={playerColors} />
+					<ComparisonChart
+						data={comparisonData}
+						players={selectedPlayersObjects}
+						filters={filters}
+						playerColors={playerColors}
+					/>
 				</div>
-			)
-			}
-		</div >
+			)}
+		</div>
 	);
 };
 

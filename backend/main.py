@@ -1,12 +1,11 @@
 import os
-from typing import List
 
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from .analysis_service import AnalysisService
 from .form_service import FormService
@@ -40,7 +39,7 @@ async def global_exception_handler(request, call_next):
         response = await call_next(request)
         return response
     except Exception as e:
-        logger.exception(f"Unhandled Exception: {str(e)}")
+        logger.exception(f"Unhandled Exception: {e!s}")
         return JSONResponse(
             status_code=500,
             content={"detail": "Internal Server Error", "error": str(e)},
@@ -74,9 +73,7 @@ async def auth_callback(request: AuthCallbackRequest):
     """Exchanges a PingOne authorization code for an access token."""
     tokens = await fpl_service.exchange_code(request.code)
     if not tokens:
-        raise HTTPException(
-            status_code=401, detail="Token exchange failed. Code may be expired."
-        )
+        raise HTTPException(status_code=401, detail="Token exchange failed. Code may be expired.")
     return {
         "access_token": tokens.get("access_token"),
         "refresh_token": tokens.get("refresh_token"),
@@ -89,9 +86,7 @@ async def auth_refresh(request: RefreshTokenRequest):
     """Uses a refresh token to get a new access token (refresh tokens last ~30 days)."""
     tokens = await fpl_service.refresh_access_token(request.refresh_token)
     if not tokens:
-        raise HTTPException(
-            status_code=401, detail="Token refresh failed. Re-login required."
-        )
+        raise HTTPException(status_code=401, detail="Token refresh failed. Re-login required.")
     return {
         "access_token": tokens.get("access_token"),
         "refresh_token": tokens.get("refresh_token"),
@@ -107,26 +102,20 @@ async def get_me(authorization: str = Header(None)):
     try:
         return await fpl_service.get_me(authorization)
     except Exception as e:
-        raise HTTPException(
-            status_code=401, detail=f"Failed to fetch user profile: {e}"
-        )
+        raise HTTPException(status_code=401, detail=f"Failed to fetch user profile: {e}")
 
 
 @app.get("/api/team/{team_id}/squad", tags=["FPL Team"])
-async def get_squad(
-    team_id: int, gw: int | None = None, authorization: str = Header(None)
-):
-    logger.debug(
-        f"Endpoint get_squad called with team_id={team_id}, gw={gw}, auth={bool(authorization)}"
-    )
+async def get_squad(team_id: int, gw: int | None = None, authorization: str = Header(None)):
+    logger.debug(f"Endpoint get_squad called with team_id={team_id}, gw={gw}, auth={bool(authorization)}")
     try:
         data = await fpl_service.get_enriched_squad(team_id, gw, authorization)
         return data
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Squad not found: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Squad not found: {e!s}")
 
 
-@app.get("/api/teams", response_model=List[Team], tags=["FPL Data"])
+@app.get("/api/teams", response_model=list[Team], tags=["FPL Data"])
 async def get_teams():
     data = await fpl_service.get_teams()
     return data
@@ -235,7 +224,7 @@ async def get_fixture_analysis(gw: int | None = None):
     return data
 
 
-@app.get("/api/fixtures", response_model=List[Fixture], tags=["FPL Data"])
+@app.get("/api/fixtures", response_model=list[Fixture], tags=["FPL Data"])
 async def get_fixtures(event: int | None = None):
     if event:
         data = await fpl_service.get_live_fixtures(event)
@@ -270,9 +259,7 @@ async def get_current_gameweek():
 
 
 # Mount static files if the directory exists (it will in production)
-frontend_dist = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)), "frontend", "dist"
-)
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
 if os.path.exists(frontend_dist):
     app.mount(
         "/assets",

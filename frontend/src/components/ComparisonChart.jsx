@@ -18,27 +18,27 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 
 		// 1. Get all unique GWs from all players
 		const allGws = new Set();
-		Object.values(data).forEach(pHistory => {
-			pHistory.forEach(h => allGws.add(h.round));
+		Object.values(data).forEach((pHistory) => {
+			pHistory.forEach((h) => allGws.add(h.round));
 		});
 
 		// Filter GWs by range
 		const gws = Array.from(allGws)
-			.filter(gw => gw >= minGw && gw <= maxGw)
+			.filter((gw) => gw >= minGw && gw <= maxGw)
 			.sort((a, b) => a - b);
 
-		// Cumulative totals tracker (start from 0 or start from sum of previous GWs? 
+		// Cumulative totals tracker (start from 0 or start from sum of previous GWs?
 		// Usually cumulative chart within a range starts from 0 for that range, or actual total?)
-		// Let's do actual total from GW1 but only display from minGw? 
+		// Let's do actual total from GW1 but only display from minGw?
 		// No, usually "Period stats" implies stats IN that period. So start from 0 at minGw.
 		const cumulative = {};
-		players.forEach(p => cumulative[p.id] = 0);
+		players.forEach((p) => (cumulative[p.id] = 0));
 
-		gws.forEach(gw => {
+		gws.forEach((gw) => {
 			const point = { gw };
-			players.forEach(p => {
+			players.forEach((p) => {
 				const pHistory = data[p.id] || [];
-				const gwData = pHistory.find(h => h.round === gw);
+				const gwData = pHistory.find((h) => h.round === gw);
 
 				let weekPoints = 0;
 				let isValidVenue = true;
@@ -101,19 +101,8 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 				<ResponsiveContainer width="100%" height="100%">
 					<LineChart data={chartData}>
 						<CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5} />
-						<XAxis
-							dataKey="gw"
-							stroke="#64748b"
-							fontSize={12}
-							tickLine={false}
-							axisLine={false}
-						/>
-						<YAxis
-							stroke="#64748b"
-							fontSize={12}
-							tickLine={false}
-							axisLine={false}
-						/>
+						<XAxis dataKey="gw" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+						<YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
 						<Tooltip
 							contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
 							itemStyle={{ fontSize: '12px' }}
@@ -122,7 +111,7 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 								if (!players) return [value, name];
 								// Name is key (id), map to player name
 								const valStr = name != null ? name.toString() : '';
-								const p = players.find(x => x && x.id != null && x.id.toString() === valStr);
+								const p = players.find((x) => x && x.id != null && x.id.toString() === valStr);
 								return [value, p ? p.web_name : name];
 							}}
 							labelFormatter={(label) => `Gameweek ${label}`}
@@ -131,7 +120,7 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 							formatter={(value) => {
 								if (!players) return value;
 								const valStr = value != null ? value.toString() : '';
-								const p = players.find(x => x && x.id != null && x.id.toString() === valStr);
+								const p = players.find((x) => x && x.id != null && x.id.toString() === valStr);
 								return p ? p.web_name : value;
 							}}
 							wrapperStyle={{ paddingTop: '10px' }}

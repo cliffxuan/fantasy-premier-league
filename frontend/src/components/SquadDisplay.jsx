@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout, ChevronLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import {
+	ArrowUpCircle,
+	Zap,
+	RefreshCw,
+	Shield,
+	List,
+	Layout,
+	ChevronLeft,
+	ChevronRight,
+	ArrowRightLeft,
+} from 'lucide-react';
 import PlayerPopover from './PlayerPopover';
 import PitchView from './PitchView';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
@@ -8,37 +18,46 @@ import { getPositionName, getFdrBadgeClass, getStatusBadgeClass } from './utils'
 const Chip = ({ name, label, status, events }) => {
 	const getIcon = (name) => {
 		switch (name) {
-			case 'bboost': return <ArrowUpCircle size={20} />;
-			case '3xc': return <Zap size={20} />;
-			case 'wildcard': return <RefreshCw size={20} />;
-			case 'freehit': return <Shield size={20} />;
-			default: return null;
+			case 'bboost':
+				return <ArrowUpCircle size={20} />;
+			case '3xc':
+				return <Zap size={20} />;
+			case 'wildcard':
+				return <RefreshCw size={20} />;
+			case 'freehit':
+				return <Shield size={20} />;
+			default:
+				return null;
 		}
 	};
 
-	let containerClass = "flex flex-col items-center justify-center p-2 rounded-lg border w-full transition-colors";
-	let textClass = "text-xs mt-1 font-bold";
-	let subTextClass = "text-[10px] mt-0.5";
+	let containerClass = 'flex flex-col items-center justify-center p-2 rounded-lg border w-full transition-colors';
+	let textClass = 'text-xs mt-1 font-bold';
+	let subTextClass = 'text-[10px] mt-0.5';
 
 	if (status === 'active') {
-		containerClass += " bg-ds-primary/20 text-ds-primary border-ds-primary shadow-[0_0_10px_rgba(59,130,246,0.2)]";
+		containerClass += ' bg-ds-primary/20 text-ds-primary border-ds-primary shadow-[0_0_10px_rgba(59,130,246,0.2)]';
 	} else if (status === 'played') {
-		containerClass += " bg-ds-card/50 text-ds-text-muted border-ds-border";
+		containerClass += ' bg-ds-card/50 text-ds-text-muted border-ds-border';
 	} else {
-		containerClass += " bg-ds-card text-ds-text border-ds-border hover:border-ds-primary/50";
+		containerClass += ' bg-ds-card text-ds-text border-ds-border hover:border-ds-primary/50';
 	}
 
 	// Format events list for display
-	const eventsStr = events && events.length > 0 ? events.join(", ") : "";
+	const eventsStr = events && events.length > 0 ? events.join(', ') : '';
 
 	return (
 		<div className={containerClass}>
 			{getIcon(name)}
 			<span className={textClass}>{label}</span>
 			<span className={subTextClass}>
-				{status === 'active' ? 'Active' :
-					status === 'played' ? `Played GW${eventsStr}` :
-						(eventsStr ? `Available (Used GW${eventsStr})` : 'Available')}
+				{status === 'active'
+					? 'Active'
+					: status === 'played'
+						? `Played GW${eventsStr}`
+						: eventsStr
+							? `Available (Used GW${eventsStr})`
+							: 'Available'}
 			</span>
 		</div>
 	);
@@ -49,7 +68,10 @@ const ListView = ({ squad }) => {
 	const bench = squad.slice(11);
 
 	const renderPlayerRow = (player) => (
-		<div key={player.id} className="grid grid-cols-[3fr_1fr_1fr_1fr_2fr] items-center py-3 border-b border-ds-border hover:bg-ds-card-hover transition-colors font-mono text-sm">
+		<div
+			key={player.id}
+			className="grid grid-cols-[3fr_1fr_1fr_1fr_2fr] items-center py-3 border-b border-ds-border hover:bg-ds-card-hover transition-colors font-mono text-sm"
+		>
 			{/* Player Info */}
 			<div className="flex items-center gap-3">
 				<div className="relative w-8 h-10">
@@ -60,7 +82,8 @@ const ListView = ({ squad }) => {
 						onError={(e) => handlePlayerImageError(e, player)}
 					/>
 					{player.status !== 'a' && (
-						<div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center text-[8px] font-bold border border-ds-bg
+						<div
+							className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center text-[8px] font-bold border border-ds-bg
                             ${getStatusBadgeClass(player.status)}`}
 						>
 							!
@@ -70,18 +93,26 @@ const ListView = ({ squad }) => {
 				<div className="flex flex-col">
 					<div className="font-bold text-sm flex items-center gap-2">
 						{player.name}
-						{player.is_captain && <span className="bg-black text-white text-[10px] px-1 rounded-full border border-white/20">C</span>}
-						{player.is_vice_captain && <span className="bg-gray-700 text-white text-[10px] px-1 rounded-full border border-white/20">V</span>}
+						{player.is_captain && (
+							<span className="bg-black text-white text-[10px] px-1 rounded-full border border-white/20">C</span>
+						)}
+						{player.is_vice_captain && (
+							<span className="bg-gray-700 text-white text-[10px] px-1 rounded-full border border-white/20">V</span>
+						)}
 					</div>
 					<div className="text-xs text-ds-text-muted flex gap-2 font-sans">
-						<span>{player.team_short} {getPositionName(player.position)}</span>
+						<span>
+							{player.team_short} {getPositionName(player.position)}
+						</span>
 					</div>
 				</div>
 			</div>
 
 			{/* Stats */}
 			<div className="text-center text-sm">{player.form}</div>
-			<div className="text-center text-sm">{(player.event_points !== 0 || player.minutes > 0 || player.match_finished) ? player.event_points : ''}</div>
+			<div className="text-center text-sm">
+				{player.event_points !== 0 || player.minutes > 0 || player.match_finished ? player.event_points : ''}
+			</div>
 			<div className="text-center text-sm font-bold">{player.total_points}</div>
 
 			{/* Fixture */}
@@ -110,19 +141,41 @@ const ListView = ({ squad }) => {
 				<div className="text-right pr-2">Fix</div>
 			</div>
 
-			{renderSection("Goalkeepers", starters.filter(p => p.position === 1))}
-			{renderSection("Defenders", starters.filter(p => p.position === 2))}
-			{renderSection("Midfielders", starters.filter(p => p.position === 3))}
-			{renderSection("Forwards", starters.filter(p => p.position === 4))}
+			{renderSection(
+				'Goalkeepers',
+				starters.filter((p) => p.position === 1),
+			)}
+			{renderSection(
+				'Defenders',
+				starters.filter((p) => p.position === 2),
+			)}
+			{renderSection(
+				'Midfielders',
+				starters.filter((p) => p.position === 3),
+			)}
+			{renderSection(
+				'Forwards',
+				starters.filter((p) => p.position === 4),
+			)}
 
-			<div className="mt-8 pt-6 border-t border-ds-border">
-				{renderSection("Substitutes", bench)}
-			</div>
+			<div className="mt-8 pt-6 border-t border-ds-border">{renderSection('Substitutes', bench)}</div>
 		</div>
 	);
 };
 
-const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, currentGw, onTabSwitch, history, extraHeaderContent, customMainHeader }) => {
+const SquadDisplay = ({
+	squad,
+	chips,
+	gameweek,
+	transfers,
+	onGwChange,
+	loading,
+	currentGw,
+	onTabSwitch,
+	history,
+	extraHeaderContent,
+	customMainHeader,
+}) => {
 	const [viewMode, setViewMode] = useState('pitch'); // 'pitch' or 'list'
 
 	const handlePrev = () => {
@@ -135,7 +188,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 	const getGwPoints = () => {
 		if (!history) return 0;
-		const entry = history.find(h => h.event === gameweek);
+		const entry = history.find((h) => h.event === gameweek);
 		return entry ? entry.points : 0;
 	};
 
@@ -147,7 +200,9 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 	const PlayerCard = ({ player, isBench = false }) => (
 		<PlayerPopover player={player}>
-			<div className={`relative flex flex-col items-center justify-center w-[64px] md:w-[90px] ${isBench ? 'opacity-90' : ''}`}>
+			<div
+				className={`relative flex flex-col items-center justify-center w-[64px] md:w-[90px] ${isBench ? 'opacity-90' : ''}`}
+			>
 				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
 					{/* Player Photo */}
 					<img
@@ -165,10 +220,16 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 							</div>
 						)
 					) : (
-						<div className={`absolute -top-1 -left-2 text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white
-							${parseFloat(player.form) >= 6.0 ? 'bg-ds-accent text-black' :
-								parseFloat(player.form) >= 3.0 ? 'bg-gray-600 text-white' :
-									'bg-ds-card text-ds-text-muted'}`}>
+						<div
+							className={`absolute -top-1 -left-2 text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white
+							${
+								parseFloat(player.form) >= 6.0
+									? 'bg-ds-accent text-black'
+									: parseFloat(player.form) >= 3.0
+										? 'bg-gray-600 text-white'
+										: 'bg-ds-card text-ds-text-muted'
+							}`}
+						>
 							{player.form}
 						</div>
 					)}
@@ -187,7 +248,8 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 					{/* Status Indicator */}
 					{player.status !== 'a' && (
-						<div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
+						<div
+							className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
 							${getStatusBadgeClass(player.status)}`}
 						>
 							!
@@ -226,9 +288,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 								</button>
 							)}
 							<div className="flex flex-col items-center min-w-[200px]">
-								<h2 className="text-2xl font-bold text-center">
-									Gameweek {gameweek}
-								</h2>
+								<h2 className="text-2xl font-bold text-center">Gameweek {gameweek}</h2>
 								{extraHeaderContent}
 								{onTabSwitch && gameweek <= (currentGw || 38) && (
 									<button
@@ -280,18 +340,16 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 			</div>
 
 			{/* Loading Overlay */}
-			{loading && (
-				<div className="text-center p-4 text-ds-text-muted animate-pulse font-mono">
-					Loading squad...
-				</div>
-			)}
+			{loading && <div className="text-center p-4 text-ds-text-muted animate-pulse font-mono">Loading squad...</div>}
 
 			{!loading && (
 				<>
 					{/* Chips Row */}
 					{chips && chips.length > 0 && (
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-							{chips.map(chip => <Chip key={chip.name} {...chip} />)}
+							{chips.map((chip) => (
+								<Chip key={chip.name} {...chip} />
+							))}
 						</div>
 					)}
 
@@ -304,7 +362,10 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 							</h3>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								{transfers.map((t) => (
-									<div key={`${t.element_out}-${t.element_in}`} className="flex items-center justify-between bg-ds-bg/50 p-2 rounded border border-ds-border text-sm font-mono">
+									<div
+										key={`${t.element_out}-${t.element_in}`}
+										className="flex items-center justify-between bg-ds-bg/50 p-2 rounded border border-ds-border text-sm font-mono"
+									>
 										<div className="flex items-center gap-2">
 											<span className="text-ds-danger font-bold text-xs">OUT</span>
 											<span>{t.element_out_name}</span>
@@ -322,23 +383,23 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 				</>
 			)}
 
-			{!loading && (viewMode === 'pitch' ? (
-				<>
-					<PitchView
-						players={starters}
-						renderCard={(player) => <PlayerCard player={player} />}
-					/>
+			{!loading &&
+				(viewMode === 'pitch' ? (
+					<>
+						<PitchView players={starters} renderCard={(player) => <PlayerCard player={player} />} />
 
-					<div className="bg-ds-card p-4 rounded-xl border border-ds-border mt-6">
-						<h3 className="text-gray-400 text-base mb-4 font-normal">Bench</h3>
-						<div className="flex justify-center gap-2 md:gap-4 flex-wrap">
-							{bench.map((p) => <PlayerCard key={p.id || p.name} player={p} isBench={true} />)}
+						<div className="bg-ds-card p-4 rounded-xl border border-ds-border mt-6">
+							<h3 className="text-gray-400 text-base mb-4 font-normal">Bench</h3>
+							<div className="flex justify-center gap-2 md:gap-4 flex-wrap">
+								{bench.map((p) => (
+									<PlayerCard key={p.id || p.name} player={p} isBench={true} />
+								))}
+							</div>
 						</div>
-					</div>
-				</>
-			) : (
-				<ListView squad={squad} />
-			))}
+					</>
+				) : (
+					<ListView squad={squad} />
+				))}
 		</div>
 	);
 };

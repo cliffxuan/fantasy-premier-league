@@ -230,4 +230,3 @@ GET /event-status/
 | `/leagues-classic/{id}/standings/`        | Classic league table        |
 | `/leagues-h2h/{id}/standings/`            | H2H standings               |
 | `/leagues-h2h-matches/league/{id}/?page=` | H2H match list              |
-

@@ -164,12 +164,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _runAnalysis(int teamId, dynamic data) {
     final bank = data.history?.isNotEmpty == true
-        ? (data.history!.last.bank / 10)
+        ? (data.history!.last.bank / 10) as double
         : 0.0;
     ref.read(analysisStateProvider.notifier).analyze(
           teamId: teamId,
           moneyInBank: bank,
-          freeTransfers: data.freeTransfers ?? 1,
+          freeTransfers: (data.freeTransfers ?? 1) as int,
           authToken: ref.read(savedAuthTokenProvider),
         );
   }

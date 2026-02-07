@@ -45,7 +45,7 @@ const ClubViewer = () => {
 					// If backend returns the requested GW, use that as current context for the display?
 					// Actually SquadDisplay needs 'currentGw' to know what is "Live" vs "Past".
 					// Pass current_event from bootstrap as currentGw roughly, but we don't have it here directly unless we fetch it.
-					// But our backend's 'gameweek' return is the requested one. 
+					// But our backend's 'gameweek' return is the requested one.
 					// Let's assume for now currentGw is the one initially loaded.
 					if (!currentGw) setCurrentGw(data.gameweek);
 				}
@@ -72,7 +72,6 @@ const ClubViewer = () => {
 		handleFetch(selectedClub, newGw);
 	};
 
-
 	useEffect(() => {
 		const fetchOpponents = async () => {
 			if (!squadData || !squadData.fixtures || !gameweek || teams.length === 0) {
@@ -86,7 +85,7 @@ const ClubViewer = () => {
 				return;
 			}
 
-			const currentFixtures = squadData.fixtures.filter(f => f.event === gameweek);
+			const currentFixtures = squadData.fixtures.filter((f) => f.event === gameweek);
 			if (currentFixtures.length === 0) {
 				setOpponentData([]);
 				return;
@@ -99,7 +98,7 @@ const ClubViewer = () => {
 				// fix.opponent_code is the team Code. Map to Team ID.
 				// Note: In some contexts opponent_code might be ID, but based on badge usage 't{code}.png', it's likely code.
 				// We check both just in case, preferring Code match.
-				const oppTeam = teams.find(t => t.code === fix.opponent_code);
+				const oppTeam = teams.find((t) => t.code === fix.opponent_code);
 				if (oppTeam) {
 					try {
 						const data = await getClubSquad(oppTeam.id, gameweek);
@@ -107,14 +106,14 @@ const ClubViewer = () => {
 							return data;
 						}
 					} catch (e) {
-						console.error("Failed to fetch opponent squad", e);
+						console.error('Failed to fetch opponent squad', e);
 					}
 				}
 				return null;
 			});
 
 			const results = await Promise.all(promises);
-			setOpponentData(results.filter(r => r !== null));
+			setOpponentData(results.filter((r) => r !== null));
 			setOppLoading(false);
 		};
 
@@ -124,10 +123,14 @@ const ClubViewer = () => {
 	// Helper for Result colors
 	const getResultColor = (result) => {
 		switch (result) {
-			case 'W': return 'text-green-500 bg-green-500/10 border-green-500/20';
-			case 'D': return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
-			case 'L': return 'text-ds-danger bg-ds-danger/10 border-ds-danger/20';
-			default: return 'text-ds-text-muted';
+			case 'W':
+				return 'text-green-500 bg-green-500/10 border-green-500/20';
+			case 'D':
+				return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
+			case 'L':
+				return 'text-ds-danger bg-ds-danger/10 border-ds-danger/20';
+			default:
+				return 'text-ds-text-muted';
 		}
 	};
 
@@ -150,15 +153,20 @@ const ClubViewer = () => {
 								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface">Date</th>
 								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface">Opponent</th>
 								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface text-center">FDR</th>
-								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface text-center">Result</th>
+								<th className="px-4 py-3 font-mono text-xs uppercase tracking-wider bg-ds-surface text-center">
+									Result
+								</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-ds-border/50">
 							{fixtures.map((fix, idx) => {
 								const date = new Date(fix.kickoff_time).toLocaleDateString(undefined, {
-									month: 'short', day: 'numeric'
+									month: 'short',
+									day: 'numeric',
 								});
-								const oppTeam = teams.find(t => t.code === fix.opponent_code) || {}; /* Note: backend returns opponent_code as team code, not team id. 
+								const oppTeam =
+									teams.find((t) => t.code === fix.opponent_code) ||
+									{}; /* Note: backend returns opponent_code as team code, not team id.
                                 Actually backend returns `opponent_code` as `team.code`. My `teams` prop likely has `id` and `code`.
                                 Let's check `teams` state usage. `teams` comes from `getTeams()`. Usually has `id`, `code`, `name`.
                             */
@@ -168,11 +176,15 @@ const ClubViewer = () => {
 
 								return (
 									<tr key={idx} className="hover:bg-ds-primary/5 transition-colors group">
-										<td className="px-4 py-3 font-mono text-ds-text-muted text-xs border-r border-ds-border/30">{fix.event}</td>
+										<td className="px-4 py-3 font-mono text-ds-text-muted text-xs border-r border-ds-border/30">
+											{fix.event}
+										</td>
 										<td className="px-4 py-3 text-ds-text-muted text-xs">{date}</td>
 										<td className="px-4 py-3">
 											<div className="flex items-center gap-3">
-												<span className={`text-[10px] font-bold w-6 text-center ${fix.is_home ? 'text-ds-text bg-ds-surface px-1 py-0.5 rounded border border-ds-border' : 'text-ds-text-muted'}`}>
+												<span
+													className={`text-[10px] font-bold w-6 text-center ${fix.is_home ? 'text-ds-text bg-ds-surface px-1 py-0.5 rounded border border-ds-border' : 'text-ds-text-muted'}`}
+												>
 													{fix.is_home ? 'H' : 'A'}
 												</span>
 												<TeamPopover team={oppTeam}>
@@ -181,7 +193,7 @@ const ClubViewer = () => {
 															src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
 															alt={fix.opponent_short}
 															className="w-5 h-5 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
-															onError={(e) => e.target.style.display = 'none'}
+															onError={(e) => (e.target.style.display = 'none')}
 														/>
 														<span className="font-semibold text-sm">{fix.opponent_short}</span>
 													</div>
@@ -189,13 +201,17 @@ const ClubViewer = () => {
 											</div>
 										</td>
 										<td className="px-4 py-3 text-center">
-											<span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold border shadow-sm ${getFdrTableClass(fix.difficulty)}`}>
+											<span
+												className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold border shadow-sm ${getFdrTableClass(fix.difficulty)}`}
+											>
 												{fix.difficulty}
 											</span>
 										</td>
 										<td className="px-4 py-3 text-center">
 											{fix.finished ? (
-												<div className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold gap-1 shadow-sm ${getResultColor(fix.result)}`}>
+												<div
+													className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold gap-1 shadow-sm ${getResultColor(fix.result)}`}
+												>
 													<span>{fix.result}</span>
 													<span className="opacity-40 mx-1">|</span>
 													<span>{fix.score}</span>
@@ -242,14 +258,16 @@ const ClubViewer = () => {
 								{selectedClub ? (
 									<>
 										<img
-											src={`https://resources.premierleague.com/premierleague/badges/50/t${teams.find(t => t.id === selectedClub)?.code}.png`}
+											src={`https://resources.premierleague.com/premierleague/badges/50/t${teams.find((t) => t.id === selectedClub)?.code}.png`}
 											alt="Badge"
 											className="w-6 h-6 object-contain"
 										/>
-										<span className="font-bold">{(() => {
-											const t = teams.find(t => t.id === selectedClub);
-											return t?.full_name || t?.name;
-										})()}</span>
+										<span className="font-bold">
+											{(() => {
+												const t = teams.find((t) => t.id === selectedClub);
+												return t?.full_name || t?.name;
+											})()}
+										</span>
 									</>
 								) : (
 									<span className="text-ds-text-muted">Select a Premier League Club...</span>
@@ -259,7 +277,10 @@ const ClubViewer = () => {
 						</div>
 
 						{/* Custom Dropdown Menu */}
-						<div id="club-dropdown" className="hidden absolute top-full left-0 right-0 mt-2 bg-ds-card border border-ds-border rounded-xl shadow-xl z-50 max-h-[400px] overflow-hidden flex flex-col">
+						<div
+							id="club-dropdown"
+							className="hidden absolute top-full left-0 right-0 mt-2 bg-ds-card border border-ds-border rounded-xl shadow-xl z-50 max-h-[400px] overflow-hidden flex flex-col"
+						>
 							{/* Search Input */}
 							<div className="p-2 border-b border-ds-border sticky top-0 bg-ds-card z-10">
 								<input
@@ -271,7 +292,7 @@ const ClubViewer = () => {
 									onChange={(e) => {
 										const term = e.target.value.toLowerCase();
 										const items = document.querySelectorAll('.club-item');
-										items.forEach(item => {
+										items.forEach((item) => {
 											const name = item.getAttribute('data-name').toLowerCase();
 											if (name.includes(term)) {
 												item.classList.remove('hidden');
@@ -284,7 +305,7 @@ const ClubViewer = () => {
 							</div>
 
 							<div className="overflow-y-auto custom-scrollbar flex-1">
-								{teams.map(team => (
+								{teams.map((team) => (
 									<div
 										key={team.id}
 										data-name={team.full_name || team.name}
@@ -296,7 +317,7 @@ const ClubViewer = () => {
 											// Reset search
 											const input = document.getElementById('club-search-input');
 											if (input) input.value = '';
-											document.querySelectorAll('.club-item').forEach(i => i.classList.remove('hidden'));
+											document.querySelectorAll('.club-item').forEach((i) => i.classList.remove('hidden'));
 										}}
 									>
 										<img
@@ -320,10 +341,7 @@ const ClubViewer = () => {
 								}
 							}}
 						></div>
-
 					</div>
-
-
 				</div>
 			</div>
 
@@ -350,12 +368,12 @@ const ClubViewer = () => {
 					<div className="bg-ds-card p-6 rounded-xl border border-ds-border flex flex-col lg:flex-row items-center justify-between gap-4">
 						<div className="flex flex-col gap-1">
 							{/* Current Gameweek Fixture Widget - Home vs Away */}
-							{(squadData?.fixtures?.filter(f => f.event === gameweek) || []).map((fix, idx) => {
-								const myTeam = teams.find(t => t.id === squadData.team.id) || squadData.team;
+							{(squadData?.fixtures?.filter((f) => f.event === gameweek) || []).map((fix, idx) => {
+								const myTeam = teams.find((t) => t.id === squadData.team.id) || squadData.team;
 								const oppTeam = {
 									code: fix.opponent_code,
 									short_name: fix.opponent_short,
-									name: fix.opponent_name
+									name: fix.opponent_name,
 								};
 
 								const homeTeam = fix.is_home ? myTeam : oppTeam;
@@ -364,7 +382,10 @@ const ClubViewer = () => {
 								// fix.result is relative to 'myTeam'.
 
 								return (
-									<div key={idx} className="flex items-center gap-3 text-sm bg-ds-surface px-4 py-3 rounded-xl border border-ds-border shadow-sm animate-in fade-in slide-in-from-top-1 w-fit">
+									<div
+										key={idx}
+										className="flex items-center gap-3 text-sm bg-ds-surface px-4 py-3 rounded-xl border border-ds-border shadow-sm animate-in fade-in slide-in-from-top-1 w-fit"
+									>
 										{/* Home Team */}
 										<div className="flex items-center gap-3">
 											{homeTeam.code && (
@@ -380,10 +401,15 @@ const ClubViewer = () => {
 										{/* Score / Status (Center) */}
 										<div className="flex flex-col items-center px-4 min-w-[80px]">
 											{fix.finished ? (
-												<div className={`px-3 py-1 rounded-lg font-mono font-bold text-lg border ${fix.result === 'W' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-													fix.result === 'L' ? 'bg-ds-danger/10 text-ds-danger border-ds-danger/20' :
-														'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-													}`}>
+												<div
+													className={`px-3 py-1 rounded-lg font-mono font-bold text-lg border ${
+														fix.result === 'W'
+															? 'bg-green-500/10 text-green-500 border-green-500/20'
+															: fix.result === 'L'
+																? 'bg-ds-danger/10 text-ds-danger border-ds-danger/20'
+																: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+													}`}
+												>
 													{fix.score}
 												</div>
 											) : (
@@ -453,14 +479,18 @@ const ClubViewer = () => {
 										transfers={[]}
 										loading={loading}
 										currentGw={currentGw}
-										history={[{
-											event: gameweek,
-											points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
-										}]}
+										history={[
+											{
+												event: gameweek,
+												points: squadData.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0),
+											},
+										]}
 										customMainHeader={
 											<div className="flex items-center gap-4">
 												<div className="flex flex-col">
-													<span className="text-xs text-ds-text-muted font-mono uppercase tracking-widest mb-1 text-left">Club</span>
+													<span className="text-xs text-ds-text-muted font-mono uppercase tracking-widest mb-1 text-left">
+														Club
+													</span>
 													<div className="flex items-center gap-3">
 														{squadData.team?.code && (
 															<img
@@ -489,14 +519,18 @@ const ClubViewer = () => {
 												transfers={[]}
 												loading={oppLoading}
 												currentGw={currentGw}
-												history={[{
-													event: gameweek,
-													points: data.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0)
-												}]}
+												history={[
+													{
+														event: gameweek,
+														points: data.squad.slice(0, 11).reduce((acc, p) => acc + (p.event_points || 0), 0),
+													},
+												]}
 												customMainHeader={
 													<div className="flex items-center gap-4">
 														<div className="flex flex-col">
-															<span className="text-xs text-ds-text-muted font-mono uppercase tracking-widest mb-1 text-left">Opponent</span>
+															<span className="text-xs text-ds-text-muted font-mono uppercase tracking-widest mb-1 text-left">
+																Opponent
+															</span>
 															<div className="flex items-center gap-3">
 																{data.team?.code && (
 																	<img

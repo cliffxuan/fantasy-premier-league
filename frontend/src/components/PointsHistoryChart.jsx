@@ -39,12 +39,7 @@ const PointsHistoryChart = ({ history }) => {
 							axisLine={false}
 							label={{ value: 'GW', position: 'insideBottomRight', offset: -5, fill: '#666', fontSize: 10 }}
 						/>
-						<YAxis
-							stroke="#666"
-							tick={{ fill: '#888', fontSize: 12 }}
-							tickLine={false}
-							axisLine={false}
-						/>
+						<YAxis stroke="#666" tick={{ fill: '#888', fontSize: 12 }} tickLine={false} axisLine={false} />
 						<Tooltip
 							contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
 							itemStyle={{ color: '#f8fafc' }}
@@ -54,7 +49,7 @@ const PointsHistoryChart = ({ history }) => {
 						/>
 						<Line
 							type="monotone"
-							dataKey={viewMode === 'weekly' ? "points" : "total_points"}
+							dataKey={viewMode === 'weekly' ? 'points' : 'total_points'}
 							stroke="#3b82f6"
 							strokeWidth={2}
 							dot={{ r: 3, fill: '#3b82f6' }}

@@ -1,7 +1,7 @@
+import ast
 import asyncio
 import io
-import ast
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 import polars as pl
@@ -9,22 +9,18 @@ from loguru import logger
 
 from .fpl_service import FPLService
 
-REPO_BASE_URL = (
-    "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data"
-)
+REPO_BASE_URL = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data"
 SEASONS = ["2019-20", "2020-21", "2021-22", "2022-23", "2023-24", "2024-25"]
 
 
 class HistoryService:
-    _cache: Dict[str, Any] = {}
+    _cache: dict[str, Any] = {}
     _cache_lock = asyncio.Lock()
 
     def __init__(self):
         self.fpl_service = FPLService()
 
-    async def get_h2h_history(
-        self, team_h_id: int, team_a_id: int
-    ) -> List[Dict[str, Any]]:
+    async def get_h2h_history(self, team_h_id: int, team_a_id: int) -> list[dict[str, Any]]:
         # 1. Get current team details to find their names
         bootstrap = await self.fpl_service.get_bootstrap_static()
         teams = {t["id"]: t for t in bootstrap["teams"]}
@@ -89,16 +85,8 @@ class HistoryService:
                 # Let's perform casting to be safe or just use flexible filter
 
                 matches = df_fixtures.filter(
-                    (
-                        (
-                            (pl.col("team_h") == s_home_id)
-                            & (pl.col("team_a") == s_away_id)
-                        )
-                        | (
-                            (pl.col("team_h") == s_away_id)
-                            & (pl.col("team_a") == s_home_id)
-                        )
-                    )
+                    ((pl.col("team_h") == s_home_id) & (pl.col("team_a") == s_away_id))
+                    | ((pl.col("team_h") == s_away_id) & (pl.col("team_a") == s_home_id))
                 )
 
                 if matches.height == 0:
@@ -117,16 +105,8 @@ class HistoryService:
                     is_home_perspective = h_id == s_home_id
 
                     try:
-                        score_h = (
-                            int(row["team_h_score"])
-                            if row["team_h_score"] is not None
-                            else 0
-                        )
-                        score_a = (
-                            int(row["team_a_score"])
-                            if row["team_a_score"] is not None
-                            else 0
-                        )
+                        score_h = int(row["team_h_score"]) if row["team_h_score"] is not None else 0
+                        score_a = int(row["team_a_score"]) if row["team_a_score"] is not None else 0
                     except ValueError:
                         score_h = 0
                         score_a = 0
@@ -222,9 +202,7 @@ class HistoryService:
         history.sort(key=lambda x: x["date"], reverse=True)
         return history
 
-    async def get_player_history_vs_team(
-        self, player_name: str, opponent_name: str
-    ) -> List[Dict[str, Any]]:
+    async def get_player_history_vs_team(self, player_name: str, opponent_name: str) -> list[dict[str, Any]]:
         """
         Get historical points for a player against a specific opponent across all seasons.
         """
@@ -256,10 +234,7 @@ class HistoryService:
                 # merged_gw.csv has "name" column like "Erling Haaland"
                 # Input player_name should match this.
 
-                player_rows = df_gws.filter(
-                    (pl.col("name") == player_name)
-                    & (pl.col("opponent_team") == opponent_id)
-                )
+                player_rows = df_gws.filter((pl.col("name") == player_name) & (pl.col("opponent_team") == opponent_id))
 
                 if player_rows.height == 0:
                     # Try partial match or fuzzy match if exact match fails?
@@ -311,7 +286,7 @@ class HistoryService:
                     if res:
                         self._cache[res["season"]] = res
 
-    async def _fetch_season_data(self, season: str) -> Optional[Dict[str, Any]]:
+    async def _fetch_season_data(self, season: str) -> dict[str, Any] | None:
         logger.info(f"Fetching historical data for {season}")
         try:
             async with httpx.AsyncClient() as client:
@@ -356,9 +331,7 @@ class HistoryService:
                     except Exception as e:
                         logger.warning(f"Failed to parse GWs for {season}: {e}")
                 else:
-                    logger.warning(
-                        f"Failed to fetch GWs for {season}: {g_resp.status_code}"
-                    )
+                    logger.warning(f"Failed to fetch GWs for {season}: {g_resp.status_code}")
 
                 # Players mapping: ID -> Web Name
                 player_map = {}
