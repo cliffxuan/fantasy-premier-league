@@ -11,7 +11,14 @@ from pydantic import ValidationError
 from .models import Fixture, Team
 from .team_details import NAME_TO_FULL_NAME, TEAM_MAPPINGS
 
+
 FPL_BASE_URL = "https://fantasy.premierleague.com/api"
+
+# PingOne OAuth configuration (FPL migrated from cookie-based to PingOne SSO)
+PINGONE_AUTH_URL = "https://account.premierleague.com"
+PINGONE_CLIENT_ID = "1f243d70-a140-4035-8c41-341f5af5aa12"
+PINGONE_REDIRECT_URI = "https://www.premierleague.com/robots.txt"
+PINGONE_SCOPE = "openid profile offline_access p1:update:user p1:read:device p1:reset:userPassword"
 
 
 class FPLService:
@@ -20,6 +27,67 @@ class FPLService:
     _last_updated: Dict[str, float] = {}
     _cache_lock = asyncio.Lock()
     CACHE_TTL = 300  # 5 minutes
+
+    @staticmethod
+    def get_authorize_url() -> str:
+        """Returns the PingOne OAuth authorize URL for FPL login.
+
+        The user opens this URL in their browser, logs in, and gets redirected
+        to a static page with ?code=XXX in the URL. They then pass the code
+        to the /api/auth/callback endpoint to exchange it for an access token.
+        """
+        from urllib.parse import urlencode
+
+        params = urlencode(
+            {
+                "response_type": "code",
+                "client_id": PINGONE_CLIENT_ID,
+                "redirect_uri": PINGONE_REDIRECT_URI,
+                "scope": PINGONE_SCOPE,
+            }
+        )
+        return f"{PINGONE_AUTH_URL}/as/authorize?{params}"
+
+    async def exchange_code(self, code: str) -> Dict[str, Any]:
+        """Exchanges a PingOne authorization code for access/refresh tokens."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{PINGONE_AUTH_URL}/as/token",
+                data={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": PINGONE_REDIRECT_URI,
+                    "client_id": PINGONE_CLIENT_ID,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+
+            if response.status_code != 200:
+                error = response.json()
+                logger.error(f"Token exchange failed: {error}")
+                return None
+
+            return response.json()
+
+    async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
+        """Uses a refresh token to get a new access token."""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{PINGONE_AUTH_URL}/as/token",
+                data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": refresh_token,
+                    "client_id": PINGONE_CLIENT_ID,
+                },
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+
+            if response.status_code != 200:
+                error = response.json()
+                logger.error(f"Token refresh failed: {error}")
+                return None
+
+            return response.json()
 
     async def get_bootstrap_static(self) -> Dict[str, Any]:
         async with self._cache_lock:

@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/providers/dio_provider.dart';
 import '../../../core/providers/shared_prefs_provider.dart';
+import '../../../data/datasources/fpl_remote_datasource.dart';
 import '../../../data/models/analysis_request.dart';
 import '../../../data/models/analysis_response.dart';
 import '../../../data/models/gameweek_status.dart';
@@ -14,6 +16,7 @@ part 'squad_providers.g.dart';
 
 const _teamIdKey = 'team_id';
 const _authTokenKey = 'auth_token';
+const _refreshTokenKey = 'refresh_token';
 
 @Riverpod(keepAlive: true)
 class SavedTeamId extends _$SavedTeamId {
@@ -54,7 +57,58 @@ class SavedAuthToken extends _$SavedAuthToken {
   void clear() {
     final prefs = ref.read(sharedPreferencesProvider);
     prefs.remove(_authTokenKey);
+    prefs.remove(_refreshTokenKey);
     state = null;
+  }
+
+  void setTokens(String accessToken, String refreshToken) {
+    final prefs = ref.read(sharedPreferencesProvider);
+    prefs.setString(_authTokenKey, accessToken);
+    prefs.setString(_refreshTokenKey, refreshToken);
+    state = accessToken;
+  }
+
+  String? getRefreshToken() {
+    final prefs = ref.read(sharedPreferencesProvider);
+    return prefs.getString(_refreshTokenKey);
+  }
+
+  Future<bool> refreshAccessToken() async {
+    final refreshToken = getRefreshToken();
+    if (refreshToken == null) return false;
+
+    try {
+      final client = ref.read(dioClientProvider);
+      final datasource = FplRemoteDatasource(client);
+      final result = await datasource.refreshToken(refreshToken);
+      final newAccess = result['access_token'] as String?;
+      final newRefresh = result['refresh_token'] as String?;
+      if (newAccess != null && newRefresh != null) {
+        setTokens(newAccess, newRefresh);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      clear();
+      return false;
+    }
+  }
+
+  Future<bool> login(String code) async {
+    try {
+      final client = ref.read(dioClientProvider);
+      final datasource = FplRemoteDatasource(client);
+      final result = await datasource.exchangeCode(code);
+      final accessToken = result['access_token'] as String?;
+      final refreshToken = result['refresh_token'] as String?;
+      if (accessToken != null && refreshToken != null) {
+        setTokens(accessToken, refreshToken);
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 }
 

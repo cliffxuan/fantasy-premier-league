@@ -2,7 +2,9 @@ class ApiConstants {
   ApiConstants._();
 
   // Change this to your backend URL
-  static const String baseUrl = 'https://fpl.nuoya.co.uk/api';
+  static const String baseUrl = bool.fromEnvironment('dart.vm.product')
+      ? 'https://fpl.nuoya.co.uk/api'
+      : 'http://localhost:8000/api';
 
   // Endpoints
   static const String analyze = '/analyze';
@@ -16,6 +18,11 @@ class ApiConstants {
   static const String optimizationSolve = '/optimization/solve';
   static const String optimizationFixtures = '/optimization/fixtures';
   static const String health = '/health';
+
+  // Auth
+  static const String authUrl = '/auth/url';
+  static const String authCallback = '/auth/callback';
+  static const String authRefresh = '/auth/refresh';
 
   static String teamSquad(int teamId) => '/team/$teamId/squad';
   static String myTeam(int teamId) => '/team/$teamId/my-team';

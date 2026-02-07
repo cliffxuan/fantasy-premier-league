@@ -1,16 +1,26 @@
 import os
 from typing import List
-from loguru import logger
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
+from pydantic import BaseModel
 
 from .analysis_service import AnalysisService
 from .form_service import FormService
 from .fpl_service import FPLService
 from .models import AnalysisRequest, AnalysisResponse, Fixture, Team
+
+
+class AuthCallbackRequest(BaseModel):
+    code: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
 
 app = FastAPI(title="FPL Alpha API")
 
@@ -49,6 +59,45 @@ async def analyze_team(request: AnalysisRequest):
 @app.get("/api/analysis/form", tags=["Analysis"])
 async def get_form_analysis():
     return await form_service.get_form_analysis_data()
+
+
+@app.get("/api/auth/url", tags=["Auth"])
+async def get_auth_url():
+    """Returns the PingOne OAuth URL. Open in browser, log in, then copy the
+    ?code= parameter from the redirect URL and POST it to /api/auth/callback."""
+    return {"url": FPLService.get_authorize_url()}
+
+
+@app.post("/api/auth/callback", tags=["Auth"])
+async def auth_callback(request: AuthCallbackRequest):
+    """Exchanges a PingOne authorization code for an access token."""
+    service = FPLService()
+    tokens = await service.exchange_code(request.code)
+    if not tokens:
+        raise HTTPException(
+            status_code=401, detail="Token exchange failed. Code may be expired."
+        )
+    return {
+        "access_token": tokens.get("access_token"),
+        "refresh_token": tokens.get("refresh_token"),
+        "expires_in": tokens.get("expires_in"),
+    }
+
+
+@app.post("/api/auth/refresh", tags=["Auth"])
+async def auth_refresh(request: RefreshTokenRequest):
+    """Uses a refresh token to get a new access token (refresh tokens last ~30 days)."""
+    service = FPLService()
+    tokens = await service.refresh_access_token(request.refresh_token)
+    if not tokens:
+        raise HTTPException(
+            status_code=401, detail="Token refresh failed. Re-login required."
+        )
+    return {
+        "access_token": tokens.get("access_token"),
+        "refresh_token": tokens.get("refresh_token"),
+        "expires_in": tokens.get("expires_in"),
+    }
 
 
 @app.get("/api/team/{team_id}/squad", tags=["FPL Team"])

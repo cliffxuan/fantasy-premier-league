@@ -23,6 +23,31 @@ class FplRemoteDatasource {
 
   FplRemoteDatasource(this._client);
 
+  // --- Auth ---
+
+  Future<String> getAuthUrl() async {
+    final data = await _client.get<Map<String, dynamic>>(
+      ApiConstants.authUrl,
+    );
+    return data['url'] as String;
+  }
+
+  Future<Map<String, dynamic>> exchangeCode(String code) async {
+    final data = await _client.post<Map<String, dynamic>>(
+      ApiConstants.authCallback,
+      data: {'code': code},
+    );
+    return data;
+  }
+
+  Future<Map<String, dynamic>> refreshToken(String refreshToken) async {
+    final data = await _client.post<Map<String, dynamic>>(
+      ApiConstants.authRefresh,
+      data: {'refresh_token': refreshToken},
+    );
+    return data;
+  }
+
   // --- Squad ---
 
   Future<SquadResponse> getSquad(

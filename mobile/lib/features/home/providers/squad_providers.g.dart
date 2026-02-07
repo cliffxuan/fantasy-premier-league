@@ -56,7 +56,7 @@ final savedTeamIdProvider = NotifierProvider<SavedTeamId, int?>.internal(
 );
 
 typedef _$SavedTeamId = Notifier<int?>;
-String _$savedAuthTokenHash() => r'ddeeb0d9b631aa98370807cd92743905c9b86e16';
+String _$savedAuthTokenHash() => r'ee21ce8050cd71daebdbb6e0160f65596abaeed8';
 
 /// See also [SavedAuthToken].
 @ProviderFor(SavedAuthToken)
