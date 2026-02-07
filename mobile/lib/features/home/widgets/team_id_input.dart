@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/providers/dio_provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/datasources/fpl_remote_datasource.dart';
 import '../providers/squad_providers.dart';
+import 'fpl_login_webview.dart';
 
 class TeamIdInput extends ConsumerStatefulWidget {
   const TeamIdInput({super.key});
@@ -17,15 +17,12 @@ class TeamIdInput extends ConsumerStatefulWidget {
 
 class _TeamIdInputState extends ConsumerState<TeamIdInput> {
   final _controller = TextEditingController();
-  final _codeController = TextEditingController();
-  bool _showCodeInput = false;
   bool _signingIn = false;
   String? _authError;
 
   @override
   void dispose() {
     _controller.dispose();
-    _codeController.dispose();
     super.dispose();
   }
 
@@ -47,56 +44,48 @@ class _TeamIdInputState extends ConsumerState<TeamIdInput> {
       final datasource = FplRemoteDatasource(client);
       final url = await datasource.getAuthUrl();
 
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+
+      // Open WebView and wait for the code
+      final code = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => FplLoginWebView(authUrl: url),
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (code == null || code.isEmpty) {
         setState(() {
-          _showCodeInput = true;
           _signingIn = false;
         });
-      } else {
-        setState(() {
-          _authError = 'Could not open browser.';
-          _signingIn = false;
-        });
+        return;
       }
-    } catch (e) {
+
+      // Exchange code for tokens
+      final success =
+          await ref.read(savedAuthTokenProvider.notifier).login(code);
+
+      if (!mounted) return;
+
       setState(() {
-        _authError = 'Failed to get login URL.';
+        _signingIn = false;
+        if (!success) {
+          _authError = 'Login failed. Please try again.';
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _authError = 'Failed to start login.';
         _signingIn = false;
       });
     }
   }
 
-  Future<void> _exchangeCode() async {
-    final code = _codeController.text.trim();
-    if (code.isEmpty) return;
-
-    setState(() {
-      _authError = null;
-      _signingIn = true;
-    });
-
-    final success = await ref.read(savedAuthTokenProvider.notifier).login(code);
-
-    setState(() {
-      _signingIn = false;
-      if (success) {
-        _showCodeInput = false;
-        _codeController.clear();
-      } else {
-        _authError = 'Code exchange failed. Try again.';
-      }
-    });
-  }
-
   void _signOut() {
     ref.read(savedAuthTokenProvider.notifier).clear();
-    setState(() {
-      _showCodeInput = false;
-      _codeController.clear();
-      _authError = null;
-    });
+    setState(() => _authError = null);
   }
 
   @override
@@ -140,13 +129,8 @@ class _TeamIdInputState extends ConsumerState<TeamIdInput> {
           // Auth section
           if (isSignedIn)
             _buildSignedInChip()
-          else ...[
+          else
             _buildSignInButton(),
-            if (_showCodeInput) ...[
-              const SizedBox(height: 12),
-              _buildCodeInput(),
-            ],
-          ],
           if (_authError != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -185,7 +169,8 @@ class _TeamIdInputState extends ConsumerState<TeamIdInput> {
           const SizedBox(width: 8),
           const Text(
             'Signed in to FPL',
-            style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: AppColors.accent, fontWeight: FontWeight.w600),
           ),
           const Spacer(),
           TextButton(
@@ -215,58 +200,13 @@ class _TeamIdInputState extends ConsumerState<TeamIdInput> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.login),
-        label: Text(_signingIn ? 'Opening browser…' : 'Sign in with FPL'),
+        label: Text(_signingIn ? 'Signing in…' : 'Sign in with FPL'),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary),
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
-    );
-  }
-
-  Widget _buildCodeInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'After logging in, copy the code from the redirect URL and paste it below:',
-          style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _codeController,
-                decoration: const InputDecoration(
-                  labelText: 'Authorization Code',
-                  hintText: 'Paste code here',
-                  prefixIcon: Icon(Icons.key),
-                ),
-                onSubmitted: (_) => _exchangeCode(),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _signingIn ? null : _exchangeCode,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              ),
-              child: _signingIn
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Submit'),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

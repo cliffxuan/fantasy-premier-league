@@ -10,8 +10,16 @@ import '../../../data/models/aggregated_player.dart';
 class PlayerListTile extends StatelessWidget {
   final AggregatedPlayer player;
   final VoidCallback? onTap;
+  final bool selectable;
+  final bool selected;
 
-  const PlayerListTile({super.key, required this.player, this.onTap});
+  const PlayerListTile({
+    super.key,
+    required this.player,
+    this.onTap,
+    this.selectable = false,
+    this.selected = false,
+  });
 
   String get _posName {
     switch (player.elementType) {
@@ -27,7 +35,20 @@ class PlayerListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
-      leading: PlayerImage(playerCode: player.code, size: 40),
+      leading: selectable
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  selected ? Icons.check_box : Icons.check_box_outline_blank,
+                  color: selected ? AppColors.primary : AppColors.textMuted,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                PlayerImage(playerCode: player.code, size: 36),
+              ],
+            )
+          : PlayerImage(playerCode: player.code, size: 40),
       title: Row(
         children: [
           Flexible(

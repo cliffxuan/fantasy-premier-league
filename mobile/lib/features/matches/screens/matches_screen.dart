@@ -21,6 +21,7 @@ class MatchesScreen extends ConsumerStatefulWidget {
 
 class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   int? _selectedGw;
+  bool _sortByOdds = false;
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +47,27 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
                   onChanged: (gw) => setState(() => _selectedGw = gw),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    _SortChip(
+                      label: 'By Time',
+                      selected: !_sortByOdds,
+                      onTap: () => setState(() => _sortByOdds = false),
+                    ),
+                    const SizedBox(width: 8),
+                    _SortChip(
+                      label: 'By Odds',
+                      selected: _sortByOdds,
+                      onTap: () => setState(() => _sortByOdds = true),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
               Expanded(
-                child: _FixturesList(gw: currentGw),
+                child: _FixturesList(gw: currentGw, sortByOdds: _sortByOdds),
               ),
             ],
           );
@@ -57,10 +77,45 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
   }
 }
 
+class _SortChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _SortChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.card,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            color: selected ? AppColors.text : AppColors.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _FixturesList extends ConsumerWidget {
   final int gw;
+  final bool sortByOdds;
 
-  const _FixturesList({required this.gw});
+  const _FixturesList({required this.gw, this.sortByOdds = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +131,19 @@ class _FixturesList extends ConsumerWidget {
       data: (fixtures) {
         final markets = polyAsync.valueOrNull ?? <PolymarketMarket>[];
 
+        // Build fixture-market pairs and optionally sort by max odds
+        var paired = fixtures.map((f) {
+          return (fixture: f, market: _findMarket(f, markets));
+        }).toList();
+
+        if (sortByOdds) {
+          paired.sort((a, b) {
+            final aMax = _maxOdds(a.market);
+            final bMax = _maxOdds(b.market);
+            return bMax.compareTo(aMax);
+          });
+        }
+
         return RefreshIndicator(
           color: AppColors.primary,
           onRefresh: () async {
@@ -84,21 +152,27 @@ class _FixturesList extends ConsumerWidget {
           },
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            itemCount: fixtures.length,
+            itemCount: paired.length,
             itemBuilder: (context, index) {
-              final fixture = fixtures[index];
-              final market = _findMarket(fixture, markets);
+              final item = paired[index];
 
               return MatchCard(
-                fixture: fixture,
-                market: market,
-                onTap: () => _showH2h(context, fixture),
+                fixture: item.fixture,
+                market: item.market,
+                onTap: () => _showH2h(context, item.fixture),
               );
             },
           ),
         );
       },
     );
+  }
+
+  double _maxOdds(PolymarketMarket? market) {
+    if (market == null || market.outcomes.isEmpty) return 0;
+    return market.outcomes
+        .map((o) => o.price)
+        .reduce((a, b) => a > b ? a : b);
   }
 
   PolymarketMarket? _findMarket(

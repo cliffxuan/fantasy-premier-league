@@ -139,13 +139,29 @@ class MatchCard extends StatelessWidget {
                 const Divider(height: 1),
                 const SizedBox(height: 6),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: market!.outcomes.map((o) {
-                    return Text(
-                      '${o.label} ${(o.price * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
+                    final pct = (o.price * 100).round();
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 4,
+                            horizontal: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _oddsColor(pct),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${o.label} $pct%',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     );
                   }).toList(),
@@ -161,6 +177,12 @@ class MatchCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static Color _oddsColor(int pct) {
+    if (pct >= 60) return AppColors.accent.withValues(alpha: 0.25);
+    if (pct >= 40) return AppColors.primary.withValues(alpha: 0.25);
+    return AppColors.textMuted.withValues(alpha: 0.15);
   }
 
   Widget _buildH2hBar(Map<String, dynamic> stats) {

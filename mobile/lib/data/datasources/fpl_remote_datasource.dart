@@ -48,6 +48,14 @@ class FplRemoteDatasource {
     return data;
   }
 
+  Future<Map<String, dynamic>> getMe(String accessToken) async {
+    final data = await _client.get<Map<String, dynamic>>(
+      ApiConstants.authMe,
+      headers: {'Authorization': 'Bearer $accessToken'},
+    );
+    return data;
+  }
+
   // --- Squad ---
 
   Future<SquadResponse> getSquad(

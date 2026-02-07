@@ -103,6 +103,17 @@ class SavedAuthToken extends _$SavedAuthToken {
       final refreshToken = result['refresh_token'] as String?;
       if (accessToken != null && refreshToken != null) {
         setTokens(accessToken, refreshToken);
+        // Auto-fetch team ID from /me
+        try {
+          final me = await datasource.getMe(accessToken);
+          final player = me['player'] as Map<String, dynamic>?;
+          final entry = player?['entry'] as int?;
+          if (entry != null) {
+            ref.read(savedTeamIdProvider.notifier).set(entry);
+          }
+        } catch (_) {
+          // Non-fatal: user can still enter team ID manually
+        }
         return true;
       }
       return false;
