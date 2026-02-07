@@ -1,17 +1,25 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/asset_urls.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/player_image.dart';
+import '../../../core/widgets/fdr_badge.dart';
 import '../../../data/models/squad_player.dart';
 
 class SquadPitchView extends StatelessWidget {
   final List<SquadPlayer> squad;
   final ValueChanged<SquadPlayer>? onPlayerTap;
+  /// Map of team ID → 3-letter short name (e.g. {1: "ARS", 21: "WHU"}).
+  /// When provided, the fixture badge uses the abbreviation instead of the
+  /// full name string from the backend.
+  final Map<int, String> teamShortNames;
 
   const SquadPitchView({
     super.key,
     required this.squad,
     this.onPlayerTap,
+    this.teamShortNames = const {},
   });
 
   @override
@@ -28,26 +36,38 @@ class SquadPitchView extends StatelessWidget {
     return Column(
       children: [
         // Pitch
-        Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+              ),
             ),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          child: Column(
-            children: [
-              _buildRow(fwds),
-              const SizedBox(height: 8),
-              _buildRow(mids),
-              const SizedBox(height: 8),
-              _buildRow(defs),
-              const SizedBox(height: 8),
-              _buildRow(gkps),
-            ],
+            child: Stack(
+              children: [
+                // Pitch decorations
+                const _PitchOverlay(),
+                // Player rows — GKP top, FWD bottom (matches React)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                  child: Column(
+                    children: [
+                      _buildRow(gkps),
+                      const SizedBox(height: 8),
+                      _buildRow(defs),
+                      const SizedBox(height: 8),
+                      _buildRow(mids),
+                      const SizedBox(height: 8),
+                      _buildRow(fwds),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         // Bench
@@ -64,12 +84,10 @@ class SquadPitchView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'BENCH',
+                  'Bench',
                   style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                     color: AppColors.textMuted,
-                    letterSpacing: 1,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -86,81 +104,261 @@ class SquadPitchView extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: players
-          .map((p) => _PitchPlayer(player: p, onTap: () => onPlayerTap?.call(p)))
+          .map((p) => _PitchPlayer(
+                player: p,
+                onTap: () => onPlayerTap?.call(p),
+                teamShortNames: teamShortNames,
+              ))
           .toList(),
     );
   }
 }
 
+/// Decorative pitch markings: grid pattern, center circle, halfway line.
+class _PitchOverlay extends StatelessWidget {
+  const _PitchOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomPaint(painter: _PitchPainter()),
+      ),
+    );
+  }
+}
+
+class _PitchPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.05)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    // Halfway line
+    final midY = size.height / 2;
+    canvas.drawLine(Offset(0, midY), Offset(size.width, midY), paint);
+
+    // Center circle
+    canvas.drawCircle(
+      Offset(size.width / 2, midY),
+      math.min(size.width, size.height) * 0.12,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
 class _PitchPlayer extends StatelessWidget {
   final SquadPlayer player;
   final VoidCallback? onTap;
+  final Map<int, String> teamShortNames;
 
-  const _PitchPlayer({required this.player, this.onTap});
+  const _PitchPlayer({
+    required this.player,
+    this.onTap,
+    this.teamShortNames = const {},
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 70,
+        width: 74,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Player image with badges
             Stack(
               clipBehavior: Clip.none,
               children: [
-                PlayerImage(playerCode: player.code, size: 36),
-                if (player.isCaptain)
+                // Portrait-ratio image matching React (45x56)
+                Image.network(
+                  AssetUrls.playerImage(player.code),
+                  width: 45,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Image.network(
+                    AssetUrls.playerImageFallback(player.code),
+                    width: 45,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 45,
+                      height: 56,
+                      color: Colors.white10,
+                      child: const Icon(Icons.person, color: Colors.white24),
+                    ),
+                  ),
+                ),
+                // Event points badge (top-left)
+                if (player.eventPoints != 0 ||
+                    player.minutes > 0 ||
+                    player.matchFinished)
                   Positioned(
-                    right: -4,
-                    top: -4,
+                    left: -8,
+                    top: -2,
                     child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
+                      width: 20,
+                      height: 18,
+                      decoration: BoxDecoration(
                         color: AppColors.primary,
                         shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
                       ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${player.eventPoints}',
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Captain badge (top-right)
+                if (player.isCaptain)
+                  Positioned(
+                    right: -8,
+                    top: -2,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      alignment: Alignment.center,
                       child: const Text(
                         'C',
-                        style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Vice-captain badge (top-right)
+                if (player.isViceCaptain)
+                  Positioned(
+                    right: -8,
+                    top: -2,
+                    child: Container(
+                      width: 18,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF374151),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'V',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Status indicator (bottom-right)
+                if (player.status != 'a')
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: _statusColor(player.status),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        '!',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
+            // Name + fixture card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              width: 74,
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: Text(
-                player.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                color: AppColors.card.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: AppColors.border,
+                  width: 0.5,
                 ),
               ),
-            ),
-            Text(
-              '${player.eventPoints}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: player.eventPoints > 0
-                    ? AppColors.accent
-                    : Colors.white70,
+              child: Column(
+                children: [
+                  Text(
+                    player.name,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Fixture difficulty badge
+                  FdrBadge(
+                    difficulty: player.fixtureDifficulty,
+                    label: _fixtureLabel(),
+                    width: 60,
+                    height: 16,
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Resolve fixture label: use 3-letter abbreviation if team map is available,
+  /// otherwise fall back to the backend-provided fixture string.
+  String _fixtureLabel() {
+    if (player.opponentId != null && teamShortNames.containsKey(player.opponentId)) {
+      final short = teamShortNames[player.opponentId]!;
+      // Extract (H)/(A) suffix from original fixture string
+      final venue = player.fixture.contains('(H)') ? ' (H)' : player.fixture.contains('(A)') ? ' (A)' : '';
+      return '$short$venue';
+    }
+    return player.fixture;
+  }
+
+  static Color _statusColor(String status) {
+    switch (status) {
+      case 'd':
+        return const Color(0xFFEAB308); // yellow
+      case 'i':
+        return AppColors.danger;
+      case 'u':
+        return const Color(0xFFF97316); // orange
+      default:
+        return const Color(0xFF6B7280); // gray
+    }
   }
 }

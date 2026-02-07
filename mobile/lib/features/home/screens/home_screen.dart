@@ -6,6 +6,7 @@ import '../../../data/models/squad_player.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/gameweek_navigator.dart';
 import '../../../core/widgets/loading_indicator.dart';
+import '../../explore/providers/club_viewer_providers.dart';
 import '../providers/squad_providers.dart';
 import '../widgets/analysis_result_card.dart';
 import '../widgets/chip_row.dart';
@@ -58,6 +59,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onRetry: () => ref.invalidate(squadProvider),
         ),
         data: (data) {
+          // Build team ID → short name map for fixture abbreviations
+          final teams = ref.watch(allTeamsProvider).valueOrNull ?? [];
+          final teamShortNames = {
+            for (final t in teams) t.id: t.shortName,
+          };
+
           return RefreshIndicator(
             color: AppColors.primary,
             onRefresh: () async => ref.invalidate(squadProvider),
@@ -91,6 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ? SquadPitchView(
                           squad: data.squad,
                           onPlayerTap: (player) => _showPlayerSheet(player),
+                          teamShortNames: teamShortNames,
                         )
                       : SquadListView(
                           squad: data.squad,

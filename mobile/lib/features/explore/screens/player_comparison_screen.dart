@@ -24,9 +24,7 @@ class _PlayerComparisonScreenState
   @override
   Widget build(BuildContext context) {
     final players = ref.watch(playerComparisonSelectionProvider);
-    final playerIds = players.map((p) => p.id).toList();
-    final historiesAsync =
-        ref.watch(comparisonHistoriesProvider(playerIds));
+    final historiesAsync = ref.watch(comparisonHistoriesProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Compare Players')),

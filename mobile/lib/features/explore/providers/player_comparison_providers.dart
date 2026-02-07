@@ -40,12 +40,16 @@ class ComparisonModeActive extends _$ComparisonModeActive {
 @riverpod
 Future<Map<int, List<PlayerHistoryEntry>>> comparisonHistories(
   Ref ref,
-  List<int> playerIds,
 ) async {
-  final results = <int, List<PlayerHistoryEntry>>{};
-  for (final id in playerIds) {
-    final summary = await ref.watch(playerSummaryProvider(id).future);
-    results[id] = summary.history;
-  }
-  return results;
+  final players = ref.watch(playerComparisonSelectionProvider);
+  final playerIds = players.map((p) => p.id).toList();
+
+  // Fetch all summaries in parallel
+  final futures = playerIds.map((id) => ref.watch(playerSummaryProvider(id).future));
+  final summaries = await Future.wait(futures);
+
+  return {
+    for (int i = 0; i < playerIds.length; i++)
+      playerIds[i]: summaries[i].history,
+  };
 }
