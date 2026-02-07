@@ -116,7 +116,8 @@ function Dashboard() {
 				setIsPrivate(false);
 			}
 		}
-	}, [paramTeamId, gwParam, authToken]); // Added authToken to dependency
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- fetchSquad is defined below and not memoized; adding it would cause infinite re-renders
+	}, [paramTeamId, gwParam, authToken]);
 
 	const fetchSquad = async (id, gw) => {
 		if (!isTeamLoaded) {

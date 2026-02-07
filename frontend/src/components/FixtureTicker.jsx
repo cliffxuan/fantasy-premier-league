@@ -27,17 +27,6 @@ const FixtureTicker = () => {
 		fetchData();
 	}, []);
 
-	const getDifficultyColor = (diff, type) => {
-		// Attack/Defense maps 1-5 (1=Easy, 5=Hard)
-		// Official FDR maps 1-5 (1=Easy, 5=Hard)
-		// We want green for easy (1-2), gray (3), red (4-5)
-
-		const val = Math.round(diff);
-		if (val <= 2) return 'bg-ds-primary text-white font-bold shadow-sm'; // Easy (Green equivalent) - using Primary for now or specific green
-		if (val === 3) return 'bg-ds-surface border border-ds-border text-ds-text-muted'; // Medium (Grey)
-		return 'bg-ds-danger text-white font-bold opacity-90'; // Hard (Red)
-	};
-
 	// Custom color map for 1-5 scale
 	const getFDRColor = (score) => {
 		if (score <= 2.2) return 'bg-green-500 text-white'; // Easy

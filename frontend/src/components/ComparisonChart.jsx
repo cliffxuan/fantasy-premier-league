@@ -125,7 +125,7 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 							}}
 							wrapperStyle={{ paddingTop: '10px' }}
 						/>
-						{players.map((p, index) => {
+						{players.map((p) => {
 							// Use a deterministic color based on ID to ensure consistency
 							// Simple hash: ID % colors.length
 							// const colorIndex = p.id % colors.length;

@@ -53,7 +53,7 @@ export function usePopover({ onShow, hideDelay = 100, flipThreshold = 500, mobil
 	// ------- Scroll / resize listeners -------
 	useEffect(() => {
 		if (isVisible) {
-			updatePosition();
+			updatePosition(); // eslint-disable-line react-hooks/set-state-in-effect -- positioning popover on mount is intentional
 			window.addEventListener('scroll', updatePosition, true);
 			window.addEventListener('resize', updatePosition);
 			return () => {

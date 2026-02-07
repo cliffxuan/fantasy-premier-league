@@ -8,14 +8,14 @@ describe('useCurrentGameweek', () => {
 	});
 
 	it('starts with loading=true and null gameweek', () => {
-		vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
+		vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
 		const { result } = renderHook(() => useCurrentGameweek());
 		expect(result.current.loading).toBe(true);
 		expect(result.current.gameweek).toBeNull();
 	});
 
 	it('fetches and sets gameweek on success', async () => {
-		vi.spyOn(global, 'fetch').mockResolvedValue({
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue({
 			ok: true,
 			json: async () => ({ gameweek: 15, status: { id: 15, name: 'Gameweek 15' } }),
 		});
@@ -31,7 +31,7 @@ describe('useCurrentGameweek', () => {
 	});
 
 	it('handles fetch failure gracefully', async () => {
-		vi.spyOn(global, 'fetch').mockRejectedValue(new Error('Network error'));
+		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		const { result } = renderHook(() => useCurrentGameweek());
@@ -44,7 +44,7 @@ describe('useCurrentGameweek', () => {
 	});
 
 	it('handles non-ok response', async () => {
-		vi.spyOn(global, 'fetch').mockResolvedValue({ ok: false });
+		vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false });
 
 		const { result } = renderHook(() => useCurrentGameweek());
 

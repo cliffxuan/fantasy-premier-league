@@ -24,7 +24,6 @@ const PlayerExplorer = () => {
 	const inputRef = useRef(null);
 
 	const [selectedPlayers, setSelectedPlayers] = useState([]); // List of IDs
-	const [showComparison, setShowComparison] = useState(false);
 	const [sortConfig, setSortConfig] = useState({ key: 'points_in_range', direction: 'desc' });
 
 	// Comparison Data
@@ -95,7 +94,7 @@ const PlayerExplorer = () => {
 
 				if (missing.length > 0) {
 					try {
-						const results = await Promise.all(missing.map((pid) => getPlayerSummary(pid).catch((e) => null)));
+						const results = await Promise.all(missing.map((pid) => getPlayerSummary(pid).catch(() => null)));
 
 						results.forEach((res, index) => {
 							if (res && res.history) {
@@ -113,7 +112,8 @@ const PlayerExplorer = () => {
 
 			fetchDetails();
 		}
-	}, [selectedPlayers]); // Data is fetched automatically when players are selected
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedPlayers]); // comparisonData intentionally excluded to avoid infinite loop
 
 	// Derived / Client-side filtered list
 	const filteredPlayers = useMemo(() => {

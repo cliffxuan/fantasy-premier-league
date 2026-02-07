@@ -154,16 +154,16 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 
 							<button
 								onClick={handleStartLogin}
-								disabled={loading || !!currentToken}
+								disabled={loading || Boolean(currentToken)}
 								className={`w-full font-bold rounded-lg px-6 py-4 text-sm active:scale-95 transition-all shadow-lg flex items-center justify-center gap-3 ${
-									!!currentToken
+									currentToken
 										? 'bg-ds-surface border border-ds-border text-ds-text-muted cursor-not-allowed'
 										: 'bg-ds-primary text-white hover:bg-ds-primary-hover shadow-ds-primary/20'
 								}`}
 							>
 								{loading ? (
 									<div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-								) : !!currentToken ? (
+								) : currentToken ? (
 									<>
 										<Check size={18} className="text-green-500" />
 										<span>Already Authenticated</span>

@@ -4,7 +4,7 @@ import TeamPopover from './TeamPopover';
 import useCurrentGameweek from '../hooks/useCurrentGameweek';
 
 const LeagueTable = () => {
-	const { gameweek: currentGw, loading: gwLoading } = useCurrentGameweek();
+	const { gameweek: currentGw } = useCurrentGameweek();
 	const [table, setTable] = useState([]);
 	const [gwRange, setGwRange] = useState({ start: 1, end: 38 });
 	const [maxGw, setMaxGw] = useState(38);

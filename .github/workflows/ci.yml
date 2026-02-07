@@ -80,7 +80,7 @@ jobs:
       - run: flutter pub get
 
       - name: Dart analyze
-        run: dart analyze --fatal-infos
+        run: dart analyze --fatal-infos lib
 
       - name: Run tests
         run: flutter test

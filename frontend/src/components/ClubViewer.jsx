@@ -61,12 +61,6 @@ const ClubViewer = () => {
 		}
 	};
 
-	const handleClubChange = (e) => {
-		const clubId = parseInt(e.target.value);
-		setSelectedClub(clubId);
-		handleFetch(clubId, gameweek);
-	};
-
 	const handleGwChange = (newGw) => {
 		setGameweek(newGw);
 		handleFetch(selectedClub, newGw);

@@ -12,7 +12,7 @@ const MarketOverview = () => {
 	const [markets, setMarkets] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [gw, setGw] = useState(null);
-	const [currentGw, setCurrentGw] = useState(null);
+	const [, setCurrentGw] = useState(null);
 	const [sortBy, setSortBy] = useState('time'); // 'time' or 'odds'
 	const [h2hStatsFilter, setH2hStatsFilter] = useState('all'); // 'all' or 'venue'
 
@@ -125,7 +125,7 @@ const MarketOverview = () => {
 	// History Modal State
 	const [showHistoryModal, setShowHistoryModal] = useState(false);
 	const [historyData, setHistoryData] = useState([]);
-	const [historyLoading, setHistoryLoading] = useState(false);
+	const [, setHistoryLoading] = useState(false);
 	const [selectedTeams, setSelectedTeams] = useState({ home: null, away: null });
 
 	// Lazy load HistoryModal? Or just import at top.
