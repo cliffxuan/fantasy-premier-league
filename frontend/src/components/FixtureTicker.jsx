@@ -117,6 +117,7 @@ const FixtureTicker = () => {
 										<img
 											src={`https://resources.premierleague.com/premierleague/badges/70/t${team.team_code}.png`}
 											alt={team.team_short}
+											loading="lazy"
 											className="w-6 h-6 object-contain"
 											onError={(e) => {
 												e.target.style.display = 'none';

@@ -186,6 +186,7 @@ const ClubViewer = () => {
 														<img
 															src={`https://resources.premierleague.com/premierleague/badges/20/t${fix.opponent_code}.png`}
 															alt={fix.opponent_short}
+															loading="lazy"
 															className="w-5 h-5 object-contain opacity-80 group-hover:opacity-100 transition-opacity"
 															onError={(e) => (e.target.style.display = 'none')}
 														/>
@@ -254,6 +255,7 @@ const ClubViewer = () => {
 										<img
 											src={`https://resources.premierleague.com/premierleague/badges/50/t${teams.find((t) => t.id === selectedClub)?.code}.png`}
 											alt="Badge"
+											loading="lazy"
 											className="w-6 h-6 object-contain"
 										/>
 										<span className="font-bold">
@@ -317,6 +319,7 @@ const ClubViewer = () => {
 										<img
 											src={`https://resources.premierleague.com/premierleague/badges/50/t${team.code}.png`}
 											alt={team.name}
+											loading="lazy"
 											className="w-8 h-8 object-contain"
 										/>
 										<span className="font-bold text-sm">{team.full_name || team.name}</span>
@@ -386,6 +389,7 @@ const ClubViewer = () => {
 												<img
 													src={`https://resources.premierleague.com/premierleague/badges/50/t${homeTeam.code}.png`}
 													alt="Home"
+													loading="lazy"
 													className="w-8 h-8 object-contain"
 												/>
 											)}
@@ -418,6 +422,7 @@ const ClubViewer = () => {
 												<img
 													src={`https://resources.premierleague.com/premierleague/badges/50/t${awayTeam.code}.png`}
 													alt="Away"
+													loading="lazy"
 													className="w-8 h-8 object-contain"
 												/>
 											)}
@@ -491,6 +496,7 @@ const ClubViewer = () => {
 																src={`https://resources.premierleague.com/premierleague/badges/50/t${squadData.team.code}.png`}
 																className="w-10 h-10 object-contain drop-shadow-md"
 																alt={squadData.team?.name}
+																loading="lazy"
 															/>
 														)}
 														<h2 className="text-2xl font-bold">{squadData.team?.full_name || squadData.team?.name}</h2>
@@ -531,6 +537,7 @@ const ClubViewer = () => {
 																		src={`https://resources.premierleague.com/premierleague/badges/50/t${data.team.code}.png`}
 																		className="w-10 h-10 object-contain drop-shadow-md"
 																		alt={data.team?.name}
+																		loading="lazy"
 																	/>
 																)}
 																<h2 className="text-2xl font-bold">{data.team?.name}</h2>

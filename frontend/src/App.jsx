@@ -1,22 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, X, FileText, Code, Check, Key } from 'lucide-react';
 import { analyzeTeam, getSquad, getMe } from './api';
-import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
-import PointsHistoryChart from './components/PointsHistoryChart';
 import TeamHeader from './components/TeamHeader';
-import LeagueTable from './components/LeagueTable';
-import DreamTeam from './components/DreamTeam';
-import TopManagersAnalysis from './components/TopManagersAnalysis';
-import Solver from './components/Solver';
 import FixtureTicker from './components/FixtureTicker';
-import MarketOverview from './components/MarketOverview';
-import ClubViewer from './components/ClubViewer';
-import FormAnalysis from './components/FormAnalysis';
-import PlayerExplorer from './components/PlayerExplorer';
 import AuthModal from './components/AuthModal';
 import TeamInput from './components/TeamInput';
+
+// Lazy-loaded tab components for code splitting
+const AnalysisResult = lazy(() => import('./components/AnalysisResult'));
+const PointsHistoryChart = lazy(() => import('./components/PointsHistoryChart'));
+const LeagueTable = lazy(() => import('./components/LeagueTable'));
+const DreamTeam = lazy(() => import('./components/DreamTeam'));
+const TopManagersAnalysis = lazy(() => import('./components/TopManagersAnalysis'));
+const Solver = lazy(() => import('./components/Solver'));
+const MarketOverview = lazy(() => import('./components/MarketOverview'));
+const ClubViewer = lazy(() => import('./components/ClubViewer'));
+const FormAnalysis = lazy(() => import('./components/FormAnalysis'));
+const PlayerExplorer = lazy(() => import('./components/PlayerExplorer'));
 
 const TABS = [
 	{ id: 'squad', label: 'My Squad' },
@@ -312,194 +314,210 @@ function Dashboard() {
 
 				<div className="grid grid-cols-1 lg:grid-cols-[3fr_1fr] gap-8 items-start">
 					{/* LEFT COLUMN: Main Content */}
-					<div className="flex flex-col gap-8 min-w-0">
-						{/* Squad Tab */}
-						<div
-							style={{ display: activeTab === 'squad' ? 'block' : 'none' }}
-							className="animate-in fade-in duration-300"
-						>
-							{!isTeamLoaded ? (
-								<div className="text-center py-20 flex flex-col items-center justify-center opacity-60">
-									<div className="w-16 h-16 rounded-full bg-ds-card border border-ds-border flex items-center justify-center mb-6 shadow-xl">
-										<span className="text-3xl">⚽️</span>
+					<Suspense
+						fallback={<div className="flex items-center justify-center py-20 text-ds-text-muted">Loading...</div>}
+					>
+						<div className="flex flex-col gap-8 min-w-0">
+							{/* Squad Tab */}
+							<div
+								style={{ display: activeTab === 'squad' ? 'block' : 'none' }}
+								className="animate-in fade-in duration-300"
+							>
+								{!isTeamLoaded ? (
+									<div className="text-center py-20 flex flex-col items-center justify-center opacity-60">
+										<div className="w-16 h-16 rounded-full bg-ds-card border border-ds-border flex items-center justify-center mb-6 shadow-xl">
+											<span className="text-3xl">⚽️</span>
+										</div>
+										<h2 className="text-2xl font-bold text-ds-text mb-6">My Squad</h2>
+										<div className="flex flex-col gap-3 justify-center w-full max-w-[400px] items-center">
+											<TeamInput
+												centered={true}
+												teamId={teamId}
+												setTeamId={setTeamId}
+												handleGoClick={handleGoClick}
+												loading={loading}
+											/>
+											<button
+												onClick={() => setShowAuthModal(true)}
+												className="w-full bg-ds-surface border border-ds-border hover:border-ds-primary/50 text-ds-text font-bold rounded-md px-6 py-3 text-sm hover:bg-ds-surface/80 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+											>
+												<Key size={16} className="text-ds-primary group-hover:scale-110 transition-transform" />
+												<span>Sign in with FPL</span>
+											</button>
+										</div>
+										<p className="text-ds-text-muted max-w-md mx-auto mt-4 text-sm">
+											Enter your Team ID to unlock detailed analysis, point history, and AI insights.
+										</p>
 									</div>
-									<h2 className="text-2xl font-bold text-ds-text mb-6">My Squad</h2>
-									<div className="flex flex-col gap-3 justify-center w-full max-w-[400px] items-center">
-										<TeamInput
-											centered={true}
-											teamId={teamId}
-											setTeamId={setTeamId}
-											handleGoClick={handleGoClick}
-											loading={loading}
+								) : (
+									<div className="flex flex-col gap-8">
+										{/* Input for switching teams */}
+										<div className="flex justify-end border-b border-ds-border pb-4">
+											<TeamInput
+												teamId={teamId}
+												setTeamId={setTeamId}
+												handleGoClick={handleGoClick}
+												loading={loading}
+											/>
+											<button
+												onClick={() => setShowAuthModal(true)}
+												className="ml-3 p-2 bg-ds-surface border border-ds-border rounded-md text-ds-text-muted hover:text-ds-primary hover:border-ds-primary/50 transition-all group"
+												title="Update Auth Token"
+											>
+												<Key size={20} className="group-hover:scale-110 transition-transform" />
+											</button>
+										</div>
+
+										<TeamHeader
+											entry={entry}
+											freeTransfers={calculatedFreeTransfers}
+											isPrivate={isPrivate}
+											transferDetails={transferDetails}
 										/>
-										<button
-											onClick={() => setShowAuthModal(true)}
-											className="w-full bg-ds-surface border border-ds-border hover:border-ds-primary/50 text-ds-text font-bold rounded-md px-6 py-3 text-sm hover:bg-ds-surface/80 active:scale-95 transition-all flex items-center justify-center gap-2 group"
-										>
-											<Key size={16} className="text-ds-primary group-hover:scale-110 transition-transform" />
-											<span>Sign in with FPL</span>
-										</button>
-									</div>
-									<p className="text-ds-text-muted max-w-md mx-auto mt-4 text-sm">
-										Enter your Team ID to unlock detailed analysis, point history, and AI insights.
-									</p>
-								</div>
-							) : (
-								<div className="flex flex-col gap-8">
-									{/* Input for switching teams */}
-									<div className="flex justify-end border-b border-ds-border pb-4">
-										<TeamInput teamId={teamId} setTeamId={setTeamId} handleGoClick={handleGoClick} loading={loading} />
-										<button
-											onClick={() => setShowAuthModal(true)}
-											className="ml-3 p-2 bg-ds-surface border border-ds-border rounded-md text-ds-text-muted hover:text-ds-primary hover:border-ds-primary/50 transition-all group"
-											title="Update Auth Token"
-										>
-											<Key size={20} className="group-hover:scale-110 transition-transform" />
-										</button>
-									</div>
-
-									<TeamHeader
-										entry={entry}
-										freeTransfers={calculatedFreeTransfers}
-										isPrivate={isPrivate}
-										transferDetails={transferDetails}
-									/>
-									{squad && (
-										<SquadDisplay
-											squad={squad}
-											chips={chips}
-											gameweek={viewGw || entry?.current_event}
-											transfers={transfers}
-											onGwChange={handleGwChange}
-											onTabSwitch={() => handleTabChange('dream_team')}
-											loading={squadLoading}
-											currentGw={entry?.current_event}
-											history={history}
-										/>
-									)}
-								</div>
-							)}
-						</div>
-
-						<div style={{ display: activeTab === 'dream_team' ? 'block' : 'none' }}>
-							<DreamTeam
-								currentGw={entry?.current_event}
-								gw={viewGw}
-								onGwChange={handleGwChange}
-								onTabSwitch={() => handleTabChange('squad')}
-								isActive={activeTab === 'dream_team'}
-							/>
-						</div>
-
-						<div style={{ display: activeTab === 'club_viewer' ? 'block' : 'none' }}>
-							<ClubViewer />
-						</div>
-
-						<div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
-							<TopManagersAnalysis />
-						</div>
-
-						<div style={{ display: activeTab === 'solver' ? 'block' : 'none' }}>
-							<div className="space-y-8">
-								<Solver />
-								<FixtureTicker />
-							</div>
-						</div>
-
-						<div style={{ display: activeTab === 'matches' ? 'block' : 'none' }}>
-							<MarketOverview />
-						</div>
-
-						<div style={{ display: activeTab === 'form' ? 'block' : 'none' }}>
-							<FormAnalysis />
-						</div>
-
-						<div style={{ display: activeTab === 'players' ? 'block' : 'none' }}>
-							<PlayerExplorer />
-						</div>
-					</div>
-
-					{/* RIGHT COLUMN: Sidebar */}
-					<div className="flex flex-col gap-6 sticky top-32">
-						{/* Team Analysis Promo - Call To Action */}
-						{!isTeamLoaded && activeTab !== 'squad' && (
-							<div className="bg-ds-card p-6 rounded-xl border border-ds-primary/20 shadow-[0_0_30px_rgba(59,130,246,0.05)] relative overflow-hidden group hover:border-ds-primary/40 transition-all">
-								{/* Decorative Background */}
-								<div className="absolute -top-10 -right-10 w-32 h-32 bg-ds-primary/10 rounded-full blur-3xl group-hover:bg-ds-primary/20 transition-all"></div>
-
-								<div className="relative z-10">
-									<div className="flex items-center gap-2 mb-2">
-										<span className="text-xl">🚀</span>
-										<h3 className="text-lg font-bold text-ds-text">Unlock AI Insights</h3>
-									</div>
-									<p className="text-xs text-ds-text-muted mb-4 leading-relaxed">
-										Enter your Team ID to access live points tracking, transfer recommendations, and future planning
-										tools.
-									</p>
-									<div className="scale-95 origin-left w-[105%]">
-										<TeamInput teamId={teamId} setTeamId={setTeamId} handleGoClick={handleGoClick} loading={loading} />
-									</div>
-								</div>
-							</div>
-						)}
-
-						{/* Squad Specific Tools (Conditional) */}
-						{activeTab === 'squad' && isTeamLoaded && (
-							<div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
-								<PointsHistoryChart history={history} />
-
-								<div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
-									<h3 className="text-lg font-bold text-ds-text mb-2">Run Analysis</h3>
-									<p className="text-sm text-ds-text-muted mb-6 leading-relaxed">
-										Generate AI-powered insights for your current team selection.
-									</p>
-									<form onSubmit={handleSubmit} className="flex flex-col gap-3">
-										<button
-											type="submit"
-											disabled={loading}
-											className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 font-mono shadow-lg relative overflow-hidden flex items-center justify-center gap-2 group"
-										>
-											{loading ? (
-												'PROCESSING...'
-											) : (
-												<>
-													<span>RUN ANALYSIS</span>
-												</>
-											)}
-										</button>
-										<button
-											type="button"
-											onClick={handleGeneratePrompt}
-											disabled={loading}
-											className="w-full p-2.5 rounded-md border border-ds-border bg-ds-surface text-ds-text text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-ds-card-hover hover:border-ds-primary/50 transition-all disabled:opacity-50 flex items-center justify-center gap-2 group"
-										>
-											<FileText size={14} className="group-hover:text-ds-primary transition-colors" />
-											Generate Prompt
-										</button>
-									</form>
-								</div>
-
-								{error && (
-									<div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
-										{error}
+										{squad && (
+											<SquadDisplay
+												squad={squad}
+												chips={chips}
+												gameweek={viewGw || entry?.current_event}
+												transfers={transfers}
+												onGwChange={handleGwChange}
+												onTabSwitch={() => handleTabChange('dream_team')}
+												loading={squadLoading}
+												currentGw={entry?.current_event}
+												history={history}
+											/>
+										)}
 									</div>
 								)}
+							</div>
 
-								<AnalysisResult
-									data={result}
-									onShowPrompt={() => {
-										if (result?.generated_prompt) {
-											setGeneratedPrompt(result.generated_prompt);
-											setShowPromptModal(true);
-										}
-									}}
+							<div style={{ display: activeTab === 'dream_team' ? 'block' : 'none' }}>
+								<DreamTeam
+									currentGw={entry?.current_event}
+									gw={viewGw}
+									onGwChange={handleGwChange}
+									onTabSwitch={() => handleTabChange('squad')}
+									isActive={activeTab === 'dream_team'}
 								/>
 							</div>
-						)}
 
-						{/* Persistent League Table */}
-						<LeagueTable />
-					</div>
+							<div style={{ display: activeTab === 'club_viewer' ? 'block' : 'none' }}>
+								<ClubViewer />
+							</div>
+
+							<div style={{ display: activeTab === 'analysis' ? 'block' : 'none' }}>
+								<TopManagersAnalysis />
+							</div>
+
+							<div style={{ display: activeTab === 'solver' ? 'block' : 'none' }}>
+								<div className="space-y-8">
+									<Solver />
+									<FixtureTicker />
+								</div>
+							</div>
+
+							<div style={{ display: activeTab === 'matches' ? 'block' : 'none' }}>
+								<MarketOverview />
+							</div>
+
+							<div style={{ display: activeTab === 'form' ? 'block' : 'none' }}>
+								<FormAnalysis />
+							</div>
+
+							<div style={{ display: activeTab === 'players' ? 'block' : 'none' }}>
+								<PlayerExplorer />
+							</div>
+						</div>
+					</Suspense>
+
+					{/* RIGHT COLUMN: Sidebar */}
+					<Suspense fallback={<div className="text-ds-text-muted text-sm">Loading...</div>}>
+						<div className="flex flex-col gap-6 sticky top-32">
+							{/* Team Analysis Promo - Call To Action */}
+							{!isTeamLoaded && activeTab !== 'squad' && (
+								<div className="bg-ds-card p-6 rounded-xl border border-ds-primary/20 shadow-[0_0_30px_rgba(59,130,246,0.05)] relative overflow-hidden group hover:border-ds-primary/40 transition-all">
+									{/* Decorative Background */}
+									<div className="absolute -top-10 -right-10 w-32 h-32 bg-ds-primary/10 rounded-full blur-3xl group-hover:bg-ds-primary/20 transition-all"></div>
+
+									<div className="relative z-10">
+										<div className="flex items-center gap-2 mb-2">
+											<span className="text-xl">🚀</span>
+											<h3 className="text-lg font-bold text-ds-text">Unlock AI Insights</h3>
+										</div>
+										<p className="text-xs text-ds-text-muted mb-4 leading-relaxed">
+											Enter your Team ID to access live points tracking, transfer recommendations, and future planning
+											tools.
+										</p>
+										<div className="scale-95 origin-left w-[105%]">
+											<TeamInput
+												teamId={teamId}
+												setTeamId={setTeamId}
+												handleGoClick={handleGoClick}
+												loading={loading}
+											/>
+										</div>
+									</div>
+								</div>
+							)}
+
+							{/* Squad Specific Tools (Conditional) */}
+							{activeTab === 'squad' && isTeamLoaded && (
+								<div className="flex flex-col gap-6 animate-in slide-in-from-right-4 duration-500">
+									<PointsHistoryChart history={history} />
+
+									<div className="bg-ds-card p-6 rounded-xl border border-ds-border shadow-sm">
+										<h3 className="text-lg font-bold text-ds-text mb-2">Run Analysis</h3>
+										<p className="text-sm text-ds-text-muted mb-6 leading-relaxed">
+											Generate AI-powered insights for your current team selection.
+										</p>
+										<form onSubmit={handleSubmit} className="flex flex-col gap-3">
+											<button
+												type="submit"
+												disabled={loading}
+												className="w-full p-3 rounded-md border-none bg-ds-primary text-white font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-ds-primary-hover active:scale-95 transition-all disabled:opacity-50 font-mono shadow-lg relative overflow-hidden flex items-center justify-center gap-2 group"
+											>
+												{loading ? (
+													'PROCESSING...'
+												) : (
+													<>
+														<span>RUN ANALYSIS</span>
+													</>
+												)}
+											</button>
+											<button
+												type="button"
+												onClick={handleGeneratePrompt}
+												disabled={loading}
+												className="w-full p-2.5 rounded-md border border-ds-border bg-ds-surface text-ds-text text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-ds-card-hover hover:border-ds-primary/50 transition-all disabled:opacity-50 flex items-center justify-center gap-2 group"
+											>
+												<FileText size={14} className="group-hover:text-ds-primary transition-colors" />
+												Generate Prompt
+											</button>
+										</form>
+									</div>
+
+									{error && (
+										<div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-4 rounded-lg text-center font-mono text-sm">
+											{error}
+										</div>
+									)}
+
+									<AnalysisResult
+										data={result}
+										onShowPrompt={() => {
+											if (result?.generated_prompt) {
+												setGeneratedPrompt(result.generated_prompt);
+												setShowPromptModal(true);
+											}
+										}}
+									/>
+								</div>
+							)}
+
+							{/* Persistent League Table */}
+							<LeagueTable />
+						</div>
+					</Suspense>
 				</div>
 			</main>
 

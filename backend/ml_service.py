@@ -1,8 +1,9 @@
 import asyncio
 import logging
 import os
-import pickle
 
+import joblib
+import numpy as np
 import polars as pl
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.impute import SimpleImputer
@@ -29,8 +30,7 @@ class MLService:
     def _load_model(self):
         if os.path.exists(MODEL_FILE):
             try:
-                with open(MODEL_FILE, "rb") as f:
-                    self.model = pickle.load(f)
+                self.model = joblib.load(MODEL_FILE)
                 logger.info("Loaded FPL ML Model.")
             except Exception as e:
                 logger.error(f"Failed to load model: {e}")
@@ -194,10 +194,8 @@ class MLService:
 
         return final_df
 
-    def train_model(self, df: pl.DataFrame | None = None):
-        """
-        Trains a Random Forest model on the collected data.
-        """
+    def _train_model_sync(self, df: pl.DataFrame | None = None):
+        """Synchronous model training — call via asyncio.to_thread."""
         if df is None:
             if os.path.exists(TRAINING_DATA_FILE):
                 try:
@@ -211,7 +209,6 @@ class MLService:
 
         logger.info("Training Model...")
 
-        # Features
         feature_cols = [
             "position",
             "cost",
@@ -225,21 +222,15 @@ class MLService:
         ]
         target_col = "target_points"
 
-        # Check for missing columns
         missing = [c for c in feature_cols + [target_col] if c not in df.columns]
         if missing:
             logger.error(f"Missing columns in training data: {missing}")
             return
 
-        # Drop nulls
         df = df.drop_nulls(subset=feature_cols + [target_col])
 
-        # Convert to Pandas or Numpy for Scikit-Learn
-        # Polars has to_pandas()
-        pdf = df.select(feature_cols + [target_col]).to_pandas()
-
-        X = pdf[feature_cols]
-        y = pdf[target_col]
+        X = df.select(feature_cols).to_numpy().astype(np.float64)
+        y = df.select(target_col).to_numpy().ravel().astype(np.float64)
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -259,11 +250,15 @@ class MLService:
         score = pipeline.score(X_test, y_test)
         logger.info(f"Model trained. R^2 Score: {score:.4f}")
 
-        with open(MODEL_FILE, "wb") as f:
-            pickle.dump(pipeline, f)
+        os.makedirs(DATA_DIR, exist_ok=True)
+        joblib.dump(pipeline, MODEL_FILE)
 
         self.model = pipeline
         return score
+
+    async def train_model(self, df: pl.DataFrame | None = None):
+        """Train model off the event loop so it doesn't block."""
+        return await asyncio.to_thread(self._train_model_sync, df)
 
     async def predict_next_gw(self, gw: int) -> dict[int, float]:
         """
@@ -273,7 +268,7 @@ class MLService:
         if not self.model:
             logger.warning("Model not loaded. Attempting to train if data exists...")
             if os.path.exists(TRAINING_DATA_FILE):
-                self.train_model()
+                await self.train_model()
             else:
                 logger.warning("No training data available. Skipping prediction.")
                 return {}
@@ -381,8 +376,7 @@ class MLService:
             "ict_index",
         ]
 
-        # Convert to Pandas/Numpy for sklearn
-        X_pred = df_inf.select(feature_cols).to_pandas()
+        X_pred = df_inf.select(feature_cols).to_numpy().astype(np.float64)
 
         # Predict
         preds = self.model.predict(X_pred)

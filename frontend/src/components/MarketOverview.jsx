@@ -117,6 +117,7 @@ const MarketOverview = () => {
 		<img
 			src={getTeamBadgeUrl(code)}
 			alt="Badge"
+			loading="lazy"
 			className="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-sm"
 			onError={(e) => (e.target.style.display = 'none')}
 		/>

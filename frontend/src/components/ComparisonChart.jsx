@@ -14,37 +14,35 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 		const maxGw = filters?.maxGw || 38;
 		const venue = filters?.venue || 'both';
 
-		let result = [];
-
-		// 1. Get all unique GWs from all players
+		// Pre-index player history by round for O(1) lookups
+		const indexedData = {};
 		const allGws = new Set();
-		Object.values(data).forEach((pHistory) => {
-			pHistory.forEach((h) => allGws.add(h.round));
-		});
+		for (const [pid, pHistory] of Object.entries(data)) {
+			const byRound = new Map();
+			for (const h of pHistory) {
+				byRound.set(h.round, h);
+				allGws.add(h.round);
+			}
+			indexedData[pid] = byRound;
+		}
 
-		// Filter GWs by range
 		const gws = Array.from(allGws)
 			.filter((gw) => gw >= minGw && gw <= maxGw)
 			.sort((a, b) => a - b);
 
-		// Cumulative totals tracker (start from 0 or start from sum of previous GWs?
-		// Usually cumulative chart within a range starts from 0 for that range, or actual total?)
-		// Let's do actual total from GW1 but only display from minGw?
-		// No, usually "Period stats" implies stats IN that period. So start from 0 at minGw.
 		const cumulative = {};
 		players.forEach((p) => (cumulative[p.id] = 0));
 
+		const result = [];
 		gws.forEach((gw) => {
 			const point = { gw };
 			players.forEach((p) => {
-				const pHistory = data[p.id] || [];
-				const gwData = pHistory.find((h) => h.round === gw);
+				const gwData = indexedData[p.id]?.get(gw);
 
 				let weekPoints = 0;
 				let isValidVenue = true;
 
 				if (gwData) {
-					// Check Venue
 					if (venue === 'home' && !gwData.was_home) isValidVenue = false;
 					if (venue === 'away' && gwData.was_home) isValidVenue = false;
 
@@ -52,17 +50,12 @@ const ComparisonChart = ({ data, players, filters, playerColors }) => {
 						weekPoints = gwData.total_points;
 					}
 				} else {
-					// Player didn't play or no data
 					isValidVenue = false;
 				}
 
 				if (viewMode === 'weekly') {
-					// If invalid venue, return null so we don't plot a point (or 0?)
-					// If we return 0, it looks like a blank. If null, it's a gap.
-					// Let's return null for clearer "this fixture doesn't count"
 					point[p.id] = isValidVenue ? weekPoints : null;
 				} else {
-					// Cumulative: adds 0 if invalid venue
 					if (isValidVenue) {
 						cumulative[p.id] += weekPoints;
 					}

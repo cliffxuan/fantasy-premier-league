@@ -51,6 +51,17 @@ class FPLService:
     _last_updated: dict[str, float] = {}
     _cache_lock = asyncio.Lock()
     CACHE_TTL = BOOTSTRAP_CACHE_TTL
+    _http_client: httpx.AsyncClient | None = None
+
+    @classmethod
+    def _get_client(cls) -> httpx.AsyncClient:
+        """Return a shared httpx client, creating one if needed."""
+        if cls._http_client is None or cls._http_client.is_closed:
+            cls._http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(30.0),
+                limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+            )
+        return cls._http_client
 
     @staticmethod
     def get_authorize_url() -> str:
@@ -74,44 +85,44 @@ class FPLService:
 
     async def exchange_code(self, code: str) -> dict[str, Any] | None:
         """Exchanges a PingOne authorization code for access/refresh tokens."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{PINGONE_AUTH_URL}/as/token",
-                data={
-                    "grant_type": "authorization_code",
-                    "code": code,
-                    "redirect_uri": PINGONE_REDIRECT_URI,
-                    "client_id": PINGONE_CLIENT_ID,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
+        client = self._get_client()
+        response = await client.post(
+            f"{PINGONE_AUTH_URL}/as/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": PINGONE_REDIRECT_URI,
+                "client_id": PINGONE_CLIENT_ID,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
 
-            if response.status_code != 200:
-                error = response.json()
-                logger.error(f"Token exchange failed: {error}")
-                return None
+        if response.status_code != 200:
+            error = response.json()
+            logger.error(f"Token exchange failed: {error}")
+            return None
 
-            return response.json()
+        return response.json()
 
     async def refresh_access_token(self, refresh_token: str) -> dict[str, Any] | None:
         """Uses a refresh token to get a new access token."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{PINGONE_AUTH_URL}/as/token",
-                data={
-                    "grant_type": "refresh_token",
-                    "refresh_token": refresh_token,
-                    "client_id": PINGONE_CLIENT_ID,
-                },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
+        client = self._get_client()
+        response = await client.post(
+            f"{PINGONE_AUTH_URL}/as/token",
+            data={
+                "grant_type": "refresh_token",
+                "refresh_token": refresh_token,
+                "client_id": PINGONE_CLIENT_ID,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
 
-            if response.status_code != 200:
-                error = response.json()
-                logger.error(f"Token refresh failed: {error}")
-                return None
+        if response.status_code != 200:
+            error = response.json()
+            logger.error(f"Token refresh failed: {error}")
+            return None
 
-            return response.json()
+        return response.json()
 
     async def get_bootstrap_static(self) -> dict[str, Any]:
         async with self._cache_lock:
@@ -119,36 +130,36 @@ class FPLService:
             if "bootstrap" in self._cache and (now - self._last_updated.get("bootstrap", 0)) < self.CACHE_TTL:
                 return self._cache["bootstrap"]
 
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{FPL_BASE_URL}/bootstrap-static/")
-                response.raise_for_status()
-                data = response.json()
+            client = self._get_client()
+            response = await client.get(f"{FPL_BASE_URL}/bootstrap-static/")
+            response.raise_for_status()
+            data = response.json()
 
-                # Populate full_name from overrides
-                for team in data.get("teams", []):
-                    team["full_name"] = NAME_TO_FULL_NAME.get(team["name"], team["name"])
+            # Populate full_name from overrides
+            for team in data.get("teams", []):
+                team["full_name"] = NAME_TO_FULL_NAME.get(team["name"], team["name"])
 
-                self._cache["bootstrap"] = data
-                self._last_updated["bootstrap"] = now
-                return data
+            self._cache["bootstrap"] = data
+            self._last_updated["bootstrap"] = now
+            return data
 
     async def get_entry_history(self, team_id: int) -> dict[str, Any]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/history/")
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/history/")
+        response.raise_for_status()
+        return response.json()
 
     async def get_entry_picks(self, team_id: int, gw: int) -> dict[str, Any]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/event/{gw}/picks/")
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/event/{gw}/picks/")
+        response.raise_for_status()
+        return response.json()
 
     async def get_transfers(self, team_id: int) -> list:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/transfers/")
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/transfers/")
+        response.raise_for_status()
+        return response.json()
 
     async def get_me(self, auth_token: str) -> dict[str, Any]:
         headers = {
@@ -162,10 +173,10 @@ class FPLService:
             auth_token = f"Bearer {auth_token}"
         headers["x-api-authorization"] = auth_token
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/me/", headers=headers)
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/me/", headers=headers)
+        response.raise_for_status()
+        return response.json()
 
     async def get_my_team(self, team_id: int, auth_token: str) -> dict[str, Any]:
         headers = {
@@ -185,22 +196,22 @@ class FPLService:
 
         headers["x-api-authorization"] = auth_token
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/my-team/{team_id}/", headers=headers)
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/my-team/{team_id}/", headers=headers)
+        response.raise_for_status()
+        return response.json()
 
     async def get_entry(self, team_id: int) -> dict[str, Any]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/")
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/entry/{team_id}/")
+        response.raise_for_status()
+        return response.json()
 
     async def get_event_live(self, gw: int) -> dict[str, Any]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/event/{gw}/live/")
-            response.raise_for_status()
-            return response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/event/{gw}/live/")
+        response.raise_for_status()
+        return response.json()
 
     async def get_enriched_squad(
         self, team_id: int, gw: int | None = None, auth_token: str | None = None
@@ -643,22 +654,22 @@ class FPLService:
             if "fixtures" in self._cache and (now - self._last_updated.get("fixtures", 0)) < self.CACHE_TTL:
                 return self._cache["fixtures"]
 
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{FPL_BASE_URL}/fixtures/")
-                response.raise_for_status()
-                data = response.json()
+            client = self._get_client()
+            response = await client.get(f"{FPL_BASE_URL}/fixtures/")
+            response.raise_for_status()
+            data = response.json()
 
-                # Parse into models
-                fixtures = []
-                for f in data:
-                    try:
-                        fixtures.append(Fixture(**f))
-                    except ValidationError:
-                        logger.warning(f"Failed parsing fixture: {f}")
+            # Parse into models
+            fixtures = []
+            for f in data:
+                try:
+                    fixtures.append(Fixture(**f))
+                except ValidationError:
+                    logger.warning(f"Failed parsing fixture: {f}")
 
-                self._cache["fixtures"] = fixtures
-                self._last_updated["fixtures"] = now
-                return fixtures
+            self._cache["fixtures"] = fixtures
+            self._last_updated["fixtures"] = now
+            return fixtures
 
     async def get_live_fixtures(self, gw: int) -> list[Fixture]:
         bootstrap = await self.get_bootstrap_static()
@@ -670,13 +681,13 @@ class FPLService:
         history_service = HistoryService()
         await history_service._ensure_history_data()
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/fixtures/", params={"event": gw})
-            response.raise_for_status()
-            data = response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/fixtures/", params={"event": gw})
+        response.raise_for_status()
+        data = response.json()
 
-            # Convert to Models
-            fixtures = [Fixture(**f) for f in data]
+        # Convert to Models
+        fixtures = [Fixture(**f) for f in data]
 
         # Enrich with team names and H2H Stats
         for f in fixtures:
@@ -770,10 +781,10 @@ class FPLService:
     async def get_pulse_lineup(self, pulse_match_id: int) -> dict[str, Any]:
         url = f"https://sdp-prem-prod.premier-league-prod.pulselive.com/api/v3/matches/{pulse_match_id}/lineups"
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-                if response.status_code == 200:
-                    return response.json()
+            client = self._get_client()
+            response = await client.get(url)
+            if response.status_code == 200:
+                return response.json()
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             logger.debug(f"Failed to fetch pulse lineup for {pulse_match_id}: {e}")
         return {}
@@ -906,6 +917,10 @@ class FPLService:
         if not fixture_strs:
             max_difficulty = 0
 
+        # Pre-index for O(1) lookups
+        _starting_xi_index = {code: idx for idx, code in enumerate(starting_xi_codes)}
+        _subs_index = {code: idx for idx, code in enumerate(subs_codes)}
+
         squad = []
         for player in club_players:
             # Filter by Matchday Squad if available
@@ -925,12 +940,12 @@ class FPLService:
             sort_rank = 2
             lineup_index = 999
 
-            if p_code in starting_xi_codes:
+            if p_code in _starting_xi_index:
                 sort_rank = 0
-                lineup_index = starting_xi_codes.index(p_code)
-            elif p_code in subs_codes:
+                lineup_index = _starting_xi_index[p_code]
+            elif p_code in _subs_index:
                 sort_rank = 1
-                lineup_index = subs_codes.index(p_code)
+                lineup_index = _subs_index[p_code]
 
             squad.append(
                 {
@@ -1299,68 +1314,68 @@ class FPLService:
         teams = {t["id"]: t for t in bootstrap["teams"]}
         elements = {p["id"]: p for p in bootstrap["elements"]}
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/element-summary/{player_id}/")
-            response.raise_for_status()
-            data = response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/element-summary/{player_id}/")
+        response.raise_for_status()
+        data = response.json()
 
-            # Enrich history
-            for fixture in data.get("history", []):
-                opp_id = fixture["opponent_team"]
-                fixture["opponent_short_name"] = teams[opp_id]["short_name"] if opp_id in teams else "UNK"
+        # Enrich history
+        for fixture in data.get("history", []):
+            opp_id = fixture["opponent_team"]
+            fixture["opponent_short_name"] = teams[opp_id]["short_name"] if opp_id in teams else "UNK"
 
-            # Enrich fixtures
-            for fixture in data.get("fixtures", []):
-                h_id = fixture["team_h"]
-                a_id = fixture["team_a"]
-                fixture["team_h_short"] = teams[h_id]["short_name"] if h_id in teams else "UNK"
-                fixture["team_a_short"] = teams[a_id]["short_name"] if a_id in teams else "UNK"
+        # Enrich fixtures
+        for fixture in data.get("fixtures", []):
+            h_id = fixture["team_h"]
+            a_id = fixture["team_a"]
+            fixture["team_h_short"] = teams[h_id]["short_name"] if h_id in teams else "UNK"
+            fixture["team_a_short"] = teams[a_id]["short_name"] if a_id in teams else "UNK"
 
-            # Get History vs Opponent (Next or Specific)
-            try:
-                target_opponent_id = None
+        # Get History vs Opponent (Next or Specific)
+        try:
+            target_opponent_id = None
 
-                if opponent_id:
-                    target_opponent_id = opponent_id
-                elif data.get("fixtures") and len(data["fixtures"]) > 0:
-                    next_fixture = data["fixtures"][0]
-                    player = elements.get(player_id)
-                    if player:
-                        my_team_id = player["team"]
-                        if next_fixture["team_h"] == my_team_id:
-                            target_opponent_id = next_fixture["team_a"]
-                        else:
-                            target_opponent_id = next_fixture["team_h"]
+            if opponent_id:
+                target_opponent_id = opponent_id
+            elif data.get("fixtures") and len(data["fixtures"]) > 0:
+                next_fixture = data["fixtures"][0]
+                player = elements.get(player_id)
+                if player:
+                    my_team_id = player["team"]
+                    if next_fixture["team_h"] == my_team_id:
+                        target_opponent_id = next_fixture["team_a"]
+                    else:
+                        target_opponent_id = next_fixture["team_h"]
 
-                if target_opponent_id:
-                    opponent = teams.get(target_opponent_id)
-                    player = elements.get(player_id)
+            if target_opponent_id:
+                opponent = teams.get(target_opponent_id)
+                player = elements.get(player_id)
 
-                    if opponent and player:
-                        opponent_name = opponent["name"]
-                        player_full_name = f"{player['first_name']} {player['second_name']}"
+                if opponent and player:
+                    opponent_name = opponent["name"]
+                    player_full_name = f"{player['first_name']} {player['second_name']}"
 
-                        from .history_service import HistoryService
+                    from .history_service import HistoryService
 
-                        history_service = HistoryService()
+                    history_service = HistoryService()
 
-                        vs_history = await history_service.get_player_history_vs_team(player_full_name, opponent_name)
-                        data["history_vs_opponent"] = vs_history
-                        data["next_opponent_name"] = opponent_name
-            except (httpx.HTTPStatusError, httpx.RequestError, KeyError) as e:
-                logger.debug(f"Failed to fetch history vs opponent: {e}")
+                    vs_history = await history_service.get_player_history_vs_team(player_full_name, opponent_name)
+                    data["history_vs_opponent"] = vs_history
+                    data["next_opponent_name"] = opponent_name
+        except (httpx.HTTPStatusError, httpx.RequestError, KeyError) as e:
+            logger.debug(f"Failed to fetch history vs opponent: {e}")
 
-            return data
+        return data
 
     async def get_dream_team(self, gw: int) -> dict[str, Any]:
         bootstrap = await self.get_bootstrap_static()
         elements = {p["id"]: p for p in bootstrap["elements"]}
         teams = {t["id"]: t for t in bootstrap["teams"]}
 
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{FPL_BASE_URL}/dream-team/{gw}/")
-            response.raise_for_status()
-            data = response.json()
+        client = self._get_client()
+        response = await client.get(f"{FPL_BASE_URL}/dream-team/{gw}/")
+        response.raise_for_status()
+        data = response.json()
 
         # Fetch fixtures for this GW
         fixtures = await self.get_fixtures()
@@ -1510,13 +1525,13 @@ class FPLService:
                     logger.error(f"Failed to fetch standings page {page}: {e}")
                     return None
 
-            async with httpx.AsyncClient() as client:
-                tasks = [fetch_standings_page(client, page) for page in range(1, num_pages + 1)]
-                results = await asyncio.gather(*tasks)
+            client = self._get_client()
+            tasks = [fetch_standings_page(client, page) for page in range(1, num_pages + 1)]
+            results = await asyncio.gather(*tasks)
 
-                for res in results:
-                    if res and "standings" in res and "results" in res["standings"]:
-                        top_teams.extend(res["standings"]["results"])
+            for res in results:
+                if res and "standings" in res and "results" in res["standings"]:
+                    top_teams.extend(res["standings"]["results"])
 
             # Slice to exact count
             top_teams = top_teams[:count]
@@ -1533,36 +1548,38 @@ class FPLService:
 
             chunk_size = 50
 
-            async with httpx.AsyncClient() as client:
-                for i in range(0, len(team_ids), chunk_size):
-                    chunk = team_ids[i : i + chunk_size]
-                    tasks = []
-                    for tid in chunk:
-                        tasks.append(client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/"))
+            client = self._get_client()
+            for i in range(0, len(team_ids), chunk_size):
+                chunk = team_ids[i : i + chunk_size]
+                tasks = []
+                for tid in chunk:
+                    tasks.append(client.get(f"{FPL_BASE_URL}/entry/{tid}/event/{gw}/picks/"))
 
-                    responses = await asyncio.gather(*tasks, return_exceptions=True)
+                responses = await asyncio.gather(*tasks, return_exceptions=True)
 
-                    # Process chunk results IN ORDER
-                    for resp in responses:
-                        if isinstance(resp, httpx.Response) and resp.status_code == 200:
-                            data = resp.json()
-                            picks_data.append(
-                                {
-                                    "picks": data.get("picks", []),
-                                    "active_chip": data.get("active_chip"),
-                                }
-                            )
-                        else:
-                            # If failed, add empty to maintain count correct?
-                            # Or just skip. If we skip, the count won't match.
-                            # Let's add empty placeholder to be safe
-                            picks_data.append({"picks": [], "active_chip": None})
+                # Process chunk results IN ORDER
+                for resp in responses:
+                    if isinstance(resp, httpx.Response) and resp.status_code == 200:
+                        data = resp.json()
+                        picks_data.append(
+                            {
+                                "picks": data.get("picks", []),
+                                "active_chip": data.get("active_chip"),
+                            }
+                        )
+                    else:
+                        picks_data.append({"picks": [], "active_chip": None})
 
-                    # Small sleep to be nice
-                    await asyncio.sleep(0.5)
+                # Small sleep to be nice to FPL API
+                await asyncio.sleep(0.2)
 
             # Update Raw Cache if this is the largest set we've seen
             if not raw_cached or len(picks_data) > len(raw_cached):
+                # Evict stale raw caches from other gameweeks
+                stale_keys = [k for k in self._cache if k.startswith("top_managers_raw_") and k != raw_cache_key]
+                for k in stale_keys:
+                    del self._cache[k]
+                    self._last_updated.pop(k, None)
                 self._cache[raw_cache_key] = picks_data
                 self._last_updated[raw_cache_key] = now
 
@@ -1842,164 +1859,154 @@ class FPLService:
             logger.warning(f"Failed to fetch bootstrap for polymarket: {e}")
             events = []
 
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url, params=params)
-                response.raise_for_status()
-                data = response.json()
+        client = self._get_client()
+        try:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
 
-                markets = []
-                for item in data:
-                    title = item.get("title") or item.get("question") or ""
+            markets = []
+            for item in data:
+                title = item.get("title") or item.get("question") or ""
 
-                    # Filter for match events
-                    if " vs " not in title.lower() and " vs. " not in title.lower():
-                        continue
+                # Filter for match events
+                if " vs " not in title.lower() and " vs. " not in title.lower():
+                    continue
 
-                    # Filter out "More Markets"
-                    if " - More" in title or "More Markets" in title:
-                        continue
+                # Filter out "More Markets"
+                if " - More" in title or "More Markets" in title:
+                    continue
 
-                    # Parse Home/Away names from title
-                    separator = " vs " if " vs " in title else " vs. "
-                    try:
-                        home_raw, away_raw = title.split(separator)
+                # Parse Home/Away names from title
+                separator = " vs " if " vs " in title else " vs. "
+                try:
+                    home_raw, away_raw = title.split(separator)
 
-                        # Helper to normalize/clean strings for lookup
-                        def normalize(n):
-                            return n.strip().lower()
+                    # Helper to normalize/clean strings for lookup
+                    def normalize(n):
+                        return n.strip().lower()
 
-                        # Try to find in mapping
-                        h_key = normalize(home_raw)
-                        a_key = normalize(away_raw)
+                    # Try to find in mapping
+                    h_key = normalize(home_raw)
+                    a_key = normalize(away_raw)
 
-                        home_fpl = TEAM_MAPPINGS.get(h_key)
-                        away_fpl = TEAM_MAPPINGS.get(a_key)
+                    home_fpl = TEAM_MAPPINGS.get(h_key)
+                    away_fpl = TEAM_MAPPINGS.get(a_key)
 
-                        # If not found, try simple cleaning (removing FC/AFC)
-                        if not home_fpl:
-                            clean = home_raw.replace(" FC", "").replace(" AFC", "").strip().lower()
-                            home_fpl = TEAM_MAPPINGS.get(clean)
+                    # If not found, try simple cleaning (removing FC/AFC)
+                    if not home_fpl:
+                        clean = home_raw.replace(" FC", "").replace(" AFC", "").strip().lower()
+                        home_fpl = TEAM_MAPPINGS.get(clean)
 
-                        if not away_fpl:
-                            clean = away_raw.replace(" FC", "").replace(" AFC", "").strip().lower()
-                            away_fpl = TEAM_MAPPINGS.get(clean)
+                    if not away_fpl:
+                        clean = away_raw.replace(" FC", "").replace(" AFC", "").strip().lower()
+                        away_fpl = TEAM_MAPPINGS.get(clean)
 
-                        # Display Names (use mapped name if available, else raw)
-                        home_clean = home_fpl["name"] if home_fpl else home_raw.strip()
-                        away_clean = away_fpl["name"] if away_fpl else away_raw.strip()
+                    # Display Names (use mapped name if available, else raw)
+                    home_clean = home_fpl["name"] if home_fpl else home_raw.strip()
+                    away_clean = away_fpl["name"] if away_fpl else away_raw.strip()
 
-                        # Keep full names for matching loop below
-                        home_name = home_raw.strip()
-                        away_name = away_raw.strip()
+                    # Keep full names for matching loop below
+                    home_name = home_raw.strip()
+                    away_name = away_raw.strip()
 
-                    except ValueError:
-                        continue
+                except ValueError:
+                    continue
 
-                    # Calculate Gameweek
-                    gameweek = None
-                    match_date = item.get("endDate")
-                    if events and match_date:
-                        # Find the last deadline that is BEFORE the match date
-                        for e in events:
-                            if e["deadline_time"] < match_date:
-                                gameweek = e["id"]
-                            else:
-                                # Since events are sorted by deadline, once we hit a deadline > match_date,
-                                # the previous one was the correct gameweek.
-                                break
+                # Calculate Gameweek
+                gameweek = None
+                match_date = item.get("endDate")
+                if events and match_date:
+                    # Find the last deadline that is BEFORE the match date
+                    for e in events:
+                        if e["deadline_time"] < match_date:
+                            gameweek = e["id"]
+                        else:
+                            break
 
-                    home_data = {
-                        "name": home_clean,
-                        "short_name": home_fpl["short_name"] if home_fpl else home_clean[:3].upper(),
-                        "code": home_fpl["code"] if home_fpl else None,
+                home_data = {
+                    "name": home_clean,
+                    "short_name": home_fpl["short_name"] if home_fpl else home_clean[:3].upper(),
+                    "code": home_fpl["code"] if home_fpl else None,
+                }
+                away_data = {
+                    "name": away_clean,
+                    "short_name": away_fpl["short_name"] if away_fpl else away_clean[:3].upper(),
+                    "code": away_fpl["code"] if away_fpl else None,
+                }
+
+                event_markets = item.get("markets", [])
+                home_price = 0.0
+                away_price = 0.0
+                draw_price = 0.0
+
+                # Logic to find the specific markets
+                for market in event_markets:
+                    question = market.get("question", "")
+                    m_outcomes = market.get("outcomes", [])
+                    if isinstance(m_outcomes, str):
+                        import json
+
+                        m_outcomes = json.loads(m_outcomes)
+
+                    m_prices = market.get("outcomePrices", [])
+                    if isinstance(m_prices, str):
+                        import json
+
+                        m_prices = json.loads(m_prices)
+
+                    yes_price = 0.0
+                    if m_outcomes and "Yes" in m_outcomes and m_prices:
+                        try:
+                            yes_index = m_outcomes.index("Yes")
+                            yes_price = float(m_prices[yes_index])
+                        except (ValueError, IndexError):
+                            pass
+
+                    # Match logic
+                    if " draw" in question.lower() or "draw " in question.lower():
+                        draw_price = yes_price
+                    elif home_name in question:
+                        home_price = yes_price
+                    elif away_name in question:
+                        away_price = yes_price
+
+                valid_prices = sum([1 for p in [home_price, draw_price, away_price] if p > 0])
+                if valid_prices < 2:
+                    continue
+
+                market_outcomes = [
+                    {"label": home_clean, "price": home_price},
+                    {"label": "Draw", "price": draw_price},
+                    {"label": away_clean, "price": away_price},
+                ]
+
+                markets.append(
+                    {
+                        "id": item.get("id"),
+                        "question": item.get("title") or item.get("question") or f"{home_clean} vs {away_clean}",
+                        "slug": item.get("slug"),
+                        "outcomes": market_outcomes,
+                        "volume": float(item.get("volume")) if item.get("volume") else 0.0,
+                        "endDate": item.get("endDate"),
+                        "image": item.get("image") or item.get("icon"),
+                        "group": item.get("group"),
+                        "home_team": home_data,
+                        "away_team": away_data,
+                        "gameweek": gameweek,
                     }
-                    away_data = {
-                        "name": away_clean,
-                        "short_name": away_fpl["short_name"] if away_fpl else away_clean[:3].upper(),
-                        "code": away_fpl["code"] if away_fpl else None,
-                    }
+                )
+            # Sort by Date ascending (soonest first)
+            markets.sort(key=lambda x: x["endDate"])
 
-                    event_markets = item.get("markets", [])
-                    home_price = 0.0
-                    away_price = 0.0
-                    draw_price = 0.0
-
-                    # Logic to find the specific markets
-                    for market in event_markets:
-                        question = market.get("question", "")
-                        m_outcomes = market.get("outcomes", [])
-                        if isinstance(m_outcomes, str):
-                            import json
-
-                            m_outcomes = json.loads(m_outcomes)
-
-                        m_prices = market.get("outcomePrices", [])
-                        if isinstance(m_prices, str):
-                            import json
-
-                            m_prices = json.loads(m_prices)
-
-                        yes_price = 0.0
-                        if m_outcomes and "Yes" in m_outcomes and m_prices:
-                            try:
-                                yes_index = m_outcomes.index("Yes")
-                                yes_price = float(m_prices[yes_index])
-                            except (ValueError, IndexError):
-                                pass
-
-                        # Match logic
-                        if " draw" in question.lower() or "draw " in question.lower():
-                            draw_price = yes_price
-                        elif home_name in question:
-                            home_price = yes_price
-                        elif away_name in question:
-                            away_price = yes_price
-
-                    # Strict check: Must have at least Home and Away prices
-                    # (Draw sometimes missing in rare formats, but for EPL 1x2 it should be there)
-                    # Let's say we need at least 2 non-zero prices to correspond to a valid market match
-                    valid_prices = sum([1 for p in [home_price, draw_price, away_price] if p > 0])
-                    if valid_prices < 2:
-                        continue
-
-                    # Structure outcomes specifically as Home, Draw, Away
-                    # Use Clean Names for display
-                    market_outcomes = [
-                        {"label": home_clean, "price": home_price},
-                        {"label": "Draw", "price": draw_price},
-                        {"label": away_clean, "price": away_price},
-                    ]
-
-                    # Construct clean title
-                    # clean_title = f"{home_clean} vs {away_clean}"
-
-                    markets.append(
-                        {
-                            "id": item.get("id"),
-                            "question": item.get("title") or item.get("question") or f"{home_clean} vs {away_clean}",
-                            "slug": item.get("slug"),
-                            "outcomes": market_outcomes,
-                            "volume": float(item.get("volume")) if item.get("volume") else 0.0,
-                            "endDate": item.get("endDate"),
-                            "image": item.get("image") or item.get("icon"),
-                            "group": item.get("group"),
-                            "home_team": home_data,
-                            "away_team": away_data,
-                            "gameweek": gameweek,
-                        }
-                    )
-                # Sort by Date ascending (soonest first)
-                markets.sort(key=lambda x: x["endDate"])
-
-                # Cache top 50 to cover multiple gameweeks if available
-                final_list = markets[:50]
-                self._cache[cache_key] = final_list
-                self._last_updated[cache_key] = now
-                return final_list
-            except Exception as e:
-                logger.error(f"Failed to fetch Polymarket data: {e}")
-                return []
+            # Cache top 50 to cover multiple gameweeks if available
+            final_list = markets[:50]
+            self._cache[cache_key] = final_list
+            self._last_updated[cache_key] = now
+            return final_list
+        except Exception as e:
+            logger.error(f"Failed to fetch Polymarket data: {e}")
+            return []
 
     async def get_optimized_team(
         self,
@@ -2121,20 +2128,16 @@ class FPLService:
                         logger.error(f"Failed to fetch history for {pid}: {e}")
                         return pid, 0
 
-            async with httpx.AsyncClient() as client:
-                # Optimized task creation: Only fetch history if player has total_points > 0.
-                # If total_points is 0 (fodder), their window points must be 0.
-                tasks = []
-                for p in candidates:
-                    if p["total_points"] > 0:
-                        tasks.append(fetch_player_points(client, p["id"]))
-                    else:
-                        # Implicitly 0 points, no need to fetch
-                        pass
+            client = self._get_client()
+            # Optimized task creation: Only fetch history if player has total_points > 0.
+            tasks = []
+            for p in candidates:
+                if p["total_points"] > 0:
+                    tasks.append(fetch_player_points(client, p["id"]))
 
-                results = await asyncio.gather(*tasks)
-                for pid, pts in results:
-                    player_period_points[pid] = pts
+            results = await asyncio.gather(*tasks)
+            for pid, pts in results:
+                player_period_points[pid] = pts
         else:
             # Use total_points from bootstrap
             for p in candidates:

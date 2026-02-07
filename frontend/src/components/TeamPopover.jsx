@@ -49,6 +49,7 @@ const TeamPopover = ({ team, children, className = '' }) => {
 								<img
 									src={`https://resources.premierleague.com/premierleague/badges/50/t${team.code}.png`}
 									alt={team.name}
+									loading="lazy"
 									className="w-full h-full object-contain"
 								/>
 							</div>
@@ -217,6 +218,7 @@ const TeamPopover = ({ team, children, className = '' }) => {
 														<img
 															src={`https://resources.premierleague.com/premierleague25/photos/players/110x140/${player.photo.replace('.png', '').replace('.jpg', '')}.png`}
 															alt={player.web_name}
+															loading="lazy"
 															className="w-full h-full object-cover"
 															onError={(e) => {
 																e.target.src =

@@ -82,6 +82,7 @@ const LeagueTable = () => {
 											<img
 												src={`https://resources.premierleague.com/premierleague/badges/25/t${team.code}.png`}
 												alt={team.short_name}
+												loading="lazy"
 												className="w-6 h-6 object-contain"
 												onError={(e) => {
 													e.target.style.display = 'none';

@@ -143,6 +143,7 @@ const PolymarketWidget = () => {
 											<img
 												src={getTeamBadgeUrl(market.home_team.code, 70)}
 												alt={market.home_team.short_name}
+												loading="lazy"
 												className="w-8 h-8 object-contain"
 											/>
 										) : (
@@ -160,6 +161,7 @@ const PolymarketWidget = () => {
 											<img
 												src={getTeamBadgeUrl(market.away_team.code, 70)}
 												alt={market.away_team.short_name}
+												loading="lazy"
 												className="w-8 h-8 object-contain"
 											/>
 										) : (

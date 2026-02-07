@@ -90,6 +90,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 					<img
 						src={getPlayerImage(player.code)}
 						alt={player.name}
+						loading="lazy"
 						className="w-[45px] h-[60px] md:w-[60px] md:h-[75px] object-cover drop-shadow-lg"
 						onError={(e) => handlePlayerImageError(e, player)}
 					/>
@@ -164,6 +165,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 								<img
 									src={getPlayerImage(top_player.code, '40x40')}
 									alt={top_player.name}
+									loading="lazy"
 									className="w-8 h-8 rounded-full object-cover border border-ds-border"
 									onError={(e) => handlePlayerImageError(e, top_player, '40x40')}
 								/>

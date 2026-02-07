@@ -42,6 +42,7 @@ const LiveFixtures = () => {
 		<img
 			src={`https://resources.premierleague.com/premierleague/badges/50/t${code}.png`}
 			alt="Badge"
+			loading="lazy"
 			className="w-6 h-6 md:w-8 md:h-8 object-contain"
 			onError={(e) => (e.target.style.display = 'none')}
 		/>

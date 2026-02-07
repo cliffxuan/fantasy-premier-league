@@ -224,6 +224,7 @@ const Solver = () => {
 												<img
 													src={`https://resources.premierleague.com/premierleague/badges/70/t${p.team_code}.png`}
 													alt={p.team_short}
+													loading="lazy"
 													className="w-5 h-5 object-contain"
 													onError={(e) => {
 														e.target.style.display = 'none';

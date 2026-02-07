@@ -3,7 +3,6 @@ import asyncio
 import io
 from typing import Any
 
-import httpx
 import polars as pl
 from loguru import logger
 
@@ -289,72 +288,72 @@ class HistoryService:
     async def _fetch_season_data(self, season: str) -> dict[str, Any] | None:
         logger.info(f"Fetching historical data for {season}")
         try:
-            async with httpx.AsyncClient() as client:
-                teams_url = f"{REPO_BASE_URL}/{season}/teams.csv"
-                fixtures_url = f"{REPO_BASE_URL}/{season}/fixtures.csv"
-                players_url = f"{REPO_BASE_URL}/{season}/players_raw.csv"
-                gws_url = f"{REPO_BASE_URL}/{season}/gws/merged_gw.csv"
+            client = FPLService._get_client()
+            teams_url = f"{REPO_BASE_URL}/{season}/teams.csv"
+            fixtures_url = f"{REPO_BASE_URL}/{season}/fixtures.csv"
+            players_url = f"{REPO_BASE_URL}/{season}/players_raw.csv"
+            gws_url = f"{REPO_BASE_URL}/{season}/gws/merged_gw.csv"
 
-                t_resp, f_resp, p_resp, g_resp = await asyncio.gather(
-                    client.get(teams_url),
-                    client.get(fixtures_url),
-                    client.get(players_url),
-                    client.get(gws_url),
-                )
+            t_resp, f_resp, p_resp, g_resp = await asyncio.gather(
+                client.get(teams_url),
+                client.get(fixtures_url),
+                client.get(players_url),
+                client.get(gws_url),
+            )
 
-                if t_resp.status_code != 200 or f_resp.status_code != 200:
-                    logger.error(f"Failed to fetch data for {season} (Teams/Fixtures)")
-                    return None
+            if t_resp.status_code != 200 or f_resp.status_code != 200:
+                logger.error(f"Failed to fetch data for {season} (Teams/Fixtures)")
+                return None
 
-                # Parse CSVs with Polars
-                teams_df = pl.read_csv(
-                    io.BytesIO(t_resp.content),
-                    infer_schema_length=10000,
-                    null_values=[""],
-                )
-                fixtures_df = pl.read_csv(
-                    io.BytesIO(f_resp.content),
-                    infer_schema_length=10000,
-                    null_values=[""],
-                    ignore_errors=True,
-                )
+            # Parse CSVs with Polars
+            teams_df = pl.read_csv(
+                io.BytesIO(t_resp.content),
+                infer_schema_length=10000,
+                null_values=[""],
+            )
+            fixtures_df = pl.read_csv(
+                io.BytesIO(f_resp.content),
+                infer_schema_length=10000,
+                null_values=[""],
+                ignore_errors=True,
+            )
 
-                gws_df = None
-                if g_resp.status_code == 200:
-                    try:
-                        gws_df = pl.read_csv(
-                            io.BytesIO(g_resp.content),
-                            infer_schema_length=10000,
-                            null_values=[""],
-                            ignore_errors=True,
-                        )
-                    except Exception as e:
-                        logger.warning(f"Failed to parse GWs for {season}: {e}")
-                else:
-                    logger.warning(f"Failed to fetch GWs for {season}: {g_resp.status_code}")
+            gws_df = None
+            if g_resp.status_code == 200:
+                try:
+                    gws_df = pl.read_csv(
+                        io.BytesIO(g_resp.content),
+                        infer_schema_length=10000,
+                        null_values=[""],
+                        ignore_errors=True,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to parse GWs for {season}: {e}")
+            else:
+                logger.warning(f"Failed to fetch GWs for {season}: {g_resp.status_code}")
 
-                # Players mapping: ID -> Web Name
-                player_map = {}
-                if p_resp.status_code == 200:
-                    try:
-                        players_df = pl.read_csv(
-                            io.BytesIO(p_resp.content),
-                            columns=["id", "web_name"],
-                            infer_schema_length=10000,
-                            null_values=[""],
-                        )
-                        for row in players_df.iter_rows(named=True):
-                            player_map[row["id"]] = row["web_name"]
-                    except Exception as e:
-                        logger.warning(f"Failed to parse players for {season}: {e}")
+            # Players mapping: ID -> Web Name
+            player_map = {}
+            if p_resp.status_code == 200:
+                try:
+                    players_df = pl.read_csv(
+                        io.BytesIO(p_resp.content),
+                        columns=["id", "web_name"],
+                        infer_schema_length=10000,
+                        null_values=[""],
+                    )
+                    for row in players_df.iter_rows(named=True):
+                        player_map[row["id"]] = row["web_name"]
+                except Exception as e:
+                    logger.warning(f"Failed to parse players for {season}: {e}")
 
-                return {
-                    "season": season,
-                    "teams": teams_df,
-                    "fixtures": fixtures_df,
-                    "players": player_map,
-                    "gws": gws_df,
-                }
+            return {
+                "season": season,
+                "teams": teams_df,
+                "fixtures": fixtures_df,
+                "players": player_map,
+                "gws": gws_df,
+            }
         except Exception as e:
             logger.error(f"Error fetching {season}: {e}")
             return None

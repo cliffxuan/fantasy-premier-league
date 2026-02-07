@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 /**
  * Shared pitch background and position grouping layout.
@@ -9,10 +9,15 @@ import React from 'react';
  * @param {string} [props.className] - Additional classes for the pitch container
  */
 const PitchView = ({ players, renderCard, className = '' }) => {
-	const gkp = players.filter((p) => p.position === 1);
-	const def = players.filter((p) => p.position === 2);
-	const mid = players.filter((p) => p.position === 3);
-	const fwd = players.filter((p) => p.position === 4);
+	const { gkp, def, mid, fwd } = useMemo(
+		() => ({
+			gkp: players.filter((p) => p.position === 1),
+			def: players.filter((p) => p.position === 2),
+			mid: players.filter((p) => p.position === 3),
+			fwd: players.filter((p) => p.position === 4),
+		}),
+		[players],
+	);
 
 	return (
 		<div

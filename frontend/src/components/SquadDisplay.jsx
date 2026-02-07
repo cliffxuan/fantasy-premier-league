@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
 	ArrowUpCircle,
 	Zap,
@@ -78,6 +78,7 @@ const ListView = ({ squad }) => {
 					<img
 						src={getPlayerImage(player.code)}
 						alt={player.name}
+						loading="lazy"
 						className="w-full h-full object-cover rounded-full"
 						onError={(e) => handlePlayerImageError(e, player)}
 					/>
@@ -163,6 +164,78 @@ const ListView = ({ squad }) => {
 	);
 };
 
+const PlayerCard = memo(({ player, isBench = false, gameweek, currentGw }) => (
+	<PlayerPopover player={player}>
+		<div
+			className={`relative flex flex-col items-center justify-center w-[64px] md:w-[90px] ${isBench ? 'opacity-90' : ''}`}
+		>
+			<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
+				{/* Player Photo */}
+				<img
+					src={getPlayerImage(player.code)}
+					alt={player.name}
+					loading="lazy"
+					className="w-[45px] h-[56px] md:w-[60px] md:h-[75px] object-cover drop-shadow-lg"
+					onError={(e) => handlePlayerImageError(e, player)}
+				/>
+
+				{/* Form/Points Badge */}
+				{gameweek <= (currentGw || 38) ? (
+					(player.event_points !== 0 || player.minutes > 0 || player.match_finished) && (
+						<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white">
+							{player.event_points}
+						</div>
+					)
+				) : (
+					<div
+						className={`absolute -top-1 -left-2 text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white
+							${
+								parseFloat(player.form) >= 6.0
+									? 'bg-ds-accent text-black'
+									: parseFloat(player.form) >= 3.0
+										? 'bg-gray-600 text-white'
+										: 'bg-ds-card text-ds-text-muted'
+							}`}
+					>
+						{player.form}
+					</div>
+				)}
+
+				{/* Captain/Vice-Captain Badges */}
+				{player.is_captain && (
+					<div className="absolute -top-1 -right-2 bg-black text-white text-[8px] md:text-[10px] font-bold w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-white">
+						C
+					</div>
+				)}
+				{player.is_vice_captain && (
+					<div className="absolute -top-1 -right-2 bg-gray-700 text-white text-[8px] md:text-[10px] font-bold w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-white">
+						V
+					</div>
+				)}
+
+				{/* Status Indicator */}
+				{player.status !== 'a' && (
+					<div
+						className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
+							${getStatusBadgeClass(player.status)}`}
+					>
+						!
+					</div>
+				)}
+			</div>
+
+			<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
+				<div className="text-[10px] md:text-xs font-bold truncate px-1 font-sans">{player.name}</div>
+				<div className="flex justify-center items-center gap-1 mt-0.5">
+					<span className={`text-[9px] px-1 rounded font-bold ${getFdrBadgeClass(player.fixture_difficulty)}`}>
+						{player.fixture}
+					</span>
+				</div>
+			</div>
+		</div>
+	</PlayerPopover>
+));
+
 const SquadDisplay = ({
 	squad,
 	chips,
@@ -176,7 +249,7 @@ const SquadDisplay = ({
 	extraHeaderContent,
 	customMainHeader,
 }) => {
-	const [viewMode, setViewMode] = useState('pitch'); // 'pitch' or 'list'
+	const [viewMode, setViewMode] = useState('pitch');
 
 	const handlePrev = () => {
 		if (gameweek > 1 && onGwChange) onGwChange(gameweek - 1);
@@ -186,88 +259,16 @@ const SquadDisplay = ({
 		if (gameweek < 38 && onGwChange) onGwChange(gameweek + 1);
 	};
 
-	const getGwPoints = () => {
+	const gwPoints = useMemo(() => {
 		if (!history) return 0;
 		const entry = history.find((h) => h.event === gameweek);
 		return entry ? entry.points : 0;
-	};
+	}, [history, gameweek]);
 
 	if (!squad || squad.length === 0) return null;
 
-	// Separate starters (first 11) and bench (rest)
 	const starters = squad.slice(0, 11);
 	const bench = squad.slice(11);
-
-	const PlayerCard = ({ player, isBench = false }) => (
-		<PlayerPopover player={player}>
-			<div
-				className={`relative flex flex-col items-center justify-center w-[64px] md:w-[90px] ${isBench ? 'opacity-90' : ''}`}
-			>
-				<div className="relative mb-1 transition-transform hover:scale-110 cursor-pointer">
-					{/* Player Photo */}
-					<img
-						src={getPlayerImage(player.code)}
-						alt={player.name}
-						className="w-[45px] h-[56px] md:w-[60px] md:h-[75px] object-cover drop-shadow-lg"
-						onError={(e) => handlePlayerImageError(e, player)}
-					/>
-
-					{/* Form/Points Badge */}
-					{gameweek <= (currentGw || 38) ? (
-						(player.event_points !== 0 || player.minutes > 0 || player.match_finished) && (
-							<div className="absolute -top-1 -left-2 bg-ds-primary text-white text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white">
-								{player.event_points}
-							</div>
-						)
-					) : (
-						<div
-							className={`absolute -top-1 -left-2 text-[9px] md:text-[10px] font-bold w-5 h-4 md:w-6 md:h-5 flex items-center justify-center rounded-full border border-white
-							${
-								parseFloat(player.form) >= 6.0
-									? 'bg-ds-accent text-black'
-									: parseFloat(player.form) >= 3.0
-										? 'bg-gray-600 text-white'
-										: 'bg-ds-card text-ds-text-muted'
-							}`}
-						>
-							{player.form}
-						</div>
-					)}
-
-					{/* Captain/Vice-Captain Badges */}
-					{player.is_captain && (
-						<div className="absolute -top-1 -right-2 bg-black text-white text-[8px] md:text-[10px] font-bold w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-white">
-							C
-						</div>
-					)}
-					{player.is_vice_captain && (
-						<div className="absolute -top-1 -right-2 bg-gray-700 text-white text-[8px] md:text-[10px] font-bold w-4 h-4 md:w-5 md:h-5 flex items-center justify-center rounded-full border border-white">
-							V
-						</div>
-					)}
-
-					{/* Status Indicator */}
-					{player.status !== 'a' && (
-						<div
-							className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
-							${getStatusBadgeClass(player.status)}`}
-						>
-							!
-						</div>
-					)}
-				</div>
-
-				<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
-					<div className="text-[10px] md:text-xs font-bold truncate px-1 font-sans">{player.name}</div>
-					<div className="flex justify-center items-center gap-1 mt-0.5">
-						<span className={`text-[9px] px-1 rounded font-bold ${getFdrBadgeClass(player.fixture_difficulty)}`}>
-							{player.fixture}
-						</span>
-					</div>
-				</div>
-			</div>
-		</PlayerPopover>
-	);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -315,7 +316,7 @@ const SquadDisplay = ({
 				<div className="flex items-center gap-8">
 					<div className="text-center">
 						<div className="text-xs text-ds-text-muted uppercase tracking-wider mb-1">Total Points</div>
-						<div className="text-3xl font-bold text-ds-primary">{getGwPoints()}</div>
+						<div className="text-3xl font-bold text-ds-primary">{gwPoints}</div>
 					</div>
 
 					<div className="h-10 w-px bg-ds-border hidden md:block"></div>
@@ -386,13 +387,22 @@ const SquadDisplay = ({
 			{!loading &&
 				(viewMode === 'pitch' ? (
 					<>
-						<PitchView players={starters} renderCard={(player) => <PlayerCard player={player} />} />
+						<PitchView
+							players={starters}
+							renderCard={(player) => <PlayerCard player={player} gameweek={gameweek} currentGw={currentGw} />}
+						/>
 
 						<div className="bg-ds-card p-4 rounded-xl border border-ds-border mt-6">
 							<h3 className="text-gray-400 text-base mb-4 font-normal">Bench</h3>
 							<div className="flex justify-center gap-2 md:gap-4 flex-wrap">
 								{bench.map((p) => (
-									<PlayerCard key={p.id || p.name} player={p} isBench={true} />
+									<PlayerCard
+										key={p.id || p.name}
+										player={p}
+										isBench={true}
+										gameweek={gameweek}
+										currentGw={currentGw}
+									/>
 								))}
 							</div>
 						</div>

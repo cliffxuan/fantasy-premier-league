@@ -201,7 +201,10 @@ const PlayerExplorer = () => {
 		n: 'bg-gray-400',
 	};
 
-	const selectedPlayersObjects = players.filter((p) => selectedPlayers.includes(p.id));
+	const selectedPlayersObjects = useMemo(
+		() => players.filter((p) => selectedPlayers.includes(p.id)),
+		[players, selectedPlayers],
+	);
 
 	return (
 		<div className="space-y-6">

@@ -49,6 +49,7 @@ const PlayerPopover = ({ player, children }) => {
 								<img
 									src={getPlayerImage(player.code)}
 									alt={player.name}
+									loading="lazy"
 									className="w-full h-full object-cover"
 									onError={(e) => handlePlayerImageError(e, player)}
 								/>
