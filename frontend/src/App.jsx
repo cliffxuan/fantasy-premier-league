@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Copy, X, FileText, Code, Check, Key } from 'lucide-react';
+import { Copy, X, FileText, Code, Check, Key, ClipboardPaste, ExternalLink } from 'lucide-react';
 import { analyzeTeam, getSquad, getAuthUrl, exchangeCode, getMe } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
@@ -57,8 +57,12 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
   const [step, setStep] = useState('initial'); // initial, paste
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false); // New success state
+  const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const [popupStatus, setPopupStatus] = useState(null); // null, 'waiting', 'closed'
+  const codeInputRef = useRef(null);
+  const popupRef = useRef(null);
+  const pollRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -66,9 +70,17 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
       setSuccess(false);
       setError(null);
       setCode('');
+      setPopupStatus(null);
     }
     setToken(currentToken);
   }, [currentToken, isOpen]);
+
+  // Clean up popup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const handleStartLogin = async () => {
     try {
@@ -76,8 +88,31 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
       setError(null);
       const { url } = await getAuthUrl();
       if (url) {
-        window.open(url, '_blank');
+        // Open as a centered popup instead of a new tab
+        const w = 500, h = 650;
+        const left = window.screenX + (window.outerWidth - w) / 2;
+        const top = window.screenY + (window.outerHeight - h) / 2;
+        const popup = window.open(
+          url,
+          'fpl-login',
+          `width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`
+        );
+        popupRef.current = popup;
         setStep('paste');
+        setPopupStatus('waiting');
+
+        // Poll for popup close — when user finishes login and lands on robots.txt
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(() => {
+          if (!popup || popup.closed) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+            popupRef.current = null;
+            setPopupStatus('closed');
+            // Auto-focus the code input so user can paste immediately
+            setTimeout(() => codeInputRef.current?.focus(), 100);
+          }
+        }, 500);
       }
     } catch (err) {
       setError('Failed to start login: ' + err.message);
@@ -86,12 +121,30 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
     }
   };
 
-  const handleVerifyCode = async () => {
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setCode(text.trim());
+        // Auto-submit if it looks like a valid code or URL with code
+        const trimmed = text.trim();
+        if (trimmed.includes('code=') || (trimmed.length > 20 && !trimmed.includes(' '))) {
+          // Slight delay so user sees the paste before auto-submit
+          setTimeout(() => handleVerifyCode(trimmed), 300);
+        }
+      }
+    } catch {
+      // Clipboard permission denied — fall back to manual paste
+      codeInputRef.current?.focus();
+    }
+  };
+
+  const handleVerifyCode = async (directCode) => {
     try {
       setLoading(true);
       setError(null);
       // Clean up code if it's a full URL
-      let cleanCode = code.trim();
+      let cleanCode = (directCode || code).trim();
       if (cleanCode.includes('code=')) {
         cleanCode = cleanCode.split('code=')[1].split('&')[0];
       }
@@ -99,7 +152,6 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
       const data = await exchangeCode(cleanCode);
       if (data.access_token) {
         setSuccess(true);
-        // Short delay to show success state
         setTimeout(() => {
           onSave(data.access_token);
           onClose();
@@ -173,8 +225,6 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
                 )}
               </button>
 
-
-
               {!currentToken && (
                 <>
                   <div className="relative py-2">
@@ -201,13 +251,27 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
             </div>
           ) : (
             <div className="space-y-4 animate-in slide-in-from-right-4">
+              {/* Status indicator */}
+              {popupStatus === 'waiting' && (
+                <div className="flex items-center gap-3 bg-ds-primary/5 border border-ds-primary/20 p-3 rounded-lg">
+                  <div className="w-2 h-2 bg-ds-primary rounded-full animate-pulse" />
+                  <p className="text-xs text-ds-primary font-medium">Login popup is open — sign in there, then come back here</p>
+                </div>
+              )}
+              {popupStatus === 'closed' && !code && !success && (
+                <div className="flex items-center gap-3 bg-ds-accent/5 border border-ds-accent/20 p-3 rounded-lg">
+                  <Check size={14} className="text-ds-accent" />
+                  <p className="text-xs text-ds-accent font-medium">Popup closed — now paste the URL from your address bar</p>
+                </div>
+              )}
+
               <div className="flex items-start gap-3 bg-ds-surface p-4 rounded-lg border border-ds-border">
                 <div className="bg-ds-primary/10 text-ds-primary p-1.5 rounded-full mt-0.5">
                   <span className="font-bold text-xs">1</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm mb-1">Check the new tab</h4>
-                  <p className="text-xs text-ds-text-muted">Log in on the official FPL page. You will be redirected to a page starting with <code className="bg-black/20 px-1 rounded">premierleague.com/robots.txt</code>.</p>
+                  <h4 className="font-bold text-sm mb-1">Log in to FPL</h4>
+                  <p className="text-xs text-ds-text-muted">Sign in on the official FPL page in the popup. After login you'll land on a page starting with <code className="bg-black/20 px-1 rounded">premierleague.com/robots.txt</code>.</p>
                 </div>
               </div>
 
@@ -216,26 +280,36 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
                   <span className="font-bold text-xs">2</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm mb-1">Copy the Code</h4>
-                  <p className="text-xs text-ds-text-muted">Copy the weird text code from the URL bar (e.g. <code className="bg-black/20 px-1 rounded">?code=XYZ...</code>) and paste it below.</p>
+                  <h4 className="font-bold text-sm mb-1">Copy the entire URL</h4>
+                  <p className="text-xs text-ds-text-muted">Click the address bar, select all (<kbd className="bg-black/20 px-1 rounded text-[10px]">Ctrl+A</kbd>), and copy (<kbd className="bg-black/20 px-1 rounded text-[10px]">Ctrl+C</kbd>). Then close the popup and come back here.</p>
                 </div>
               </div>
 
-              <div className="pt-2">
-                <label className="text-xs font-bold text-ds-text uppercase tracking-wider mb-2 block">Paste Code Here</label>
-                <input
-                  type="text"
-                  autoFocus
-                  className="w-full bg-ds-surface border border-ds-border rounded-md px-4 py-3 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all font-mono"
-                  placeholder="Paste the code or full URL..."
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && code && handleVerifyCode()}
-                />
+              <div className="pt-2 space-y-2">
+                <label className="text-xs font-bold text-ds-text uppercase tracking-wider block">Paste URL or Code</label>
+                <div className="flex gap-2">
+                  <input
+                    ref={codeInputRef}
+                    type="text"
+                    autoFocus
+                    className="flex-1 bg-ds-surface border border-ds-border rounded-md px-4 py-3 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all font-mono"
+                    placeholder="Paste the full URL..."
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && code && handleVerifyCode()}
+                  />
+                  <button
+                    onClick={handlePasteFromClipboard}
+                    className="bg-ds-surface border border-ds-border rounded-md px-3 hover:border-ds-primary hover:text-ds-primary transition-colors text-ds-text-muted"
+                    title="Paste from clipboard"
+                  >
+                    <ClipboardPaste size={18} />
+                  </button>
+                </div>
               </div>
 
               <button
-                onClick={handleVerifyCode}
+                onClick={() => handleVerifyCode()}
                 disabled={loading || !code || success}
                 className={`w-full font-bold rounded-lg px-6 py-3 text-sm transition-all shadow-lg flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed ${success
                   ? 'bg-green-500 text-white shadow-green-500/20'
@@ -260,7 +334,11 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
         <div className="p-6 border-t border-ds-border bg-ds-card/50 flex justify-between items-center rounded-b-xl">
           {step === 'paste' ? (
             <button
-              onClick={() => setStep('initial')}
+              onClick={() => {
+                setStep('initial');
+                setPopupStatus(null);
+                if (pollRef.current) clearInterval(pollRef.current);
+              }}
               className="text-xs font-bold text-ds-text-muted hover:text-ds-text transition-colors"
             >
               Back
