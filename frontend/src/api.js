@@ -139,7 +139,26 @@ export const getCurrentGameweek = async () => {
 export const getFormAnalysis = async () => {
 	const response = await fetch(`${API_BASE_URL}/analysis/form`);
 	if (!response.ok) throw new Error('Failed to fetch form analysis');
-	return response.json();
+	const players = await response.json();
+
+	// Enrich with code/team_short from aggregated players if missing
+	if (players.length > 0 && !players[0].code) {
+		try {
+			const aggResponse = await fetch(`${API_BASE_URL}/players/aggregated?min_gw=1&max_gw=38&venue=both`);
+			if (aggResponse.ok) {
+				const aggPlayers = await aggResponse.json();
+				const lookup = Object.fromEntries(aggPlayers.map((p) => [p.id, p]));
+				return players.map((p) => ({
+					...p,
+					code: lookup[p.id]?.code ?? 0,
+					team_short: lookup[p.id]?.team_short ?? '',
+				}));
+			}
+		} catch {
+			// If enrichment fails, return as-is
+		}
+	}
+	return players;
 };
 
 export const getTopManagers = async (count) => {

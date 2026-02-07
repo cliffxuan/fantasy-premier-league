@@ -123,9 +123,52 @@ class FplRemoteDatasource {
 
   Future<List<FormPlayer>> getFormAnalysis() async {
     final data = await _client.get<List<dynamic>>(ApiConstants.analysisForm);
-    return data
+    final players = data
         .map((e) => FormPlayer.fromJson(e as Map<String, dynamic>))
         .toList();
+
+    // Enrich with code/teamShort from aggregated players if missing
+    final needsEnrichment = players.any((p) => p.code == 0);
+    if (needsEnrichment) {
+      try {
+        final aggData = await _client.get<List<dynamic>>(
+          ApiConstants.playersAggregated,
+          queryParameters: {'min_gw': 1, 'max_gw': 38, 'venue': 'both'},
+        );
+        final lookup = <int, Map<String, dynamic>>{};
+        for (final raw in aggData) {
+          final map = raw as Map<String, dynamic>;
+          lookup[(map['id'] as num).toInt()] = map;
+        }
+        return players.map((p) {
+          if (p.code != 0) return p;
+          final agg = lookup[p.id];
+          if (agg == null) return p;
+          return FormPlayer(
+            id: p.id,
+            code: (agg['code'] as num?)?.toInt() ?? 0,
+            webName: p.webName,
+            teamCode: p.teamCode,
+            teamShort: (agg['team_short'] as String?) ?? '',
+            position: p.position,
+            streakGames: p.streakGames,
+            streakPoints: p.streakPoints,
+            xgDelta: p.xgDelta,
+            goals: p.goals,
+            expectedGoals: p.expectedGoals,
+            classification: p.classification,
+            sustainabilityScore: p.sustainabilityScore,
+            reasons: p.reasons,
+            lastMatchGw: p.lastMatchGw,
+            predictedEndGw: p.predictedEndGw,
+          );
+        }).toList();
+      } catch (_) {
+        // If enrichment fails, return players as-is
+        return players;
+      }
+    }
+    return players;
   }
 
   Future<TopManagersResponse> getTopManagers({int? gw, int count = FplConstants.defaultTopManagersCount}) async {

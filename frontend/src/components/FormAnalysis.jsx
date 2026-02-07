@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCw, Flame, TrendingDown, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+import { getPlayerImage, handlePlayerImageError } from '../utils';
 import { getPositionName } from './utils';
 import { useFormAnalysis } from '../hooks/queries';
 import PlayerPopover from './PlayerPopover';
@@ -87,7 +88,17 @@ const FormAnalysis = () => {
 							>
 								{/* Header */}
 								<div className="flex justify-between items-start mb-4">
-									<div className="flex gap-3">
+									<div className="flex gap-3 items-center">
+										{player.code ? (
+											<img
+												src={getPlayerImage(player.code)}
+												onError={(e) => handlePlayerImageError(e, player)}
+												alt={player.web_name}
+												className="w-10 h-10 rounded-full object-cover bg-ds-surface shrink-0"
+											/>
+										) : (
+											<div className="w-10 h-10 rounded-full bg-ds-surface shrink-0" />
+										)}
 										<div className="flex flex-col">
 											<PlayerPopover player={player}>
 												<span className="font-bold text-ds-text text-base hover:text-ds-primary cursor-pointer transition-colors">
@@ -95,9 +106,13 @@ const FormAnalysis = () => {
 												</span>
 											</PlayerPopover>
 											<span className="text-[10px] uppercase text-ds-text-muted font-mono mt-0.5">
+												{player.team_short && (
+													<>
+														{player.team_short}
+														<span className="opacity-50 mx-1.5">•</span>
+													</>
+												)}
 												{getPositionName(player.position)}
-												<span className="opacity-50 mx-1.5">•</span>
-												GW{player.last_match_gw}
 											</span>
 										</div>
 									</div>
@@ -183,17 +198,28 @@ const FormAnalysis = () => {
 									{data.map((player) => (
 										<tr key={player.id} className="hover:bg-ds-surface/30 transition-colors group">
 											<td className="px-3 py-2">
-												<div className="flex flex-col">
-													<PlayerPopover player={player}>
-														<span className="font-bold text-ds-text hover:text-ds-primary cursor-pointer transition-colors">
-															{player.web_name}
+												<div className="flex items-center gap-2.5">
+													{player.code ? (
+														<img
+															src={getPlayerImage(player.code)}
+															onError={(e) => handlePlayerImageError(e, player)}
+															alt={player.web_name}
+															className="w-8 h-8 rounded-full object-cover bg-ds-surface shrink-0"
+														/>
+													) : (
+														<div className="w-8 h-8 rounded-full bg-ds-surface shrink-0" />
+													)}
+													<div className="flex flex-col">
+														<PlayerPopover player={player}>
+															<span className="font-bold text-ds-text hover:text-ds-primary cursor-pointer transition-colors">
+																{player.web_name}
+															</span>
+														</PlayerPopover>
+														<span className="text-[10px] uppercase text-ds-text-muted font-mono">
+															{player.team_short && <>{player.team_short} • </>}
+															{getPositionName(player.position)}
 														</span>
-													</PlayerPopover>
-													<span className="text-[10px] uppercase text-ds-text-muted font-mono">
-														{getPositionName(player.position)}
-														{' • '}
-														GW{player.last_match_gw}
-													</span>
+													</div>
 												</div>
 											</td>
 											<td className="px-3 py-2 text-center">
