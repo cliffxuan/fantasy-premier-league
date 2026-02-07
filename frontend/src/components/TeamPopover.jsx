@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPositionName, getFdrCardClass } from './utils';
@@ -16,9 +16,11 @@ const TeamPopover = ({ team, children, className = '' }) => {
 	});
 
 	// Reset offset when team changes
-	useEffect(() => {
+	const [prevTeamId, setPrevTeamId] = useState(team.id);
+	if (team.id !== prevTeamId) {
+		setPrevTeamId(team.id);
 		setHistoryOffset(0);
-	}, [team.id]);
+	}
 
 	return (
 		<div className={`relative inline-block ${className}`} {...triggerProps}>

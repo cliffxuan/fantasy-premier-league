@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import useCurrentGameweek from './useCurrentGameweek';
+
+const createWrapper = () => {
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false } },
+	});
+	return ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+};
 
 describe('useCurrentGameweek', () => {
 	beforeEach(() => {
@@ -9,7 +17,7 @@ describe('useCurrentGameweek', () => {
 
 	it('starts with loading=true and null gameweek', () => {
 		vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise(() => {}));
-		const { result } = renderHook(() => useCurrentGameweek());
+		const { result } = renderHook(() => useCurrentGameweek(), { wrapper: createWrapper() });
 		expect(result.current.loading).toBe(true);
 		expect(result.current.gameweek).toBeNull();
 	});
@@ -20,7 +28,7 @@ describe('useCurrentGameweek', () => {
 			json: async () => ({ gameweek: 15, status: { id: 15, name: 'Gameweek 15' } }),
 		});
 
-		const { result } = renderHook(() => useCurrentGameweek());
+		const { result } = renderHook(() => useCurrentGameweek(), { wrapper: createWrapper() });
 
 		await waitFor(() => {
 			expect(result.current.loading).toBe(false);
@@ -34,7 +42,7 @@ describe('useCurrentGameweek', () => {
 		vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
 		vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		const { result } = renderHook(() => useCurrentGameweek());
+		const { result } = renderHook(() => useCurrentGameweek(), { wrapper: createWrapper() });
 
 		await waitFor(() => {
 			expect(result.current.loading).toBe(false);
@@ -46,7 +54,7 @@ describe('useCurrentGameweek', () => {
 	it('handles non-ok response', async () => {
 		vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false });
 
-		const { result } = renderHook(() => useCurrentGameweek());
+		const { result } = renderHook(() => useCurrentGameweek(), { wrapper: createWrapper() });
 
 		await waitFor(() => {
 			expect(result.current.loading).toBe(false);

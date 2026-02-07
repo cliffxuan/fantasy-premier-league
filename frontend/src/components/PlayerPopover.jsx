@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
@@ -17,9 +17,11 @@ const PlayerPopover = ({ player, children }) => {
 	});
 
 	// Reset offset when player changes
-	useEffect(() => {
+	const [prevPlayerId, setPrevPlayerId] = useState(player.id);
+	if (player.id !== prevPlayerId) {
+		setPrevPlayerId(player.id);
 		setHistoryOffset(0);
-	}, [player.id]);
+	}
 
 	return (
 		<div className="relative" {...triggerProps}>

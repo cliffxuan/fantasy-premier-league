@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import PlayerPopover from './PlayerPopover';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import useCurrentGameweek from '../hooks/useCurrentGameweek';
@@ -17,19 +17,19 @@ const Solver = () => {
 
 	const { mutate, data: result, isPending: loading, error, reset } = useSolver();
 
-	useEffect(() => {
-		if (gwLoading) return;
+	const safeMax = useMemo(() => {
+		if (gwLoading) return null;
+		if (gwStatus) return gwStatus.started ? gwStatus.id : Math.max(1, gwStatus.id - 1);
+		if (currentGw) return currentGw;
+		return 38;
+	}, [currentGw, gwStatus, gwLoading]);
 
-		let safeMax = 38;
-		if (gwStatus) {
-			safeMax = gwStatus.started ? gwStatus.id : Math.max(1, gwStatus.id - 1);
-		} else if (currentGw) {
-			safeMax = currentGw;
-		}
-
+	const [prevSafeMax, setPrevSafeMax] = useState(safeMax);
+	if (safeMax !== null && safeMax !== prevSafeMax) {
+		setPrevSafeMax(safeMax);
 		setSliderMax(safeMax);
 		setMaxGw(safeMax);
-	}, [currentGw, gwStatus, gwLoading]);
+	}
 
 	const handleSolve = (e) => {
 		e.preventDefault();

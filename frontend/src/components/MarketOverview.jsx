@@ -78,8 +78,8 @@ const MarketOverview = () => {
 
 	const {
 		data: historyData = [],
-		isLoading: historyLoading,
-		isFetching: historyFetching,
+		isLoading: _historyLoading,
+		isFetching: _historyFetching,
 	} = useH2hHistory(selectedTeams.home?.id, selectedTeams.away?.id, {
 		enabled: showHistoryModal && !!selectedTeams.home && !!selectedTeams.away,
 	});

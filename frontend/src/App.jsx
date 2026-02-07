@@ -79,14 +79,12 @@ function Dashboard() {
 		}
 	}, [teamId]);
 
-	// Sync teamId from URL param
-	useEffect(() => {
-		if (paramTeamId) {
-			setTeamId(paramTeamId);
-		} else {
-			setTeamId(sessionStorage.getItem('fpl_team_id') || '');
-		}
-	}, [paramTeamId]);
+	// Sync teamId from URL param (render-time adjustment)
+	const [prevParamTeamId, setPrevParamTeamId] = useState(paramTeamId);
+	if (paramTeamId !== prevParamTeamId) {
+		setPrevParamTeamId(paramTeamId);
+		setTeamId(paramTeamId || sessionStorage.getItem('fpl_team_id') || '');
+	}
 
 	// Use TanStack Query for squad data
 	const {

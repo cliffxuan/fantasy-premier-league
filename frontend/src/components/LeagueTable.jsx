@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import TeamPopover from './TeamPopover';
 import useCurrentGameweek from '../hooks/useCurrentGameweek';
@@ -10,12 +10,12 @@ const LeagueTable = () => {
 	const [gwRange, setGwRange] = useState({ start: 1, end: 38 });
 	const [maxGw, setMaxGw] = useState(38);
 
-	useEffect(() => {
-		if (currentGw) {
-			setMaxGw(currentGw);
-			setGwRange((prev) => ({ ...prev, end: currentGw }));
-		}
-	}, [currentGw]);
+	const [prevCurrentGw, setPrevCurrentGw] = useState(currentGw);
+	if (currentGw && currentGw !== prevCurrentGw) {
+		setPrevCurrentGw(currentGw);
+		setMaxGw(currentGw);
+		setGwRange((prev) => ({ ...prev, end: currentGw }));
+	}
 
 	const debouncedRange = useDebouncedValue(gwRange, 500);
 	const { data: table = [], isLoading: loading, error } = useLeagueTable(debouncedRange.start, debouncedRange.end);
