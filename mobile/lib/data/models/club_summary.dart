@@ -38,6 +38,8 @@ class ClubFixtureEntry {
 @JsonSerializable(fieldRename: FieldRename.snake)
 class ClubTopPlayer {
   final int id;
+  @JsonKey(defaultValue: 0)
+  final int code;
   final String webName;
   final int totalPoints;
   final int elementType;
@@ -46,6 +48,7 @@ class ClubTopPlayer {
 
   const ClubTopPlayer({
     required this.id,
+    this.code = 0,
     required this.webName,
     required this.totalPoints,
     required this.elementType,

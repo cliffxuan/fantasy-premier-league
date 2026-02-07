@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/position_utils.dart';
 import '../../../core/widgets/player_image.dart';
+import '../../../core/widgets/player_quick_sheet.dart';
 import '../../../core/widgets/team_badge.dart';
 import '../../../data/models/solver_response.dart';
 
@@ -57,9 +58,17 @@ class _SolverPlayerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
+    return InkWell(
+      onTap: () => PlayerQuickSheet.show(
+        context,
+        playerId: player.id,
+        playerCode: player.code,
+        playerName: player.name,
+        playerTeam: player.teamShort,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
         children: [
           PlayerImage(playerCode: player.code, size: 32),
           const SizedBox(width: 8),
@@ -111,6 +120,7 @@ class _SolverPlayerRow extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }

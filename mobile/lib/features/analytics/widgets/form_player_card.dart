@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/team_badge.dart';
+import '../../../core/widgets/player_image.dart';
+import '../../../core/widgets/player_quick_sheet.dart';
 import '../../../data/models/form_player.dart';
 
 class FormPlayerCard extends StatelessWidget {
@@ -20,23 +21,44 @@ class FormPlayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
+    return GestureDetector(
+      onTap: () => PlayerQuickSheet.show(
+        context,
+        playerId: player.id,
+        playerCode: player.code,
+        playerName: player.webName,
+        playerTeam: player.teamShort,
+      ),
+      child: Card(
+        child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                TeamBadge(teamCode: player.teamCode, size: 24),
+                PlayerImage(playerCode: player.code, size: 32),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    player.webName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        player.webName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      if (player.teamShort.isNotEmpty)
+                        Text(
+                          player.teamShort,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Container(
@@ -88,6 +110,7 @@ class FormPlayerCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }

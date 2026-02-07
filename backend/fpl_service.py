@@ -1058,6 +1058,7 @@ class FPLService:
             top_players_data.append(
                 {
                     "id": p["id"],
+                    "code": p["code"],
                     "web_name": p["web_name"],
                     "total_points": p["total_points"],
                     "element_type": p["element_type"],

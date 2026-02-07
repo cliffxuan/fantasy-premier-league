@@ -2,6 +2,7 @@ import React from 'react';
 import { RefreshCw, Flame, TrendingDown, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { getPositionName } from './utils';
 import { useFormAnalysis } from '../hooks/queries';
+import PlayerPopover from './PlayerPopover';
 
 const FormAnalysis = () => {
 	const { data = [], isLoading: loading, error, refetch } = useFormAnalysis();
@@ -88,7 +89,11 @@ const FormAnalysis = () => {
 								<div className="flex justify-between items-start mb-4">
 									<div className="flex gap-3">
 										<div className="flex flex-col">
-											<span className="font-bold text-ds-text text-base">{player.web_name}</span>
+											<PlayerPopover player={player}>
+												<span className="font-bold text-ds-text text-base hover:text-ds-primary cursor-pointer transition-colors">
+													{player.web_name}
+												</span>
+											</PlayerPopover>
 											<span className="text-[10px] uppercase text-ds-text-muted font-mono mt-0.5">
 												{getPositionName(player.position)}
 												<span className="opacity-50 mx-1.5">•</span>
@@ -179,7 +184,11 @@ const FormAnalysis = () => {
 										<tr key={player.id} className="hover:bg-ds-surface/30 transition-colors group">
 											<td className="px-3 py-2">
 												<div className="flex flex-col">
-													<span className="font-bold text-ds-text">{player.web_name}</span>
+													<PlayerPopover player={player}>
+														<span className="font-bold text-ds-text hover:text-ds-primary cursor-pointer transition-colors">
+															{player.web_name}
+														</span>
+													</PlayerPopover>
 													<span className="text-[10px] uppercase text-ds-text-muted font-mono">
 														{getPositionName(player.position)}
 														{' • '}

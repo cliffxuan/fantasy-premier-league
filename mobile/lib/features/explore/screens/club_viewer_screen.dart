@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/fdr_badge.dart';
 import '../../../core/widgets/loading_indicator.dart';
+import '../../../core/widgets/player_quick_sheet.dart';
 import '../../../core/widgets/section_card.dart';
 import '../../../core/widgets/team_badge.dart';
 import '../providers/club_viewer_providers.dart';
@@ -85,26 +86,34 @@ class _ClubDetails extends ConsumerWidget {
                 title: 'Top Players',
                 child: Column(
                   children: summary.topPlayers.map((p) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              p.webName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
+                    return GestureDetector(
+                      onTap: () => PlayerQuickSheet.show(
+                        context,
+                        playerId: p.id,
+                        playerCode: p.code,
+                        playerName: p.webName,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                p.webName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                          Text(
-                            '${p.totalPoints} pts',
-                            style: const TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.bold,
+                            Text(
+                              '${p.totalPoints} pts',
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),

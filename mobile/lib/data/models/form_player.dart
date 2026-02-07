@@ -5,8 +5,12 @@ part 'form_player.g.dart';
 @JsonSerializable(fieldRename: FieldRename.snake)
 class FormPlayer {
   final int id;
+  @JsonKey(defaultValue: 0)
+  final int code;
   final String webName;
   final int teamCode;
+  @JsonKey(defaultValue: '')
+  final String teamShort;
   final int position;
   final int streakGames;
   final int streakPoints;
@@ -21,8 +25,10 @@ class FormPlayer {
 
   const FormPlayer({
     required this.id,
+    this.code = 0,
     required this.webName,
     required this.teamCode,
+    this.teamShort = '',
     required this.position,
     required this.streakGames,
     required this.streakPoints,

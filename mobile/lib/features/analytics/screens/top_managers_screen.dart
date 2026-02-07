@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/loading_indicator.dart';
 import '../../../core/widgets/player_image.dart';
+import '../../../core/widgets/player_quick_sheet.dart';
 import '../../../core/widgets/team_badge.dart';
 import '../providers/top_managers_providers.dart';
 
@@ -34,6 +35,13 @@ class TopManagersScreen extends ConsumerWidget {
                 final player = data.players[index];
                 return Card(
                   child: ListTile(
+                    onTap: () => PlayerQuickSheet.show(
+                      context,
+                      playerId: player.id,
+                      playerCode: player.code,
+                      playerName: player.webName,
+                      playerTeam: player.teamShort,
+                    ),
                     leading: PlayerImage(playerCode: player.code, size: 36),
                     title: Row(
                       children: [

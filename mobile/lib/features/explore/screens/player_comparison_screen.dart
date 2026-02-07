@@ -8,6 +8,7 @@ import '../../../data/models/aggregated_player.dart';
 import '../../../data/models/player_summary.dart';
 import '../providers/player_comparison_providers.dart';
 import '../widgets/player_comparison_chart.dart';
+import '../widgets/player_detail_sheet.dart';
 
 class PlayerComparisonScreen extends ConsumerStatefulWidget {
   const PlayerComparisonScreen({super.key});
@@ -135,7 +136,7 @@ class _StatsTable extends StatelessWidget {
           decoration: const BoxDecoration(color: AppColors.card),
           children: [
             const _Cell(text: '', header: true),
-            ...players.map((p) => _Cell(text: p.webName, header: true)),
+            ...players.map((p) => _TappableHeaderCell(player: p)),
           ],
         ),
         // Points
@@ -174,6 +175,39 @@ class _StatsTable extends StatelessWidget {
               (p) => _Cell(text: formatCost((p.nowCost * 10).round()))),
         ]),
       ],
+    );
+  }
+}
+
+class _TappableHeaderCell extends StatelessWidget {
+  final AggregatedPlayer player;
+
+  const _TappableHeaderCell({required this.player});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => PlayerDetailSheet(player: player),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+        child: Text(
+          player.webName,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+            decoration: TextDecoration.underline,
+            decorationColor: AppColors.primary,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 }

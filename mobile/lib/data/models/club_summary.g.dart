@@ -39,6 +39,7 @@ Map<String, dynamic> _$ClubFixtureEntryToJson(ClubFixtureEntry instance) =>
 ClubTopPlayer _$ClubTopPlayerFromJson(Map<String, dynamic> json) =>
     ClubTopPlayer(
       id: (json['id'] as num).toInt(),
+      code: (json['code'] as num?)?.toInt() ?? 0,
       webName: json['web_name'] as String,
       totalPoints: (json['total_points'] as num).toInt(),
       elementType: (json['element_type'] as num).toInt(),
@@ -49,6 +50,7 @@ ClubTopPlayer _$ClubTopPlayerFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$ClubTopPlayerToJson(ClubTopPlayer instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'code': instance.code,
       'web_name': instance.webName,
       'total_points': instance.totalPoints,
       'element_type': instance.elementType,

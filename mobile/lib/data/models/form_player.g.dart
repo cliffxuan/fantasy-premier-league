@@ -8,8 +8,10 @@ part of 'form_player.dart';
 
 FormPlayer _$FormPlayerFromJson(Map<String, dynamic> json) => FormPlayer(
   id: (json['id'] as num).toInt(),
+  code: (json['code'] as num?)?.toInt() ?? 0,
   webName: json['web_name'] as String,
   teamCode: (json['team_code'] as num).toInt(),
+  teamShort: json['team_short'] as String? ?? '',
   position: (json['position'] as num).toInt(),
   streakGames: (json['streak_games'] as num).toInt(),
   streakPoints: (json['streak_points'] as num).toInt(),
@@ -26,8 +28,10 @@ FormPlayer _$FormPlayerFromJson(Map<String, dynamic> json) => FormPlayer(
 Map<String, dynamic> _$FormPlayerToJson(FormPlayer instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'code': instance.code,
       'web_name': instance.webName,
       'team_code': instance.teamCode,
+      'team_short': instance.teamShort,
       'position': instance.position,
       'streak_games': instance.streakGames,
       'streak_points': instance.streakPoints,

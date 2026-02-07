@@ -25,7 +25,7 @@ final advancedFixturesProvider =
 // ignore: unused_element
 typedef AdvancedFixturesRef =
     AutoDisposeFutureProviderRef<List<FixtureTickerTeam>>;
-String _$solverParamsHash() => r'c512c12c722b53adea57828fd5464c7c20b5b92d';
+String _$solverParamsHash() => r'48a81901f7a547f9e22b800110592d3dab4c9392';
 
 /// See also [SolverParams].
 @ProviderFor(SolverParams)
