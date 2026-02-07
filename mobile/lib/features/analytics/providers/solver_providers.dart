@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/constants/fpl_constants.dart';
 import '../../../data/models/fixture_ticker.dart';
 import '../../../data/models/solver_response.dart';
 import '../../../data/repositories/fixture_repository.dart';
@@ -14,7 +15,7 @@ class SolverParams extends _$SolverParams {
   ({double budget, bool excludeBench, bool excludeUnavailable, bool useMl})
       build() {
     return (
-      budget: 100.0,
+      budget: FplConstants.defaultBudget,
       excludeBench: false,
       excludeUnavailable: false,
       useMl: false,

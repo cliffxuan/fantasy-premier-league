@@ -4,6 +4,7 @@ import GameweekRangeSlider from './GameweekRangeSlider';
 import PlayerPopover from './PlayerPopover';
 import ComparisonChart from './ComparisonChart';
 import { getPlayerSummary, getTeams } from '../api';
+import { getPositionName } from './utils';
 
 const PlayerExplorer = () => {
 	const [players, setPlayers] = useState([]);
@@ -194,7 +195,6 @@ const PlayerExplorer = () => {
 	};
 
 	// Helper mappings
-	const positionMap = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' };
 	const statusColorMap = {
 		'a': 'bg-green-500',
 		'd': 'bg-yellow-500',
@@ -423,7 +423,7 @@ const PlayerExplorer = () => {
 											: 'bg-transparent border-ds-border text-ds-text-muted hover:border-ds-text'
 											}`}
 									>
-										{p === 'all' ? 'All' : positionMap[p]}
+										{p === 'all' ? 'All' : getPositionName(p)}
 									</button>
 								))}
 							</div>
@@ -528,7 +528,7 @@ const PlayerExplorer = () => {
 												</PlayerPopover>
 											</div>
 										</td>
-										<td className="p-3 text-xs text-ds-text-muted">{positionMap[player.element_type]}</td>
+										<td className="p-3 text-xs text-ds-text-muted">{getPositionName(player.element_type)}</td>
 										<td className="p-3 text-xs text-ds-text-muted">{player.team_short}</td>
 										<td className="p-3 text-right font-mono">£{player.now_cost}m</td>
 										<td className="p-3 text-right font-bold text-ds-primary">{player.points_in_range}</td>

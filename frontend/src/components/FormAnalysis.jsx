@@ -7,6 +7,7 @@ import {
 	AlertTriangle,
 	Info
 } from "lucide-react";
+import { getPositionName } from './utils';
 
 const FormAnalysis = () => {
 	const [data, setData] = useState([]);
@@ -115,7 +116,7 @@ const FormAnalysis = () => {
 										<div className="flex flex-col">
 											<span className="font-bold text-ds-text text-base">{player.web_name}</span>
 											<span className="text-[10px] uppercase text-ds-text-muted font-mono mt-0.5">
-												{player.position === 1 ? "GKP" : player.position === 2 ? "DEF" : player.position === 3 ? "MID" : "FWD"}
+												{getPositionName(player.position)}
 												<span className="opacity-50 mx-1.5">•</span>
 												GW{player.last_match_gw}
 											</span>
@@ -199,7 +200,7 @@ const FormAnalysis = () => {
 												<div className="flex flex-col">
 													<span className="font-bold text-ds-text">{player.web_name}</span>
 													<span className="text-[10px] uppercase text-ds-text-muted font-mono">
-														{player.position === 1 ? "GKP" : player.position === 2 ? "DEF" : player.position === 3 ? "MID" : "FWD"}
+														{getPositionName(player.position)}
 														{" • "}
 														GW{player.last_match_gw}
 													</span>

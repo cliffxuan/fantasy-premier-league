@@ -2,32 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getDreamTeam } from '../api';
 import PlayerPopover from './PlayerPopover';
+import PitchView from './PitchView';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
+import useCurrentGameweek from '../hooks/useCurrentGameweek';
+import { getStatusBadgeClass } from './utils';
 
 const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
+	const { gameweek: fetchedGw, status: fetchedStatus } = useCurrentGameweek();
 	const [data, setData] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [fetchedStatus, setFetchedStatus] = useState(null);
 
-	// Fetch current GW status always to ensure we know the latest finalized week
+	// Only update GW if it's missing AND this tab is active
 	useEffect(() => {
-		const fetchCurrent = async () => {
-			try {
-				const response = await fetch('/api/gameweek/current');
-				if (response.ok) {
-					const res = await response.json();
-					setFetchedStatus(res.status);
-					// Only update GW if it's missing AND this tab is active
-					if (!gw && onGwChange && isActive) {
-						onGwChange(res.gameweek);
-					}
-				}
-			} catch (e) {
-				console.error("Failed to fetch current GW", e);
-			}
-		};
-		fetchCurrent();
-	}, [gw, onGwChange, isActive]);
+		if (fetchedGw && !gw && onGwChange && isActive) {
+			onGwChange(fetchedGw);
+		}
+	}, [fetchedGw, gw, onGwChange, isActive]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -93,12 +83,6 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 
 	const { squad, top_player, total_points } = data;
 
-	// Group by position
-	const gkp = squad.filter(p => p.position === 1);
-	const def = squad.filter(p => p.position === 2);
-	const mid = squad.filter(p => p.position === 3);
-	const fwd = squad.filter(p => p.position === 4);
-
 	const PlayerCard = ({ player }) => (
 		<PlayerPopover player={player}>
 			<div className="relative flex flex-col items-center justify-center w-[70px] md:w-[90px]">
@@ -119,9 +103,7 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 					{/* Status Indicator */}
 					{player.status !== 'a' && (
 						<div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
-                            ${player.status === 'd' ? 'bg-yellow-500 text-black' :
-								player.status === 'i' ? 'bg-red-500 text-white' :
-									player.status === 'u' ? 'bg-orange-500 text-white' : 'bg-gray-500 text-white'}`}
+                            ${getStatusBadgeClass(player.status)}`}
 						>
 							!
 						</div>
@@ -200,32 +182,10 @@ const DreamTeam = ({ currentGw, gw, onGwChange, onTabSwitch, isActive }) => {
 			</div>
 
 			{/* Pitch View */}
-			<div className="bg-ds-card rounded-xl p-2 md:p-8 relative border border-ds-border min-h-[500px] md:min-h-[600px] flex flex-col justify-between overflow-hidden">
-				{/* Pitch Pattern Overlay */}
-				<div className="absolute inset-0 opacity-5 pointer-events-none"
-					style={{
-						backgroundImage: `linear-gradient(0deg, transparent 24%, #ffffff 25%, #ffffff 26%, transparent 27%, transparent 74%, #ffffff 75%, #ffffff 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, #ffffff 25%, #ffffff 26%, transparent 27%, transparent 74%, #ffffff 75%, #ffffff 76%, transparent 77%, transparent)`,
-						backgroundSize: '100px 100px'
-					}}>
-				</div>
-				{/* Center Circle */}
-				<div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/5 rounded-full pointer-events-none"></div>
-				{/* Halfway Line */}
-				<div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/5 pointer-events-none"></div>
-
-				<div className="flex justify-center gap-1 md:gap-4 z-10">
-					{gkp.map((p, i) => <PlayerCard key={`gkp-${i}`} player={p} />)}
-				</div>
-				<div className="flex justify-center gap-1 md:gap-4 z-10">
-					{def.map((p, i) => <PlayerCard key={`def-${i}`} player={p} />)}
-				</div>
-				<div className="flex justify-center gap-1 md:gap-4 z-10">
-					{mid.map((p, i) => <PlayerCard key={`mid-${i}`} player={p} />)}
-				</div>
-				<div className="flex justify-center gap-1 md:gap-4 z-10">
-					{fwd.map((p, i) => <PlayerCard key={`fwd-${i}`} player={p} />)}
-				</div>
-			</div>
+			<PitchView
+				players={squad}
+				renderCard={(player) => <PlayerCard player={player} />}
+			/>
 		</div>
 	);
 };

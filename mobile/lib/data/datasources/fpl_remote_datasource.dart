@@ -1,4 +1,5 @@
 import '../../core/constants/api_constants.dart';
+import '../../core/constants/fpl_constants.dart';
 import '../../core/network/dio_client.dart';
 import '../models/analysis_request.dart';
 import '../models/analysis_response.dart';
@@ -127,7 +128,7 @@ class FplRemoteDatasource {
         .toList();
   }
 
-  Future<TopManagersResponse> getTopManagers({int? gw, int count = 1000}) async {
+  Future<TopManagersResponse> getTopManagers({int? gw, int count = FplConstants.defaultTopManagersCount}) async {
     final query = <String, dynamic>{'count': count};
     if (gw != null) query['gw'] = gw;
 
@@ -152,12 +153,12 @@ class FplRemoteDatasource {
   }
 
   Future<List<AggregatedPlayer>> getAggregatedPlayers({
-    int minGw = 1,
-    int maxGw = 38,
+    int minGw = FplConstants.minGameweek,
+    int maxGw = FplConstants.maxGameweek,
     String venue = 'both',
   }) async {
     final data = await _client.get<List<dynamic>>(
-      '/players/aggregated',
+      ApiConstants.playersAggregated,
       queryParameters: {
         'min_gw': minGw,
         'max_gw': maxGw,
@@ -201,8 +202,8 @@ class FplRemoteDatasource {
   // --- League Table ---
 
   Future<List<LeagueTableEntry>> getLeagueTable({
-    int minGw = 1,
-    int maxGw = 38,
+    int minGw = FplConstants.minGameweek,
+    int maxGw = FplConstants.maxGameweek,
   }) async {
     final data = await _client.get<List<dynamic>>(
       ApiConstants.leagueTable,
@@ -216,7 +217,7 @@ class FplRemoteDatasource {
   // --- Optimization ---
 
   Future<SolverResponse> solvOptimization({
-    double budget = 100.0,
+    double budget = FplConstants.defaultBudget,
     int? minGw,
     int? maxGw,
     bool excludeBench = false,

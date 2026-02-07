@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import TeamPopover from './TeamPopover';
+import useCurrentGameweek from '../hooks/useCurrentGameweek';
 
 const LeagueTable = () => {
+	const { gameweek: currentGw, loading: gwLoading } = useCurrentGameweek();
 	const [table, setTable] = useState([]);
 	const [gwRange, setGwRange] = useState({ start: 1, end: 38 });
 	const [maxGw, setMaxGw] = useState(38);
@@ -10,20 +12,11 @@ const LeagueTable = () => {
 	const [error, setError] = useState(null);
 
 	useEffect(() => {
-		const fetchCurrentGw = async () => {
-			try {
-				const response = await fetch('/api/gameweek/current');
-				if (response.ok) {
-					const data = await response.json();
-					setMaxGw(data.gameweek);
-					setGwRange((prev) => ({ ...prev, end: data.gameweek }));
-				}
-			} catch (error) {
-				console.error('Failed to fetch current gameweek:', error);
-			}
-		};
-		fetchCurrentGw();
-	}, []);
+		if (currentGw) {
+			setMaxGw(currentGw);
+			setGwRange((prev) => ({ ...prev, end: currentGw }));
+		}
+	}, [currentGw]);
 
 	useEffect(() => {
 		const fetchTable = async () => {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/fpl_constants.dart';
 import '../theme/app_colors.dart';
 
 class GameweekNavigator extends StatelessWidget {
@@ -9,7 +10,7 @@ class GameweekNavigator extends StatelessWidget {
   const GameweekNavigator({
     super.key,
     required this.currentGw,
-    this.maxGw = 38,
+    this.maxGw = FplConstants.maxGameweek,
     required this.onChanged,
   });
 

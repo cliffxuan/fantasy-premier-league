@@ -18,6 +18,7 @@ class ApiConstants {
   static const String gameweekCurrent = '/gameweek/current';
   static const String optimizationSolve = '/optimization/solve';
   static const String optimizationFixtures = '/optimization/fixtures';
+  static const String playersAggregated = '/players/aggregated';
   static const String health = '/health';
 
   // Auth

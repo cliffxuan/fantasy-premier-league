@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/player_status.dart';
 import '../theme/app_colors.dart';
 
 class StatusDot extends StatelessWidget {
@@ -9,15 +10,15 @@ class StatusDot extends StatelessWidget {
 
   Color get _color {
     switch (status.toLowerCase()) {
-      case 'a':
+      case PlayerStatus.available:
         return AppColors.accent;
-      case 'i':
+      case PlayerStatus.injured:
         return AppColors.danger;
-      case 's':
+      case PlayerStatus.suspended:
         return AppColors.danger;
-      case 'd':
+      case PlayerStatus.doubtful:
         return AppColors.warning;
-      case 'u':
+      case PlayerStatus.unavailable:
         return AppColors.textMuted;
       default:
         return AppColors.textMuted;

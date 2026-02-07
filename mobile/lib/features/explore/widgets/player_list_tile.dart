@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/player_status.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/position_utils.dart';
 import '../../../core/widgets/player_image.dart';
 import '../../../core/widgets/status_dot.dart';
 import '../../../core/widgets/team_badge.dart';
@@ -20,16 +22,6 @@ class PlayerListTile extends StatelessWidget {
     this.selectable = false,
     this.selected = false,
   });
-
-  String get _posName {
-    switch (player.elementType) {
-      case 1: return 'GKP';
-      case 2: return 'DEF';
-      case 3: return 'MID';
-      case 4: return 'FWD';
-      default: return '';
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +50,7 @@ class PlayerListTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (player.status != 'a') ...[
+          if (player.status != PlayerStatus.available) ...[
             const SizedBox(width: 4),
             StatusDot(status: player.status),
           ],
@@ -69,7 +61,7 @@ class PlayerListTile extends StatelessWidget {
           TeamBadge(teamCode: player.teamCode, size: 14),
           const SizedBox(width: 4),
           Text(
-            '$_posName | ${player.teamShort} | ${formatCost((player.nowCost * 10).round())}',
+            '${getPositionName(player.elementType)} | ${player.teamShort} | ${formatCost((player.nowCost * 10).round())}',
             style: const TextStyle(
               color: AppColors.textMuted,
               fontSize: 12,

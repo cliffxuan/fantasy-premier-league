@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ArrowUpCircle, Zap, RefreshCw, Shield, List, Layout, ChevronLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import PlayerPopover from './PlayerPopover';
+import PitchView from './PitchView';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
+import { getPositionName, getFdrBadgeClass, getStatusBadgeClass } from './utils';
 
 const Chip = ({ name, label, status, events }) => {
 	const getIcon = (name) => {
@@ -46,16 +48,6 @@ const ListView = ({ squad }) => {
 	const starters = squad.slice(0, 11);
 	const bench = squad.slice(11);
 
-	const getPositionName = (type) => {
-		switch (type) {
-			case 1: return "Goalkeepers";
-			case 2: return "Defenders";
-			case 3: return "Midfielders";
-			case 4: return "Forwards";
-			default: return "Unknown";
-		}
-	};
-
 	const renderPlayerRow = (player) => (
 		<div key={player.id} className="grid grid-cols-[3fr_1fr_1fr_1fr_2fr] items-center py-3 border-b border-ds-border hover:bg-ds-card-hover transition-colors font-mono text-sm">
 			{/* Player Info */}
@@ -69,9 +61,7 @@ const ListView = ({ squad }) => {
 					/>
 					{player.status !== 'a' && (
 						<div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full flex items-center justify-center text-[8px] font-bold border border-ds-bg
-                            ${player.status === 'd' ? 'bg-ds-warning text-black' :
-								player.status === 'i' ? 'bg-ds-danger text-white' :
-									player.status === 'u' ? 'bg-orange-500 text-white' : 'bg-gray-500 text-white'}`}
+                            ${getStatusBadgeClass(player.status)}`}
 						>
 							!
 						</div>
@@ -84,7 +74,7 @@ const ListView = ({ squad }) => {
 						{player.is_vice_captain && <span className="bg-gray-700 text-white text-[10px] px-1 rounded-full border border-white/20">V</span>}
 					</div>
 					<div className="text-xs text-ds-text-muted flex gap-2 font-sans">
-						<span>{player.team_short} {player.position === 1 ? 'GKP' : player.position === 2 ? 'DEF' : player.position === 3 ? 'MID' : 'FWD'}</span>
+						<span>{player.team_short} {getPositionName(player.position)}</span>
 					</div>
 				</div>
 			</div>
@@ -96,11 +86,7 @@ const ListView = ({ squad }) => {
 
 			{/* Fixture */}
 			<div className="text-right text-sm pr-2">
-				<span className={`px-2 py-1 rounded text-xs font-bold ${player.fixture_difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
-					player.fixture_difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
-						player.fixture_difficulty === 4 ? 'bg-ds-warning/20 text-ds-warning' :
-							'bg-ds-danger/20 text-ds-danger'
-					}`}>
+				<span className={`px-2 py-1 rounded text-xs font-bold ${getFdrBadgeClass(player.fixture_difficulty)}`}>
 					{player.fixture}
 				</span>
 			</div>
@@ -159,12 +145,6 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 	const starters = squad.slice(0, 11);
 	const bench = squad.slice(11);
 
-	// Group starters by position
-	const gkp = starters.filter(p => p.position === 1);
-	const def = starters.filter(p => p.position === 2);
-	const mid = starters.filter(p => p.position === 3);
-	const fwd = starters.filter(p => p.position === 4);
-
 	const PlayerCard = ({ player, isBench = false }) => (
 		<PlayerPopover player={player}>
 			<div className={`relative flex flex-col items-center justify-center w-[64px] md:w-[90px] ${isBench ? 'opacity-90' : ''}`}>
@@ -208,9 +188,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 					{/* Status Indicator */}
 					{player.status !== 'a' && (
 						<div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold border border-white
-							${player.status === 'd' ? 'bg-yellow-500 text-black' :
-								player.status === 'i' ? 'bg-red-500 text-white' :
-									player.status === 'u' ? 'bg-orange-500 text-white' : 'bg-gray-500 text-white'}`}
+							${getStatusBadgeClass(player.status)}`}
 						>
 							!
 						</div>
@@ -220,11 +198,7 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 				<div className="bg-ds-card/90 text-ds-text text-center rounded w-full py-1 px-0.5 border border-ds-border backdrop-blur-sm shadow-sm mt-1">
 					<div className="text-[10px] md:text-xs font-bold truncate px-1 font-sans">{player.name}</div>
 					<div className="flex justify-center items-center gap-1 mt-0.5">
-						<span className={`text-[9px] px-1 rounded font-bold ${player.fixture_difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
-							player.fixture_difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
-								player.fixture_difficulty === 4 ? 'bg-ds-warning/20 text-ds-warning' :
-									'bg-ds-danger/20 text-ds-danger'
-							}`}>
+						<span className={`text-[9px] px-1 rounded font-bold ${getFdrBadgeClass(player.fixture_difficulty)}`}>
 							{player.fixture}
 						</span>
 					</div>
@@ -329,8 +303,8 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 								Transfers
 							</h3>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								{transfers.map((t, i) => (
-									<div key={i} className="flex items-center justify-between bg-ds-bg/50 p-2 rounded border border-ds-border text-sm font-mono">
+								{transfers.map((t) => (
+									<div key={`${t.element_out}-${t.element_in}`} className="flex items-center justify-between bg-ds-bg/50 p-2 rounded border border-ds-border text-sm font-mono">
 										<div className="flex items-center gap-2">
 											<span className="text-ds-danger font-bold text-xs">OUT</span>
 											<span>{t.element_out_name}</span>
@@ -350,37 +324,15 @@ const SquadDisplay = ({ squad, chips, gameweek, transfers, onGwChange, loading, 
 
 			{!loading && (viewMode === 'pitch' ? (
 				<>
-					<div className="bg-ds-card rounded-xl p-2 md:p-8 relative border border-ds-border min-h-[500px] md:min-h-[600px] flex flex-col justify-between overflow-hidden">
-						{/* Pitch Pattern Overlay */}
-						<div className="absolute inset-0 opacity-5 pointer-events-none"
-							style={{
-								backgroundImage: `linear-gradient(0deg, transparent 24%, #ffffff 25%, #ffffff 26%, transparent 27%, transparent 74%, #ffffff 75%, #ffffff 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, #ffffff 25%, #ffffff 26%, transparent 27%, transparent 74%, #ffffff 75%, #ffffff 76%, transparent 77%, transparent)`,
-								backgroundSize: '100px 100px'
-							}}>
-						</div>
-						{/* Center Circle */}
-						<div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/5 rounded-full pointer-events-none"></div>
-						{/* Halfway Line */}
-						<div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white/5 pointer-events-none"></div>
-
-						<div className="flex justify-center gap-1 md:gap-4 z-10">
-							{gkp.map((p, i) => <PlayerCard key={`gkp-${i}`} player={p} />)}
-						</div>
-						<div className="flex justify-center gap-1 md:gap-4 z-10">
-							{def.map((p, i) => <PlayerCard key={`def-${i}`} player={p} />)}
-						</div>
-						<div className="flex justify-center gap-1 md:gap-4 z-10">
-							{mid.map((p, i) => <PlayerCard key={`mid-${i}`} player={p} />)}
-						</div>
-						<div className="flex justify-center gap-1 md:gap-4 z-10">
-							{fwd.map((p, i) => <PlayerCard key={`fwd-${i}`} player={p} />)}
-						</div>
-					</div>
+					<PitchView
+						players={starters}
+						renderCard={(player) => <PlayerCard player={player} />}
+					/>
 
 					<div className="bg-ds-card p-4 rounded-xl border border-ds-border mt-6">
 						<h3 className="text-gray-400 text-base mb-4 font-normal">Bench</h3>
 						<div className="flex justify-center gap-2 md:gap-4 flex-wrap">
-							{bench.map((p, i) => <PlayerCard key={`bench-${i}`} player={p} isBench={true} />)}
+							{bench.map((p) => <PlayerCard key={p.id || p.name} player={p} isBench={true} />)}
 						</div>
 					</div>
 				</>

@@ -20,13 +20,38 @@ PINGONE_CLIENT_ID = "1f243d70-a140-4035-8c41-341f5af5aa12"
 PINGONE_REDIRECT_URI = "https://www.premierleague.com/robots.txt"
 PINGONE_SCOPE = "openid profile offline_access p1:update:user p1:read:device p1:reset:userPassword"
 
+# --- Constants ---
+CHIP_RESET_GW = 20
+MAX_FREE_TRANSFERS = 5
+AFCON_TOPUP_GW = 15
+STANDINGS_PAGE_SIZE = 50
+TOP_MANAGERS_CACHE_TTL = 3600  # 1 hour
+POLYMARKET_CACHE_TTL = 600  # 10 minutes
+BOOTSTRAP_CACHE_TTL = 300  # 5 minutes
+OVERALL_LEAGUE_ID = 314
+
+
+def calculate_match_result(home_score: int, away_score: int, is_home: bool) -> str:
+    """Determine W/D/L from the perspective of the given team."""
+    if is_home:
+        if home_score > away_score:
+            return "W"
+        elif home_score < away_score:
+            return "L"
+    else:
+        if away_score > home_score:
+            return "W"
+        elif away_score < home_score:
+            return "L"
+    return "D"
+
 
 class FPLService:
     # Class-level cache to persist across request instances
     _cache: Dict[str, Any] = {}
     _last_updated: Dict[str, float] = {}
     _cache_lock = asyncio.Lock()
-    CACHE_TTL = 300  # 5 minutes
+    CACHE_TTL = BOOTSTRAP_CACHE_TTL
 
     @staticmethod
     def get_authorize_url() -> str:
@@ -184,8 +209,8 @@ class FPLService:
     async def get_enriched_squad(
         self, team_id: int, gw: int | None = None, auth_token: str | None = None
     ) -> Dict[str, Any]:
-        print(
-            f"DEBUG: get_enriched_squad called for team {team_id} with gw={gw} auth={bool(auth_token)}"
+        logger.debug(
+            f"get_enriched_squad called for team {team_id} with gw={gw} auth={bool(auth_token)}"
         )
         bootstrap = await self.get_bootstrap_static()
 
@@ -202,7 +227,7 @@ class FPLService:
         else:
             gw = int(gw)
 
-        print(f"DEBUG: Using gw={gw} (current_gw={current_gw})")
+        logger.debug(f"Using gw={gw} (current_gw={current_gw})")
 
         target_fixture_gw = gw
         if gw > current_gw:
@@ -212,17 +237,21 @@ class FPLService:
             entry = await self.get_entry(team_id)
             if "favourite_team" in entry and entry["favourite_team"]:
                 fav_team_id = entry["favourite_team"]
-                # bootstrap already fetched
                 teams = {t["id"]: t for t in bootstrap["teams"]}
                 if fav_team_id in teams:
                     entry["favourite_team_code"] = teams[fav_team_id]["code"]
                     entry["favourite_team_name"] = teams[fav_team_id]["name"]
-        except Exception:
+        except httpx.HTTPStatusError as e:
+            logger.warning(f"Failed to fetch entry for team {team_id}: {e}")
+            entry = {}
+        except httpx.RequestError as e:
+            logger.warning(f"Network error fetching entry for team {team_id}: {e}")
             entry = {}
 
         try:
             history = await self.get_entry_history(team_id)
-        except Exception:
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.warning(f"Failed to fetch history for team {team_id}: {e}")
             history = {"chips": [], "current": []}
 
         picks_gw = gw
@@ -238,22 +267,21 @@ class FPLService:
                 picks = my_team_data
                 # If using auth token, we are likely looking at the most up to date team (possibly next GW)
                 # But we keep gw as requested or default current
-            except Exception as e:
-                print(f"DEBUG: Failed to fetch my team with token: {e}")
-                # Fallback to public picks if auth fails? Or just fail?
-                # Let's fallback for now, or just leave picks as None to be handled below
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                logger.debug(f"Failed to fetch my team with token: {e}")
 
         if not picks:
             try:
                 picks = await self.get_entry_picks(team_id, picks_gw)
-            except Exception:
-                # If basic fetch fails too, return empty
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                logger.warning(f"Failed to fetch picks for team {team_id} GW{picks_gw}: {e}")
                 return {"squad": [], "chips": [], "entry": entry}
 
         logger.info(f"gw={gw} picks_count={len(picks.get('picks', []))}")
         try:
             all_transfers = await self.get_transfers(team_id)
-        except Exception:
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.warning(f"Failed to fetch transfers for team {team_id}: {e}")
             all_transfers = []
 
         elements = {p["id"]: p for p in bootstrap["elements"]}
@@ -305,15 +333,15 @@ class FPLService:
         try:
             live_data = await self.get_event_live(gw)
             live_elements = {e["id"]: e["stats"] for e in live_data["elements"]}
-            print(
-                f"DEBUG: Fetched live data for GW{gw}, {len(live_elements)} elements found."
+            logger.debug(
+                f"Fetched live data for GW{gw}, {len(live_elements)} elements found."
             )
-        except Exception as e:
-            print(f"DEBUG: Failed to fetch live data for GW{gw}: {e}")
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.debug(f"Failed to fetch live data for GW{gw}: {e}")
             live_elements = {}
 
         squad = []
-        print(f"DEBUG: Processing {len(picks['picks'])} picks for GW{gw}")
+        logger.debug(f"Processing {len(picks['picks'])} picks for GW{gw}")
         for pick in picks["picks"]:
             player = elements.get(pick["element"])
             if player:
@@ -540,7 +568,7 @@ class FPLService:
             for name in target_chips:
                 label = chip_labels.get(name, name)
                 status = "available"
-                start_gw_period_2 = 20  # Reset at GW20
+                start_gw_period_2 = CHIP_RESET_GW
 
                 used_events = used_chips_map.get(name, [])
 
@@ -612,11 +640,11 @@ class FPLService:
                 ft = max(0, ft - used)
 
             # You get +1 for the next round, capped at 5
-            ft = min(5, ft + 1)
+            ft = min(MAX_FREE_TRANSFERS, ft + 1)
 
-            # Special rule for 2025/26 season: 5 free transfers top-up after GW15 (AFCON)
-            if event == 15:
-                ft = 5
+            # Special rule for 2025/26 season: free transfers top-up after AFCON
+            if event == AFCON_TOPUP_GW:
+                ft = MAX_FREE_TRANSFERS
 
         # Now deduct transfers already made for the upcoming gameweek (next_gw)
         # These transfers are in the 'transfers' list but not yet in 'history' (if next_gw is future)
@@ -763,9 +791,9 @@ class FPLService:
                             "team_a_win": round((v_a_wins / venue_total) * 100),
                             "total": venue_total,
                         }
-            except Exception as e:
-                print(
-                    f"DEBUG: Failed to calc stats for {f.team_h_name} vs {f.team_a_name}: {e}"
+            except (httpx.HTTPStatusError, httpx.RequestError, KeyError) as e:
+                logger.debug(
+                    f"Failed to calc stats for {f.team_h_name} vs {f.team_a_name}: {e}"
                 )
 
         return fixtures
@@ -777,8 +805,8 @@ class FPLService:
                 response = await client.get(url)
                 if response.status_code == 200:
                     return response.json()
-        except Exception as e:
-            print(f"DEBUG: Failed to fetch pulse lineup for {pulse_match_id}: {e}")
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.debug(f"Failed to fetch pulse lineup for {pulse_match_id}: {e}")
         return {}
 
     async def get_teams(self) -> List[Team]:
@@ -788,7 +816,7 @@ class FPLService:
     async def get_club_squad(
         self, club_id: int, gw: int | None = None
     ) -> Dict[str, Any]:
-        print(f"DEBUG: get_club_squad called for club {club_id} with gw={gw}")
+        logger.debug(f"get_club_squad called for club {club_id} with gw={gw}")
         bootstrap = await self.get_bootstrap_static()
         current_gw = await self.get_current_gameweek()
         if gw is None:
@@ -809,7 +837,8 @@ class FPLService:
         try:
             live_data = await self.get_event_live(gw)
             live_elements = {e["id"]: e["stats"] for e in live_data["elements"]}
-        except Exception:
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.debug(f"Failed to fetch live data for club squad GW{gw}: {e}")
             live_elements = {}
 
         # Fetch fixtures for this GW
@@ -1014,20 +1043,7 @@ class FPLService:
                 score = f"{h_score}-{a_score}"
 
                 if h_score is not None and a_score is not None:
-                    if is_home:
-                        if h_score > a_score:
-                            result = "W"
-                        elif h_score < a_score:
-                            result = "L"
-                        else:
-                            result = "D"
-                    else:
-                        if a_score > h_score:
-                            result = "W"
-                        elif a_score < h_score:
-                            result = "L"
-                        else:
-                            result = "D"
+                    result = calculate_match_result(h_score, a_score, is_home)
 
             club_schedule.append(
                 {
@@ -1138,17 +1154,7 @@ class FPLService:
             a_score = f.team_a_score
             score = f"{h_score}-{a_score}"
 
-            result = "D"
-            if is_home:
-                if h_score > a_score:
-                    result = "W"
-                elif h_score < a_score:
-                    result = "L"
-            else:
-                if a_score > h_score:
-                    result = "W"
-                elif a_score < h_score:
-                    result = "L"
+            result = calculate_match_result(h_score, a_score, is_home)
 
             recent.append(
                 {
@@ -1401,8 +1407,8 @@ class FPLService:
                         )
                         data["history_vs_opponent"] = vs_history
                         data["next_opponent_name"] = opponent_name
-            except Exception as e:
-                print(f"DEBUG: Failed to fetch history vs opponent: {e}")
+            except (httpx.HTTPStatusError, httpx.RequestError, KeyError) as e:
+                logger.debug(f"Failed to fetch history vs opponent: {e}")
 
             return data
 
@@ -1523,7 +1529,7 @@ class FPLService:
         # Cache for 1 hour
         if (
             cache_key in self._cache
-            and (now - self._last_updated.get(cache_key, 0)) < 3600
+            and (now - self._last_updated.get(cache_key, 0)) < TOP_MANAGERS_CACHE_TTL
         ):
             return self._cache[cache_key]
 
@@ -1554,9 +1560,9 @@ class FPLService:
             # Let's just fetch what we need.
 
             # Fetch Top Manager Team IDs from Overall League (ID 314)
-            num_pages = (count + 49) // 50
+            num_pages = (count + STANDINGS_PAGE_SIZE - 1) // STANDINGS_PAGE_SIZE
             top_teams = []
-            league_id = 314
+            league_id = OVERALL_LEAGUE_ID
 
             # Helper to fetch a page of standings
             async def fetch_standings_page(client, page):
@@ -1567,7 +1573,7 @@ class FPLService:
                     )
                     resp.raise_for_status()
                     return resp.json()
-                except Exception as e:
+                except (httpx.HTTPStatusError, httpx.RequestError) as e:
                     logger.error(f"Failed to fetch standings page {page}: {e}")
                     return None
 
@@ -1649,15 +1655,7 @@ class FPLService:
                 if p["is_captain"]:
                     captain_counts[p["element"]] += 1
 
-        # 4. Enrich with Player Data
-
-        # 3. Enrich with Player Data
-        bootstrap = await self.get_bootstrap_static()
-        elements = {p["id"]: p for p in bootstrap["elements"]}
-        teams = {t["id"]: t for t in bootstrap["teams"]}
-
-        enriched_players = []
-        # 4. Enrich with Player Data
+        # Enrich with Player Data
         bootstrap = await self.get_bootstrap_static()
         elements = {p["id"]: p for p in bootstrap["elements"]}
         teams = {t["id"]: t for t in bootstrap["teams"]}
@@ -1910,7 +1908,7 @@ class FPLService:
         # Cache for 10 minutes
         if (
             cache_key in self._cache
-            and (now - self._last_updated.get(cache_key, 0)) < 600
+            and (now - self._last_updated.get(cache_key, 0)) < POLYMARKET_CACHE_TTL
         ):
             return self._cache[cache_key]
 
@@ -1932,7 +1930,8 @@ class FPLService:
             events = static_data.get("events", [])
             events = [e for e in events if e.get("deadline_time")]
             events.sort(key=lambda x: x["deadline_time"])
-        except Exception:
+        except (httpx.HTTPStatusError, httpx.RequestError) as e:
+            logger.warning(f"Failed to fetch bootstrap for polymarket: {e}")
             events = []
 
         async with httpx.AsyncClient() as client:

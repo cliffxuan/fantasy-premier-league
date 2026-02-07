@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import PlayerPopover from './PlayerPopover';
 import GameweekRangeSlider from './GameweekRangeSlider';
+import useCurrentGameweek from '../hooks/useCurrentGameweek';
+import { getPositionName } from './utils';
 
 const Solver = () => {
+	const { gameweek: currentGw, status: gwStatus, loading: gwLoading } = useCurrentGameweek();
 	const [budget, setBudget] = useState(100.0);
 	const [minGw, setMinGw] = useState(1);
 	const [maxGw, setMaxGw] = useState(null);
@@ -15,38 +18,20 @@ const Solver = () => {
 	const [error, setError] = useState(null);
 
 	useEffect(() => {
-		const fetchCurrentGw = async () => {
-			try {
-				const response = await fetch('/api/gameweek/current');
-				if (response.ok) {
-					const data = await response.json();
-					console.log('Current GW Data:', data);
-					const status = data.status;
+		if (gwLoading) return;
 
-					let safeMax = 38;
-					if (status) {
-						// If GW has started (deadline passed), use it. otherwise use previous.
-						safeMax = status.started ? status.id : Math.max(1, status.id - 1);
-					} else if (data.gameweek) {
-						// Fallback if status object is missing (stale backend)
-						safeMax = data.gameweek;
-					}
+		let safeMax = 38;
+		if (gwStatus) {
+			// If GW has started (deadline passed), use it. otherwise use previous.
+			safeMax = gwStatus.started ? gwStatus.id : Math.max(1, gwStatus.id - 1);
+		} else if (currentGw) {
+			// Fallback if status object is missing (stale backend)
+			safeMax = currentGw;
+		}
 
-					setSliderMax(safeMax);
-					setMaxGw(safeMax);
-				} else {
-					console.error('API Error:', response.status);
-					setSliderMax(38);
-					setMaxGw(38); // Fallback on error
-				}
-			} catch (err) {
-				console.error('Failed to fetch current gameweek:', err);
-				setSliderMax(38);
-				setMaxGw(38); // Fallback on exception
-			}
-		};
-		fetchCurrentGw();
-	}, []);
+		setSliderMax(safeMax);
+		setMaxGw(safeMax);
+	}, [currentGw, gwStatus, gwLoading]);
 
 	const handleSolve = async (e) => {
 		e.preventDefault();
@@ -202,7 +187,7 @@ const Solver = () => {
 								{result.squad.map((p) => (
 									<tr key={p.id} className={`border-b border-ds-border hover:bg-ds-card-hover transition-colors ${p.is_starter === false ? 'opacity-60 bg-ds-surface/50' : ''}`}>
 										<td className="px-3 py-2 text-ds-text-muted">
-											{['GKP', 'DEF', 'MID', 'FWD'][p.position - 1]}
+											{getPositionName(p.position)}
 										</td>
 										<td className="px-3 py-2 font-bold hover:text-ds-primary cursor-pointer transition-colors">
 											<PlayerPopover player={{

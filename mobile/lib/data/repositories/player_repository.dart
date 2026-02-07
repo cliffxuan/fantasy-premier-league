@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../core/constants/fpl_constants.dart';
 import '../../core/providers/dio_provider.dart';
 import '../datasources/fpl_remote_datasource.dart';
 import '../models/aggregated_player.dart';
@@ -18,8 +19,8 @@ class PlayerRepository {
   }
 
   Future<List<AggregatedPlayer>> getAggregatedPlayers({
-    int minGw = 1,
-    int maxGw = 38,
+    int minGw = FplConstants.minGameweek,
+    int maxGw = FplConstants.maxGameweek,
     String venue = 'both',
   }) {
     return _datasource.getAggregatedPlayers(

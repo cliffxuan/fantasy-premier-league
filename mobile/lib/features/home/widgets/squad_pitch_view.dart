@@ -3,14 +3,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/asset_urls.dart';
+import '../../../core/constants/player_status.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/fdr_badge.dart';
 import '../../../data/models/squad_player.dart';
+import 'pitch_player_badges.dart';
 
 class SquadPitchView extends StatelessWidget {
   final List<SquadPlayer> squad;
   final ValueChanged<SquadPlayer>? onPlayerTap;
-  /// Map of team ID → 3-letter short name (e.g. {1: "ARS", 21: "WHU"}).
+  /// Map of team ID -> 3-letter short name (e.g. {1: "ARS", 21: "WHU"}).
   /// When provided, the fixture badge uses the abbreviation instead of the
   /// full name string from the backend.
   final Map<int, String> teamShortNames;
@@ -50,7 +52,7 @@ class SquadPitchView extends StatelessWidget {
               children: [
                 // Pitch decorations
                 const _PitchOverlay(),
-                // Player rows — GKP top, FWD bottom (matches React)
+                // Player rows -- GKP top, FWD bottom (matches React)
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -221,56 +223,15 @@ class _PitchPlayer extends StatelessWidget {
                       ),
                     ),
                   ),
-                // Captain badge (top-right)
-                if (player.isCaptain)
+                // Captain / vice-captain badge (top-right)
+                if (player.isCaptain || player.isViceCaptain)
                   Positioned(
                     right: -8,
                     top: -2,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'C',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                // Vice-captain badge (top-right)
-                if (player.isViceCaptain)
-                  Positioned(
-                    right: -8,
-                    top: -2,
-                    child: Container(
-                      width: 18,
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF374151),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'V',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                    child: CaptainBadge(isCaptain: player.isCaptain),
                   ),
                 // Status indicator (bottom-right)
-                if (player.status != 'a')
+                if (player.status != PlayerStatus.available)
                   Positioned(
                     right: -2,
                     bottom: -2,
@@ -278,7 +239,7 @@ class _PitchPlayer extends StatelessWidget {
                       width: 14,
                       height: 14,
                       decoration: BoxDecoration(
-                        color: _statusColor(player.status),
+                        color: statusIndicatorColor(player.status),
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 1),
                       ),
@@ -347,18 +308,5 @@ class _PitchPlayer extends StatelessWidget {
       return '$short$venue';
     }
     return player.fixture;
-  }
-
-  static Color _statusColor(String status) {
-    switch (status) {
-      case 'd':
-        return const Color(0xFFEAB308); // yellow
-      case 'i':
-        return AppColors.danger;
-      case 'u':
-        return const Color(0xFFF97316); // orange
-      default:
-        return const Color(0xFF6B7280); // gray
-    }
   }
 }

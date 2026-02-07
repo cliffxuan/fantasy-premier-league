@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PlayerPopover from './PlayerPopover';
+import { getPositionName } from './utils';
 
 const TopManagersAnalysis = () => {
 	const [data, setData] = useState(null);
@@ -186,7 +187,7 @@ const TopManagersAnalysis = () => {
 													</div>
 												</td>
 												<td className="px-3 py-3 text-center text-ds-text-muted">
-													{['GKP', 'DEF', 'MID', 'FWD'][player.element_type - 1]}
+													{getPositionName(player.element_type)}
 												</td>
 												<td className="px-3 py-3 text-right text-ds-text-muted">£{player.cost}m</td>
 												<td className="px-3 py-3 text-right font-bold text-ds-primary text-base">

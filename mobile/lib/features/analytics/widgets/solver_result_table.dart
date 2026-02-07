@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/position_utils.dart';
 import '../../../core/widgets/player_image.dart';
 import '../../../core/widgets/team_badge.dart';
 import '../../../data/models/solver_response.dart';
@@ -54,16 +55,6 @@ class _SolverPlayerRow extends StatelessWidget {
 
   const _SolverPlayerRow({required this.player});
 
-  String get _posName {
-    switch (player.position) {
-      case 1: return 'GKP';
-      case 2: return 'DEF';
-      case 3: return 'MID';
-      case 4: return 'FWD';
-      default: return '';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -88,7 +79,7 @@ class _SolverPlayerRow extends StatelessWidget {
                     TeamBadge(teamCode: player.teamCode, size: 12),
                     const SizedBox(width: 4),
                     Text(
-                      '$_posName | ${player.teamShort}',
+                      '${getPositionName(player.position)} | ${player.teamShort}',
                       style: const TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 11,

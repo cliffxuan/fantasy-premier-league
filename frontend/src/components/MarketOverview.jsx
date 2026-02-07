@@ -4,8 +4,10 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-rea
 import { getTeamBadgeUrl, PROBABILITY_COLORS } from '../utils';
 import TeamPopover from './TeamPopover';
 import HistoryModal from './HistoryModal';
+import useCurrentGameweek from '../hooks/useCurrentGameweek';
 
 const MarketOverview = () => {
+	const { gameweek: hookGw, loading: gwLoading } = useCurrentGameweek();
 	const [fixtures, setFixtures] = useState([]);
 	const [markets, setMarkets] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -14,67 +16,63 @@ const MarketOverview = () => {
 	const [sortBy, setSortBy] = useState('time'); // 'time' or 'odds'
 	const [h2hStatsFilter, setH2hStatsFilter] = useState('all'); // 'all' or 'venue'
 
+	const fetchData = async (targetGw) => {
+		setLoading(true);
+		try {
+			// Fetch Fixtures & Market Data in parallel
+			const [fixturesData, marketData] = await Promise.all([
+				getFixtures(targetGw),
+				getPolymarketData()
+			]);
+
+			setFixtures(fixturesData);
+			// Only set markets if we have them, otherwise keep existing or empty
+			if (marketData) setMarkets(marketData);
+		} catch (e) {
+			console.error("Failed to fetch data", e);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	// Initialize once the shared hook resolves the current gameweek
 	useEffect(() => {
+		if (gwLoading || !hookGw) return;
+
 		const init = async () => {
+			const nowGw = hookGw;
+
+			// Check if current gameweek is finished
+			let targetGw = nowGw;
 			try {
-				// 1. Get current gameweek and data
-				const gwRes = await fetch('/api/gameweek/current');
-				const gwData = await gwRes.json();
-				const nowGw = gwData.gameweek;
+				const currentFixtures = await getFixtures(nowGw);
+				const allFinished = currentFixtures.length > 0 && currentFixtures.every(f => f.finished || f.finished_provisional);
 
-				// Check if current gameweek is finished
-				// We need to fetch fixtures for current week to check status
-				let targetGw = nowGw;
-				try {
-					const currentFixtures = await getFixtures(nowGw);
-					const allFinished = currentFixtures.length > 0 && currentFixtures.every(f => f.finished || f.finished_provisional);
-
-					if (allFinished && nowGw < 38) {
-						targetGw = nowGw + 1;
-					}
-				} catch (err) {
-					console.warn("Failed to check fixture status", err);
+				if (allFinished && nowGw < 38) {
+					targetGw = nowGw + 1;
 				}
-
-				setGw(targetGw);
-				setCurrentGw(nowGw); // Keep track of actual current GW
-
-				// Fetch Initial Data
-				await fetchData(targetGw);
-			} catch (e) {
-				console.error("Failed to init market overview", e);
+			} catch (err) {
+				console.warn("Failed to check fixture status", err);
 			}
-		};
 
-		const fetchData = async (targetGw) => {
-			setLoading(true);
-			try {
-				// Fetch Fixtures & Market Data in parallel
-				// Note: Polymarket data is usually for "upcoming" or "all", so we fetch once and filter?
-				// Or just re-fetch to be safe. Since getPolymarketData doesn't take GW arg, it returns all available.
-				const [fixturesData, marketData] = await Promise.all([
-					getFixtures(targetGw),
-					getPolymarketData()
-				]);
+			setGw(targetGw);
+			setCurrentGw(nowGw); // Keep track of actual current GW
 
-				setFixtures(fixturesData);
-				// Only set markets if we have them, otherwise keep existing or empty
-				if (marketData) setMarkets(marketData);
-			} catch (e) {
-				console.error("Failed to fetch data", e);
-			} finally {
-				setLoading(false);
-			}
+			// Fetch Initial Data
+			await fetchData(targetGw);
 		};
 
 		init();
+	}, [hookGw, gwLoading]);
 
-		// Poll every 60s only for current view
+	// Poll every 60s only for current view
+	useEffect(() => {
+		if (!gw) return;
 		const interval = setInterval(() => {
-			if (gw) fetchData(gw);
+			fetchData(gw);
 		}, 60000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [gw]);
 
 	// Effect to refetch when GW changes (manual navigation)
 	useEffect(() => {

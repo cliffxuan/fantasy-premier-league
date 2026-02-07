@@ -1,89 +1,26 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getPlayerSummary } from '../api';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
+import { getPositionName, getFdrBadgeClass } from './utils';
+import { usePopover } from '../hooks/usePopover';
 
 const PlayerPopover = ({ player, children }) => {
-	const [isVisible, setIsVisible] = useState(false);
 	const [summary, setSummary] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [position, setPosition] = useState({ top: 0, left: 0, transform: '-translate-x-1/2 -translate-y-full' });
 	const [activeFixtureId, setActiveFixtureId] = useState(null);
-	const [historyOffset, setHistoryOffset] = useState(0); // For pagination
+	const [historyOffset, setHistoryOffset] = useState(0);
 
 	// Reset offset when player changes
 	useEffect(() => {
 		setHistoryOffset(0);
 	}, [player.id]);
 
-	const triggerRef = useRef(null);
-	const popoverRef = useRef(null);
-	const timerRef = useRef(null);
-
-	const updatePosition = useCallback(() => {
-		if (triggerRef.current) {
-			const rect = triggerRef.current.getBoundingClientRect();
-			const isMobile = window.innerWidth < 768; // Mobile breakpoint
-
-			let top = rect.top - 10;
-			let transform = '-translate-x-1/2 -translate-y-full';
-
-			if (rect.top < 500) {
-				top = rect.bottom + 10;
-				transform = '-translate-x-1/2';
-			}
-
-			if (isMobile) {
-				setPosition({
-					top: top,
-					left: window.innerWidth / 2, // Center of screen
-					transform: transform
-				});
-			} else {
-				setPosition({
-					top: top,
-					left: rect.left + (rect.width / 2),
-					transform: transform
-				});
-			}
-		}
-	}, []);
-
-	useEffect(() => {
-		if (isVisible) {
-			updatePosition();
-			window.addEventListener('scroll', updatePosition, true);
-			window.addEventListener('resize', updatePosition);
-			return () => {
-				window.removeEventListener('scroll', updatePosition, true);
-				window.removeEventListener('resize', updatePosition);
-			};
-		}
-	}, [isVisible, updatePosition]);
-
-	const handleMouseLeave = () => {
-		// Add delay to check if moving to popover
-		timerRef.current = setTimeout(() => {
-			setIsVisible(false);
-		}, 100);
-	};
-
-	const handleMouseEnter = async () => {
-		// Clear any closing timer
-		if (timerRef.current) {
-			clearTimeout(timerRef.current);
-			timerRef.current = null;
-		}
-
-		setIsVisible(true);
-		// updatePosition is called in useEffect when isVisible becomes true
-
+	const fetchSummary = useCallback(async () => {
 		if (!summary && !loading) {
 			setLoading(true);
 			try {
-				// Pass player.opponent_id if available (provided by SquadDisplay for viewing context)
-				// If not available, it defaults to null and backend finds the actual next fixture
 				const data = await getPlayerSummary(player.id, player.opponent_id);
 				setSummary(data);
 			} catch (error) {
@@ -92,42 +29,22 @@ const PlayerPopover = ({ player, children }) => {
 				setLoading(false);
 			}
 		}
-	};
+	}, [summary, loading, player.id, player.opponent_id]);
 
-	const handleClick = () => {
-		if (window.innerWidth < 768) {
-			if (isVisible) {
-				setIsVisible(false);
-			} else {
-				handleMouseEnter();
-			}
-		}
-	};
+	const { isVisible, position, triggerProps, popoverProps } = usePopover({
+		onShow: fetchSummary,
+	});
 
 	return (
 		<div
 			className="relative"
-			ref={triggerRef}
-			onMouseEnter={handleMouseEnter}
-			onMouseLeave={handleMouseLeave}
-			onClick={handleClick}
+			{...triggerProps}
 		>
 			{children}
 			{isVisible && createPortal(
 				<div
-					ref={popoverRef}
 					className={`fixed z-[100] w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text transform ${position.transform}`}
-					style={{ top: position.top, left: position.left }}
-					onClick={(e) => e.stopPropagation()}
-					onMouseEnter={() => {
-						if (timerRef.current) {
-							clearTimeout(timerRef.current);
-							timerRef.current = null;
-						}
-					}}
-					onMouseLeave={() => {
-						setIsVisible(false);
-					}}
+					{...popoverProps}
 				>
 					<div className="flex items-center gap-3 mb-3 border-b border-ds-border pb-3">
 						<div className="w-12 h-12 rounded-full overflow-hidden bg-ds-bg border border-ds-border">
@@ -140,7 +57,7 @@ const PlayerPopover = ({ player, children }) => {
 						</div>
 						<div>
 							<h3 className="font-bold text-lg leading-tight">{player.full_name}</h3>
-							<div className="text-xs text-ds-text-muted font-mono">{player.team} • {player.position === 1 ? 'GKP' : player.position === 2 ? 'DEF' : player.position === 3 ? 'MID' : 'FWD'}</div>
+							<div className="text-xs text-ds-text-muted font-mono">{player.team} • {getPositionName(player.position)}</div>
 						</div>
 						<div className="ml-auto text-right">
 							<div className="text-xl font-bold text-ds-primary">{player.total_points}</div>
@@ -295,11 +212,7 @@ const PlayerPopover = ({ player, children }) => {
 											<span className="font-bold">
 												{fixture.is_home ? '(H)' : '(A)'} vs {fixture.is_home ? fixture.team_a_short : fixture.team_h_short}
 											</span>
-											<span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${fixture.difficulty <= 2 ? 'bg-ds-accent/20 text-ds-accent' :
-												fixture.difficulty === 3 ? 'bg-gray-500/20 text-gray-400' :
-													fixture.difficulty === 4 ? 'bg-ds-warning/20 text-ds-warning' :
-														'bg-ds-danger/20 text-ds-danger'
-												}`}>
+											<span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${getFdrBadgeClass(fixture.difficulty)}`}>
 												Diff {fixture.difficulty}
 											</span>
 										</div>

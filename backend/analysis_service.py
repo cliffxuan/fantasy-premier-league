@@ -315,7 +315,7 @@ Please provide the output in the specified format logic.
         except Exception as e:
             logging.error(f"DSPy Analysis failed: {e}")
 
-            traceback.print_exc()
+            logging.error(traceback.format_exc())
             return AnalysisResponse(
                 immediate_action="Error during analysis.",
                 transfer_plan={"Error": "Could not generate plan."},

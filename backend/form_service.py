@@ -1,9 +1,13 @@
 import asyncio
 from typing import Any, Dict, List
 
+import httpx
 from loguru import logger
 
 from .fpl_service import FPLService
+
+LUCK_RATIO_THRESHOLD = 2.0
+UNDERPERFORM_RATIO_THRESHOLD = 0.8
 
 
 class FormService:
@@ -109,11 +113,11 @@ class FormService:
                     # Luck Factor
                     if streak_goals > 0 and streak_xg > 0:
                         ratio = streak_goals / streak_xg
-                        if ratio > 2.0:
+                        if ratio > LUCK_RATIO_THRESHOLD:
                             classification = "Lucky / Overperforming"
                             sustainability_score -= 30
                             reason.append(f"Overperforming xG by {ratio:.1f}x")
-                        elif ratio < 0.8:
+                        elif ratio < UNDERPERFORM_RATIO_THRESHOLD:
                             classification = "Underperforming (Due)"
                             sustainability_score += 10
                             reason.append("Underperforming xG (Good signs)")
@@ -163,8 +167,11 @@ class FormService:
                         "predicted_end_gw": predicted_end_gw,
                     }
 
-                except Exception as e:
+                except (httpx.HTTPStatusError, httpx.RequestError) as e:
                     logger.error(f"Error analyzing form for {player['web_name']}: {e}")
+                    return None
+                except (KeyError, ValueError) as e:
+                    logger.warning(f"Data error analyzing form for {player['web_name']}: {e}")
                     return None
 
         # Execute

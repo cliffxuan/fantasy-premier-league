@@ -81,8 +81,6 @@ export const getSquad = async (teamId, gw = null, authToken = null) => {
 	if (gw !== null && gw !== undefined) {
 		url += `?gw=${gw}`;
 	}
-	console.log("Fetching squad from:", url);
-
 	const headers = {};
 	if (authToken) {
 		headers['Authorization'] = authToken;

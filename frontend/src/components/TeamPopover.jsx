@@ -1,14 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getClubSummary } from '../api';
-import { getPlayerImage, handlePlayerImageError } from '../utils';
+import { getPositionName, getFdrCardClass } from './utils';
+import { usePopover } from '../hooks/usePopover';
 
 const TeamPopover = ({ team, children, className = "" }) => {
-	const [isVisible, setIsVisible] = useState(false);
 	const [summary, setSummary] = useState(null);
 	const [loading, setLoading] = useState(false);
-	const [position, setPosition] = useState({ top: 0, left: 0, transform: '-translate-x-1/2 -translate-y-full' });
 	const [activeFixtureId, setActiveFixtureId] = useState(null);
 	const [historyOffset, setHistoryOffset] = useState(0);
 
@@ -17,128 +16,34 @@ const TeamPopover = ({ team, children, className = "" }) => {
 		setHistoryOffset(0);
 	}, [team.id]);
 
-	const triggerRef = useRef(null);
-	const popoverRef = useRef(null);
-	const timerRef = useRef(null);
-
-	const updatePosition = useCallback(() => {
-		if (triggerRef.current) {
-			const rect = triggerRef.current.getBoundingClientRect();
-			const isMobile = window.innerWidth < 768;
-
-			// Estimated popover height (can be dynamic but 400px is a safe upper bound estimate for checking)
-			// Or we can just check if top < 20
-			let top = rect.top - 10;
-			let transform = '-translate-x-1/2 -translate-y-full'; // Default: above
-
-			// Check if it fits above
-			// If top edge of popover (rect.top - 10 - height) < 0
-			// Since we don't know exact height before render, we can guess or use a threshold.
-			// However, 'top' here sets the anchor point on the screen. 
-			// The CSS `translate-y-full` moves it UP from that anchor.
-			// So if rect.top is small (e.g. < 300px), it might overflow top.
-
-			if (rect.top < 500) { // Threshold for flipping to bottom
-				top = rect.bottom + 10;
-				transform = '-translate-x-1/2'; // No translate-y-full, so it hangs down
-			}
-
-			if (isMobile) {
-				setPosition({
-					top: top,
-					left: window.innerWidth / 2,
-					transform: transform
-				});
-			} else {
-				setPosition({
-					top: top,
-					left: rect.left + (rect.width / 2),
-					transform: transform
-				});
-			}
-		}
-	}, []);
-
-	useEffect(() => {
-		if (isVisible) {
-			updatePosition();
-			window.addEventListener('scroll', updatePosition, true);
-			window.addEventListener('resize', updatePosition);
-			return () => {
-				window.removeEventListener('scroll', updatePosition, true);
-				window.removeEventListener('resize', updatePosition);
-			};
-		}
-	}, [isVisible, updatePosition]);
-
-	const handleMouseLeave = () => {
-		// Add delay to check if moving to popover
-		timerRef.current = setTimeout(() => {
-			setIsVisible(false);
-		}, 100);
-	};
-
-	const fetchData = async () => {
-		try {
-			const data = await getClubSummary(team.id);
-			setSummary(data);
-		} catch (error) {
-			console.error("Failed to fetch team summary", error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const handleMouseEnter = () => {
-		// Clear any closing timer
-		if (timerRef.current) {
-			clearTimeout(timerRef.current);
-			timerRef.current = null;
-		}
-
-		setIsVisible(true);
-		// updatePosition is called in useEffect when isVisible becomes true
-
+	const fetchData = useCallback(async () => {
 		if (!summary && !loading) {
 			setLoading(true);
-			fetchData();
-		}
-	};
-
-	const handleClick = () => {
-		if (window.innerWidth < 768) {
-			if (isVisible) {
-				setIsVisible(false);
-			} else {
-				handleMouseEnter();
+			try {
+				const data = await getClubSummary(team.id);
+				setSummary(data);
+			} catch (error) {
+				console.error("Failed to fetch team summary", error);
+			} finally {
+				setLoading(false);
 			}
 		}
-	};
+	}, [summary, loading, team.id]);
+
+	const { isVisible, position, triggerProps, popoverProps } = usePopover({
+		onShow: fetchData,
+	});
 
 	return (
 		<div
 			className={`relative inline-block ${className}`}
-			ref={triggerRef}
-			onMouseEnter={handleMouseEnter}
-			onMouseLeave={handleMouseLeave}
-			onClick={handleClick}
+			{...triggerProps}
 		>
 			{children}
 			{isVisible && createPortal(
 				<div
-					ref={popoverRef}
 					className={`fixed z-[100] w-80 bg-ds-card border border-ds-border rounded-xl shadow-2xl p-4 text-ds-text ${position.transform}`}
-					style={{ top: position.top, left: position.left }}
-					onClick={(e) => e.stopPropagation()}
-					onMouseEnter={() => {
-						if (timerRef.current) {
-							clearTimeout(timerRef.current);
-							timerRef.current = null;
-						}
-					}}
-					onMouseLeave={() => {
-						setIsVisible(false);
-					}}
+					{...popoverProps}
 				>
 					{/* Header */}
 					<div className="flex items-center gap-3 mb-4 border-b border-ds-border pb-3">
@@ -247,11 +152,7 @@ const TeamPopover = ({ team, children, className = "" }) => {
 										summary.upcoming_fixtures.map((fixture) => (
 											<div
 												key={fixture.id}
-												className={`flex flex-col items-center justify-center flex-1 rounded p-1 border border-ds-border min-w-[32px] ${fixture.difficulty <= 2 ? 'bg-ds-accent text-white' :
-													fixture.difficulty === 3 ? 'bg-gray-400 text-white' :
-														fixture.difficulty === 4 ? 'bg-ds-warning text-white' :
-															'bg-ds-danger text-white'
-													}`}
+												className={`flex flex-col items-center justify-center flex-1 rounded p-1 border border-ds-border min-w-[32px] ${getFdrCardClass(fixture.difficulty)}`}
 											>
 												<span className="text-[10px] font-bold truncate w-full text-center leading-tight" title={`${fixture.opponent_name} (${fixture.is_home ? 'H' : 'A'})`}>
 													{fixture.opponent_short}
@@ -284,7 +185,7 @@ const TeamPopover = ({ team, children, className = "" }) => {
 											</div>
 											<div className="flex-1 min-w-0">
 												<div className="text-xs font-bold truncate">{player.web_name}</div>
-												<div className="text-[10px] text-ds-text-muted">{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'} • £{player.cost}m</div>
+												<div className="text-[10px] text-ds-text-muted">{getPositionName(player.element_type)} • £{player.cost}m</div>
 											</div>
 											<div className="text-xs font-bold text-ds-primary">{player.total_points} pts</div>
 										</div>

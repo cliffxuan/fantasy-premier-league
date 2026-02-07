@@ -3,6 +3,7 @@ import { getClubSquad, getTeams } from '../api';
 import SquadDisplay from './SquadDisplay';
 import { ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import TeamPopover from './TeamPopover';
+import { getFdrTableClass } from './utils';
 
 const ClubViewer = () => {
 	const [teams, setTeams] = useState([]);
@@ -71,17 +72,6 @@ const ClubViewer = () => {
 		handleFetch(selectedClub, newGw);
 	};
 
-	// Helper for FDR colors
-	const getFdrColor = (difficulty) => {
-		switch (difficulty) {
-			case 1: return 'bg-[#375523] text-white border-[#375523]';
-			case 2: return 'bg-[#01fc7a] text-black border-[#01fc7a]';
-			case 3: return 'bg-[#e7e7e7] text-black border-[#e7e7e7]';
-			case 4: return 'bg-[#ff1751] text-white border-[#ff1751]';
-			case 5: return 'bg-[#80072d] text-white border-[#80072d]';
-			default: return 'bg-ds-surface border-ds-border text-ds-text-muted';
-		}
-	};
 
 	useEffect(() => {
 		const fetchOpponents = async () => {
@@ -199,7 +189,7 @@ const ClubViewer = () => {
 											</div>
 										</td>
 										<td className="px-4 py-3 text-center">
-											<span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold border shadow-sm ${getFdrColor(fix.difficulty)}`}>
+											<span className={`inline-flex items-center justify-center w-6 h-6 rounded text-xs font-bold border shadow-sm ${getFdrTableClass(fix.difficulty)}`}>
 												{fix.difficulty}
 											</span>
 										</td>

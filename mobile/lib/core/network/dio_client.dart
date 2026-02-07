@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../constants/api_constants.dart';
+import '../constants/fpl_constants.dart';
 import 'api_exception.dart';
 
 class DioClient {
@@ -11,8 +12,8 @@ class DioClient {
     final dio = Dio(
       BaseOptions(
         baseUrl: baseUrl ?? ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 30),
+        connectTimeout: FplConstants.connectTimeout,
+        receiveTimeout: FplConstants.receiveTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
