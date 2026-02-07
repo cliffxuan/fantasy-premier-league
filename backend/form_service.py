@@ -149,6 +149,7 @@ class FormService:
                         "id": player["id"],
                         "code": player["code"],
                         "web_name": player["web_name"],
+                        "photo": player["photo"],
                         "team_code": teams[player["team"]]["code"],
                         "team_short": teams[player["team"]]["short_name"],
                         "position": player["element_type"],
