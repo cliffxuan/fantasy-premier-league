@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, X, FileText, Code, Check, Key } from 'lucide-react';
-import { analyzeTeam, getSquad } from './api';
+import { analyzeTeam, getSquad, getAuthUrl, exchangeCode, getMe } from './api';
 import AnalysisResult from './components/AnalysisResult';
 import SquadDisplay from './components/SquadDisplay';
 import PointsHistoryChart from './components/PointsHistoryChart';
@@ -54,24 +54,79 @@ const TeamInput = ({ centered = false, teamId, setTeamId, handleGoClick, loading
 
 const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
   const [token, setToken] = useState(currentToken);
+  const [step, setStep] = useState('initial'); // initial, paste
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false); // New success state
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    if (isOpen) {
+      setStep('initial');
+      setSuccess(false);
+      setError(null);
+      setCode('');
+    }
     setToken(currentToken);
   }, [currentToken, isOpen]);
+
+  const handleStartLogin = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { url } = await getAuthUrl();
+      if (url) {
+        window.open(url, '_blank');
+        setStep('paste');
+      }
+    } catch (err) {
+      setError('Failed to start login: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Clean up code if it's a full URL
+      let cleanCode = code.trim();
+      if (cleanCode.includes('code=')) {
+        cleanCode = cleanCode.split('code=')[1].split('&')[0];
+      }
+
+      const data = await exchangeCode(cleanCode);
+      if (data.access_token) {
+        setSuccess(true);
+        // Short delay to show success state
+        setTimeout(() => {
+          onSave(data.access_token);
+          onClose();
+        }, 1000);
+      } else {
+        setError('Invalid code. Please try again.');
+      }
+    } catch (err) {
+      setError('Failed to verify code: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-ds-card w-full max-w-lg rounded-xl border border-ds-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="bg-ds-card w-full max-w-lg rounded-xl border border-ds-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
         <div className="flex justify-between items-center p-6 border-b border-ds-border bg-ds-card/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-ds-primary/10 rounded-lg text-ds-primary">
               <Key size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-ds-text">FPL Auth Token</h3>
-              <p className="text-xs text-ds-text-muted">Enter your cookie for authenticated data</p>
+              <h3 className="text-xl font-bold text-ds-text">Sign in with FPL</h3>
+              <p className="text-xs text-ds-text-muted">Import your team securely</p>
             </div>
           </div>
           <button
@@ -82,42 +137,168 @@ const AuthModal = ({ isOpen, onClose, currentToken, onSave }) => {
           </button>
         </div>
 
-        <div className="p-6">
-          <p className="text-sm text-ds-text-muted mb-4">
-            Providing your FPL Auth Token allows access to private league data and your specific transfer details.
-            This is stored locally in your browser session.
-          </p>
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-ds-text uppercase tracking-wider">Auth Token / My Team ID</label>
-            <input
-              type="text"
-              className="w-full bg-ds-surface border border-ds-border rounded-md px-4 py-3 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all font-mono"
-              placeholder="Enter Auth Token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-            />
-          </div>
+        <div className="p-6 space-y-6">
+          {error && (
+            <div className="bg-ds-danger/10 border border-ds-danger text-ds-danger p-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          {step === 'initial' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-ds-text-muted leading-relaxed">
+                Connect your FPL account to automatically load your team, improved recommendations, and private league data. This token is stored only in your browser.
+              </p>
+
+              <button
+                onClick={handleStartLogin}
+                disabled={loading || !!currentToken}
+                className={`w-full font-bold rounded-lg px-6 py-4 text-sm active:scale-95 transition-all shadow-lg flex items-center justify-center gap-3 ${!!currentToken
+                  ? 'bg-ds-surface border border-ds-border text-ds-text-muted cursor-not-allowed'
+                  : 'bg-ds-primary text-white hover:bg-ds-primary-hover shadow-ds-primary/20'
+                  }`}
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : !!currentToken ? (
+                  <>
+                    <Check size={18} className="text-green-500" />
+                    <span>Already Authenticated</span>
+                  </>
+                ) : (
+                  <>
+                    <Key size={18} />
+                    <span>Open FPL Login Page</span>
+                  </>
+                )}
+              </button>
+
+
+
+              {!currentToken && (
+                <>
+                  <div className="relative py-2">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-ds-border"></span>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-ds-card px-2 text-ds-text-muted">Or handle manually</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-ds-text uppercase tracking-wider">Manual Token / ID</label>
+                    <input
+                      type="text"
+                      className="w-full bg-ds-surface border border-ds-border rounded-md px-4 py-3 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all font-mono placeholder-ds-text-muted/30"
+                      placeholder="Enter token manually..."
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4 animate-in slide-in-from-right-4">
+              <div className="flex items-start gap-3 bg-ds-surface p-4 rounded-lg border border-ds-border">
+                <div className="bg-ds-primary/10 text-ds-primary p-1.5 rounded-full mt-0.5">
+                  <span className="font-bold text-xs">1</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm mb-1">Check the new tab</h4>
+                  <p className="text-xs text-ds-text-muted">Log in on the official FPL page. You will be redirected to a page starting with <code className="bg-black/20 px-1 rounded">premierleague.com/robots.txt</code>.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 bg-ds-surface p-4 rounded-lg border border-ds-border">
+                <div className="bg-ds-primary/10 text-ds-primary p-1.5 rounded-full mt-0.5">
+                  <span className="font-bold text-xs">2</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm mb-1">Copy the Code</h4>
+                  <p className="text-xs text-ds-text-muted">Copy the weird text code from the URL bar (e.g. <code className="bg-black/20 px-1 rounded">?code=XYZ...</code>) and paste it below.</p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <label className="text-xs font-bold text-ds-text uppercase tracking-wider mb-2 block">Paste Code Here</label>
+                <input
+                  type="text"
+                  autoFocus
+                  className="w-full bg-ds-surface border border-ds-border rounded-md px-4 py-3 text-sm outline-none focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all font-mono"
+                  placeholder="Paste the code or full URL..."
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && code && handleVerifyCode()}
+                />
+              </div>
+
+              <button
+                onClick={handleVerifyCode}
+                disabled={loading || !code || success}
+                className={`w-full font-bold rounded-lg px-6 py-3 text-sm transition-all shadow-lg flex items-center justify-center gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed ${success
+                  ? 'bg-green-500 text-white shadow-green-500/20'
+                  : 'bg-ds-primary text-white hover:bg-ds-primary-hover active:scale-95 shadow-ds-primary/20'
+                  }`}
+              >
+                {success ? (
+                  <>
+                    <Check size={18} />
+                    <span>Success! Redirecting...</span>
+                  </>
+                ) : loading ? (
+                  'Verifying...'
+                ) : (
+                  'Complete Sign In'
+                )}
+              </button>
+            </div>
+          )}
         </div>
 
-        <div className="p-6 border-t border-ds-border bg-ds-card/50 flex justify-end gap-3 rounded-b-xl">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-bold text-ds-text-muted hover:text-ds-text transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              onSave(token);
-              onClose();
-            }}
-            className="bg-ds-primary text-white font-bold rounded-md px-6 py-2 text-sm hover:bg-ds-primary-hover active:scale-95 transition-all shadow-lg shadow-ds-primary/20"
-          >
-            Save Token
-          </button>
+        <div className="p-6 border-t border-ds-border bg-ds-card/50 flex justify-between items-center rounded-b-xl">
+          {step === 'paste' ? (
+            <button
+              onClick={() => setStep('initial')}
+              className="text-xs font-bold text-ds-text-muted hover:text-ds-text transition-colors"
+            >
+              Back
+            </button>
+          ) : <span></span>}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-bold text-ds-text-muted hover:text-ds-text transition-colors"
+            >
+              Cancel
+            </button>
+            {step === 'initial' && token !== currentToken && (
+              <button
+                onClick={() => {
+                  onSave(token);
+                  onClose();
+                }}
+                className="bg-ds-surface border border-ds-border text-ds-text font-bold rounded-md px-4 py-2 text-sm hover:bg-ds-card-hover transition-all"
+              >
+                Save Manual Token
+              </button>
+            )}
+            {step === 'initial' && !!currentToken && (
+              <button
+                onClick={() => {
+                  onSave(''); // Clear token
+                }}
+                className="text-ds-danger font-bold text-sm hover:underline px-2"
+              >
+                Sign Out
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
@@ -431,13 +612,13 @@ function Dashboard() {
                       handleGoClick={handleGoClick}
                       loading={loading}
                     />
-                    <input
-                      type="text"
-                      placeholder="Auth Token (Optional)"
-                      value={authToken}
-                      onChange={(e) => setAuthToken(e.target.value)}
-                      className="bg-ds-surface border border-ds-border rounded-md px-4 py-2 text-sm outline-none w-full placeholder-ds-text-muted/50 font-mono focus:border-ds-primary focus:ring-1 focus:ring-ds-primary transition-all"
-                    />
+                    <button
+                      onClick={() => setShowAuthModal(true)}
+                      className="w-full bg-ds-surface border border-ds-border hover:border-ds-primary/50 text-ds-text font-bold rounded-md px-6 py-3 text-sm hover:bg-ds-surface/80 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                    >
+                      <Key size={16} className="text-ds-primary group-hover:scale-110 transition-transform" />
+                      <span>Sign in with FPL</span>
+                    </button>
                   </div>
                   <p className="text-ds-text-muted max-w-md mx-auto mt-4 text-sm">
                     Enter your Team ID to unlock detailed analysis, point history, and AI insights.
@@ -687,7 +868,30 @@ function Dashboard() {
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         currentToken={authToken}
-        onSave={(newToken) => setAuthToken(newToken)}
+        onSave={async (newToken) => {
+          setAuthToken(newToken);
+          // Try to fetch me to get team ID
+          if (newToken) {
+            try {
+              const me = await getMe(newToken);
+              if (me && me.player && me.player.entry) {
+                setTeamId(me.player.entry.toString());
+                // Optionally auto-fetch squad here if desired, 
+                // but existing useEffect on teamId will trigger fetchSquad anyway?
+                // Wait, useEffect triggers on paramTeamId change OR if teamId changes?
+                // The useEffect [teamId] only saves to sessionStorage.
+                // The useEffect [paramTeamId, gwParam, authToken] handles fetching.
+
+                // If we are on home page (no paramTeamId), we should manually trigger fetch or navigate
+                if (!paramTeamId) {
+                  navigate(`/${me.player.entry}?tab=squad`);
+                }
+              }
+            } catch (e) {
+              console.error("Failed to fetch user details", e);
+            }
+          }
+        }}
       />
     </div>
   );

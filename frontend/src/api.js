@@ -48,6 +48,34 @@ export const getClubSummary = async (clubId) => {
 	return response.json();
 };
 
+export const getAuthUrl = async () => {
+	const response = await fetch(`${API_BASE_URL}/auth/url`);
+	if (!response.ok) throw new Error('Failed to get auth URL');
+	return response.json();
+};
+
+export const exchangeCode = async (code) => {
+	const response = await fetch(`${API_BASE_URL}/auth/callback`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ code }),
+	});
+	if (!response.ok) throw new Error('Failed to exchange code');
+	return response.json();
+};
+
+export const getMe = async (token) => {
+	const response = await fetch(`${API_BASE_URL}/auth/me`, {
+		headers: {
+			'Authorization': `Bearer ${token}`
+		}
+	});
+	if (!response.ok) throw new Error('Failed to get user details');
+	return response.json();
+};
+
 export const getSquad = async (teamId, gw = null, authToken = null) => {
 	let url = `${API_BASE_URL}/team/${teamId}/squad`;
 	if (gw !== null && gw !== undefined) {
