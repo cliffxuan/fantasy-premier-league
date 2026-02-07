@@ -72,7 +72,7 @@ class FPLService:
         )
         return f"{PINGONE_AUTH_URL}/as/authorize?{params}"
 
-    async def exchange_code(self, code: str) -> dict[str, Any]:
+    async def exchange_code(self, code: str) -> dict[str, Any] | None:
         """Exchanges a PingOne authorization code for access/refresh tokens."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -93,7 +93,7 @@ class FPLService:
 
             return response.json()
 
-    async def refresh_access_token(self, refresh_token: str) -> dict[str, Any]:
+    async def refresh_access_token(self, refresh_token: str) -> dict[str, Any] | None:
         """Uses a refresh token to get a new access token."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -216,16 +216,13 @@ class FPLService:
         # But we also need the strict 'current' gameweek for data fetching logic
         current_gw = await self.get_current_gameweek()
 
-        if gw is None:
-            gw = default_gw
-        else:
-            gw = int(gw)
+        resolved_gw: int = default_gw if gw is None else int(gw)
 
-        logger.debug(f"Using gw={gw} (current_gw={current_gw})")
+        logger.debug(f"Using gw={resolved_gw} (current_gw={current_gw})")
 
-        target_fixture_gw = gw
-        if gw > current_gw:
-            target_fixture_gw = gw
+        target_fixture_gw = resolved_gw
+        if resolved_gw > current_gw:
+            target_fixture_gw = resolved_gw
 
         try:
             entry = await self.get_entry(team_id)
@@ -248,8 +245,8 @@ class FPLService:
             logger.warning(f"Failed to fetch history for team {team_id}: {e}")
             history = {"chips": [], "current": []}
 
-        picks_gw = gw
-        if gw > current_gw:
+        picks_gw = resolved_gw
+        if resolved_gw > current_gw:
             picks_gw = current_gw
 
         picks = None
@@ -271,7 +268,7 @@ class FPLService:
                 logger.warning(f"Failed to fetch picks for team {team_id} GW{picks_gw}: {e}")
                 return {"squad": [], "chips": [], "entry": entry}
 
-        logger.info(f"gw={gw} picks_count={len(picks.get('picks', []))}")
+        logger.info(f"gw={resolved_gw} picks_count={len(picks.get('picks', []))}")
         try:
             all_transfers = await self.get_transfers(team_id)
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
@@ -284,7 +281,7 @@ class FPLService:
         # Filter transfers for this specific GW and enrich them
         gw_transfers = []
         for t in all_transfers:
-            if t["event"] == gw:
+            if t["event"] == resolved_gw:
                 p_in = elements.get(t["element_in"])
                 p_out = elements.get(t["element_out"])
                 gw_transfers.append(
@@ -325,15 +322,15 @@ class FPLService:
 
         # Fetch live data for points
         try:
-            live_data = await self.get_event_live(gw)
+            live_data = await self.get_event_live(resolved_gw)
             live_elements = {e["id"]: e["stats"] for e in live_data["elements"]}
-            logger.debug(f"Fetched live data for GW{gw}, {len(live_elements)} elements found.")
+            logger.debug(f"Fetched live data for GW{resolved_gw}, {len(live_elements)} elements found.")
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
-            logger.debug(f"Failed to fetch live data for GW{gw}: {e}")
+            logger.debug(f"Failed to fetch live data for GW{resolved_gw}: {e}")
             live_elements = {}
 
         squad = []
-        logger.debug(f"Processing {len(picks['picks'])} picks for GW{gw}")
+        logger.debug(f"Processing {len(picks['picks'])} picks for GW{resolved_gw}")
         for pick in picks["picks"]:
             player = elements.get(pick["element"])
             if player:
@@ -435,7 +432,7 @@ class FPLService:
                 )
 
         # Process Chips
-        chips_status = self.calculate_chip_status(gw, history, picks, my_team_data)
+        chips_status = self.calculate_chip_status(resolved_gw, history, picks, my_team_data)
 
         # Update history with live points from picks for the current gameweek
         current_history = history.get("current", [])
@@ -444,7 +441,7 @@ class FPLService:
             # Check if we have an entry for this GW in history
             found = False
             for i, h in enumerate(current_history):
-                if h["event"] == gw:
+                if h["event"] == resolved_gw:
                     # Update with live data
                     current_history[i] = live_history
                     found = True
@@ -459,7 +456,7 @@ class FPLService:
         # But calculate_free_transfers logic seems to be about "available for NEXT deadline".
         # If we are viewing history, maybe we want to know how many FTs they had at that time?
         # For now, let's just use the current next_gw logic, or maybe pass the viewed gw + 1?
-        next_gw_for_calc = gw + 1
+        next_gw_for_calc = resolved_gw + 1
         free_transfers = self.calculate_free_transfers(history, all_transfers, next_gw_for_calc)
 
         if my_team_data and "transfers" in my_team_data:
@@ -486,7 +483,7 @@ class FPLService:
             "free_transfers": free_transfers,
             "transfers": gw_transfers,
             "transfer_details": transfer_details,
-            "gameweek": gw,
+            "gameweek": resolved_gw,
             "is_private": bool(my_team_data),
         }
 
@@ -494,8 +491,8 @@ class FPLService:
         self,
         gw: int,
         history: dict[str, Any],
-        picks: dict[str, Any] = None,
-        my_team_data: dict[str, Any] = None,
+        picks: dict[str, Any] | None = None,
+        my_team_data: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         chip_labels = {
             "bboost": "Bench Boost",
@@ -1105,8 +1102,8 @@ class FPLService:
             opponent_id = f.get_opponent_id(club_id)
             opp_team = teams_map.get(opponent_id, {})
 
-            h_score = f.team_h_score
-            a_score = f.team_a_score
+            h_score = f.team_h_score or 0
+            a_score = f.team_a_score or 0
             score = f"{h_score}-{a_score}"
 
             result = calculate_match_result(h_score, a_score, is_home)
@@ -1239,8 +1236,8 @@ class FPLService:
 
             h_id = f.team_h
             a_id = f.team_a
-            h_score = f.team_h_score
-            a_score = f.team_a_score
+            h_score = f.team_h_score or 0
+            a_score = f.team_a_score or 0
 
             if h_id not in teams or a_id not in teams:
                 continue
@@ -1692,7 +1689,7 @@ class FPLService:
 
         for i, result in enumerate(gw_results):
             gw = min_gw + i
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 # GW might not have happened yet or API error
                 continue
 

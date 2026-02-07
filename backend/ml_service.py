@@ -74,8 +74,9 @@ class MLService:
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for player, result in zip(chunk, results):
-                if isinstance(result, Exception):
-                    logger.error(f"Error fetching {player['web_name']}: {result}")
+                if isinstance(result, BaseException) or result is None:
+                    if isinstance(result, BaseException):
+                        logger.error(f"Error fetching {player['web_name']}: {result}")
                     continue
 
                 history = result.get("history", [])

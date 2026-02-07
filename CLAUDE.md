@@ -5,6 +5,7 @@
 uv run ruff check backend          # Lint
 uv run ruff check backend --fix    # Lint + auto-fix
 uv run ruff format backend         # Format
+uv run pyright backend tests       # Type check
 uv run pytest tests -v             # Run tests
 uv run uvicorn backend.main:app --reload  # Dev server
 ```
