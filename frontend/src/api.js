@@ -35,7 +35,7 @@ export const analyzeTeam = async (
 
 export const getTeams = async () => {
 	const response = await fetch(`${API_BASE_URL}/teams`);
-	if (!response.ok) return [];
+	if (!response.ok) throw new Error('Failed to fetch teams');
 	return response.json();
 };
 
@@ -45,13 +45,13 @@ export const getClubSquad = async (clubId, gw = null) => {
 		url += `?gw=${gw}`;
 	}
 	const response = await fetch(url);
-	if (!response.ok) return null;
+	if (!response.ok) throw new Error('Failed to fetch club squad');
 	return response.json();
 };
 
 export const getClubSummary = async (clubId) => {
 	const response = await fetch(`${API_BASE_URL}/club/${clubId}/summary`);
-	if (!response.ok) return null;
+	if (!response.ok) throw new Error('Failed to fetch club summary');
 	return response.json();
 };
 
@@ -94,10 +94,7 @@ export const getSquad = async (teamId, gw = null, authToken = null) => {
 	}
 
 	const response = await fetch(url, { headers });
-	if (!response.ok) {
-		// It's okay if squad is not found immediately (e.g. invalid ID), just return null
-		return null;
-	}
+	if (!response.ok) throw new Error('Failed to fetch squad');
 	return response.json();
 };
 
@@ -107,30 +104,20 @@ export const getPlayerSummary = async (playerId, opponentId = null) => {
 		url += `?opponent_id=${opponentId}`;
 	}
 	const response = await fetch(url);
-	if (!response.ok) {
-		return null;
-	}
+	if (!response.ok) throw new Error('Failed to fetch player summary');
 	return response.json();
 };
+
 export const getDreamTeam = async (gw) => {
 	const response = await fetch(`${API_BASE_URL}/dream-team/${gw}`);
-	if (!response.ok) {
-		return null;
-	}
+	if (!response.ok) throw new Error('Failed to fetch dream team');
 	return response.json();
 };
 
 export const getPolymarketData = async () => {
-	try {
-		const response = await fetch(`${API_BASE_URL}/polymarket`);
-		if (!response.ok) {
-			return [];
-		}
-		return response.json();
-	} catch (e) {
-		console.error('Failed to fetch Polymarket data:', e);
-		return [];
-	}
+	const response = await fetch(`${API_BASE_URL}/polymarket`);
+	if (!response.ok) throw new Error('Failed to fetch Polymarket data');
+	return response.json();
 };
 
 export const getFixtures = async (gw = null) => {
@@ -139,8 +126,60 @@ export const getFixtures = async (gw = null) => {
 		url += `?event=${gw}`;
 	}
 	const response = await fetch(url);
+	if (!response.ok) throw new Error('Failed to fetch fixtures');
+	return response.json();
+};
+
+export const getCurrentGameweek = async () => {
+	const response = await fetch(`${API_BASE_URL}/gameweek/current`);
+	if (!response.ok) throw new Error('Failed to fetch current gameweek');
+	return response.json();
+};
+
+export const getFormAnalysis = async () => {
+	const response = await fetch(`${API_BASE_URL}/analysis/form`);
+	if (!response.ok) throw new Error('Failed to fetch form analysis');
+	return response.json();
+};
+
+export const getTopManagers = async (count) => {
+	const response = await fetch(`${API_BASE_URL}/analysis/top-managers?count=${count}`);
+	if (!response.ok) throw new Error('Failed to fetch top managers analysis');
+	return response.json();
+};
+
+export const solveOptimization = async ({ budget, minGw, maxGw, excludeBench, excludeUnavailable, useMl }) => {
+	const response = await fetch(
+		`${API_BASE_URL}/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}&use_ml=${useMl}`,
+	);
 	if (!response.ok) {
-		return [];
+		const err = await response.json();
+		throw new Error(err.detail || 'Solver failed');
 	}
+	return response.json();
+};
+
+export const getLeagueTable = async (minGw, maxGw) => {
+	const response = await fetch(`${API_BASE_URL}/league-table?min_gw=${minGw}&max_gw=${maxGw}`);
+	if (!response.ok) throw new Error('Failed to fetch league table');
+	return response.json();
+};
+
+export const getAggregatedPlayers = async (minGw, maxGw, venue) => {
+	const query = new URLSearchParams({ min_gw: minGw, max_gw: maxGw, venue });
+	const response = await fetch(`${API_BASE_URL}/players/aggregated?${query.toString()}`);
+	if (!response.ok) throw new Error('Failed to fetch player stats');
+	return response.json();
+};
+
+export const getH2hHistory = async (homeId, awayId) => {
+	const response = await fetch(`${API_BASE_URL}/history/h2h/${homeId}/${awayId}`);
+	if (!response.ok) throw new Error('Failed to fetch H2H history');
+	return response.json();
+};
+
+export const getFixtureAnalysis = async () => {
+	const response = await fetch(`${API_BASE_URL}/optimization/fixtures`);
+	if (!response.ok) throw new Error('Failed to fetch fixture analysis');
 	return response.json();
 };

@@ -3,84 +3,54 @@ import { ChevronDown, Check } from 'lucide-react';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import PlayerPopover from './PlayerPopover';
 import ComparisonChart from './ComparisonChart';
-import { getPlayerSummary, getTeams } from '../api';
+import { getPlayerSummary } from '../api';
 import { getPositionName } from './utils';
+import useCurrentGameweek from '../hooks/useCurrentGameweek';
+import useDebouncedValue from '../hooks/useDebouncedValue';
+import { useTeams, useAggregatedPlayers } from '../hooks/queries';
 
 const PlayerExplorer = () => {
-	const [players, setPlayers] = useState([]);
-	const [teams, setTeams] = useState([]);
+	const { gameweek: currentGw } = useCurrentGameweek();
 	const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
-	const [loading, setLoading] = useState(false);
-	const [currentGw, setCurrentGw] = useState(38);
 	const [filters, setFilters] = useState({
 		minGw: 1,
 		maxGw: 38,
-		venue: [], // Default none selected (implies all/both in logic usually)
+		venue: [],
 		search: '',
-		position: [], // Default none selected (implies all)
-		team: [], // Empty means all
+		position: [],
+		team: [],
 	});
 	const [teamInput, setTeamInput] = useState('');
 	const inputRef = useRef(null);
 
-	const [selectedPlayers, setSelectedPlayers] = useState([]); // List of IDs
+	const [selectedPlayers, setSelectedPlayers] = useState([]);
 	const [sortConfig, setSortConfig] = useState({ key: 'points_in_range', direction: 'desc' });
 
 	// Comparison Data
-	const [comparisonData, setComparisonData] = useState({}); // { pid: history[] }
+	const [comparisonData, setComparisonData] = useState({});
 	const [loadingComparison, setLoadingComparison] = useState(false);
 
-	// Fetch Initial Data (GW and Teams)
+	// Set maxGw from current gameweek
 	useEffect(() => {
-		const init = async () => {
-			try {
-				// Fetch GW
-				const gwRes = await fetch('/api/gameweek/current');
-				if (gwRes.ok) {
-					const data = await gwRes.json();
-					const gw = data.gameweek || 38;
-					setCurrentGw(gw);
-					setFilters((prev) => ({ ...prev, maxGw: gw }));
-				}
+		if (currentGw) {
+			setFilters((prev) => ({ ...prev, maxGw: currentGw }));
+		}
+	}, [currentGw]);
 
-				// Fetch Teams
-				const teamsData = await getTeams();
-				setTeams(teamsData);
-			} catch (e) {
-				console.error('Failed to fetch initial data', e);
-			}
-		};
-		init();
-	}, []);
+	// Teams from TanStack Query
+	const { data: teams = [] } = useTeams();
 
-	// Fetch Players when filters (range/venue) change
-	useEffect(() => {
-		const fetchPlayers = async () => {
-			setLoading(true);
-			try {
-				const venueParam = filters.venue.length === 0 || filters.venue.length === 2 ? 'both' : filters.venue[0];
-				const query = new URLSearchParams({
-					min_gw: filters.minGw,
-					max_gw: filters.maxGw,
-					venue: venueParam,
-				});
+	// Debounce the server-side filter params
+	const venueParam = filters.venue.length === 0 || filters.venue.length === 2 ? 'both' : filters.venue[0];
+	const debouncedMinGw = useDebouncedValue(filters.minGw, 500);
+	const debouncedMaxGw = useDebouncedValue(filters.maxGw, 500);
+	const debouncedVenue = useDebouncedValue(venueParam, 500);
 
-				const res = await fetch(`/api/players/aggregated?${query.toString()}`);
-				if (!res.ok) throw new Error('Failed to fetch player stats');
-
-				const data = await res.json();
-				setPlayers(data);
-			} catch (e) {
-				console.error(e);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		// Debounce slightly to avoid rapid calls from slider
-		const timeout = setTimeout(fetchPlayers, 500);
-		return () => clearTimeout(timeout);
-	}, [filters.minGw, filters.maxGw, filters.venue]);
+	const { data: players = [], isLoading: loading } = useAggregatedPlayers(
+		debouncedMinGw,
+		debouncedMaxGw,
+		debouncedVenue,
+	);
 
 	// Fetch Comparison Details when selection changes
 	useEffect(() => {
@@ -89,7 +59,6 @@ const PlayerExplorer = () => {
 				setLoadingComparison(true);
 				const data = {};
 
-				// Identify missing data to fetch
 				const missing = selectedPlayers.filter((pid) => !comparisonData[pid]);
 
 				if (missing.length > 0) {
@@ -113,7 +82,7 @@ const PlayerExplorer = () => {
 			fetchDetails();
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [selectedPlayers]); // comparisonData intentionally excluded to avoid infinite loop
+	}, [selectedPlayers]);
 
 	// Derived / Client-side filtered list
 	const filteredPlayers = useMemo(() => {
@@ -169,19 +138,16 @@ const PlayerExplorer = () => {
 	const handleSelect = (id) => {
 		setSelectedPlayers((prev) => {
 			if (prev.includes(id)) {
-				// Begin removal
 				const newSelection = prev.filter((p) => p !== id);
 
-				// Free up color
 				const newColors = { ...playerColors };
 				delete newColors[id];
 				setPlayerColors(newColors);
 
 				return newSelection;
 			}
-			if (prev.length >= 5) return prev; // Max 5
+			if (prev.length >= 5) return prev;
 
-			// Allocation
 			const assignedColors = Object.values(playerColors);
 			const availableColor = colors.find((c) => !assignedColors.includes(c)) || colors[0];
 
@@ -231,7 +197,6 @@ const PlayerExplorer = () => {
 							className={`w-full bg-ds-bg border border-ds-border rounded p-1.5 flex flex-wrap items-center gap-1.5 min-h-[38px] transition-colors ${isTeamDropdownOpen ? 'border-ds-primary ring-1 ring-ds-primary' : 'hover:border-ds-primary'}`}
 							onClick={() => {
 								if (!isTeamDropdownOpen) setIsTeamDropdownOpen(true);
-								// document.getElementById('club-search-input')?.focus();
 								setTimeout(() => inputRef.current?.focus(), 0);
 							}}
 						>
@@ -322,7 +287,7 @@ const PlayerExplorer = () => {
 														key={t.id}
 														onClick={(e) => {
 															e.stopPropagation();
-															setTeamInput(''); // Clear input on selection
+															setTeamInput('');
 															setFilters((prev) => {
 																const current = prev.team;
 																return {
@@ -365,7 +330,7 @@ const PlayerExplorer = () => {
 							start={filters.minGw}
 							end={filters.maxGw}
 							min={1}
-							max={currentGw}
+							max={currentGw || 38}
 							onChange={({ start, end }) => setFilters((prev) => ({ ...prev, minGw: start, maxGw: end }))}
 						/>
 					</div>
@@ -445,7 +410,6 @@ const PlayerExplorer = () => {
 								{selectedPlayers.map((pid) => {
 									const p = players.find((x) => x.id === pid);
 									if (!p) return null;
-									// Find color
 									const color = playerColors[pid] || '#fff';
 									return (
 										<div
@@ -553,10 +517,9 @@ const PlayerExplorer = () => {
 														...player,
 														name: player.web_name,
 														full_name: player.full_name,
-														team: player.team_short || player.team_name, // Fallback
+														team: player.team_short || player.team_name,
 														position: player.element_type,
 														cost: player.now_cost,
-														// Ensure code is present for image
 													}}
 												>
 													<span className="cursor-help decoration-ds-text-muted/50 underline-offset-2 hover:underline hover:text-ds-primary transition-colors">

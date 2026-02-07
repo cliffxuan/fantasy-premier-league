@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import TeamPopover from './TeamPopover';
 import useCurrentGameweek from '../hooks/useCurrentGameweek';
+import useDebouncedValue from '../hooks/useDebouncedValue';
+import { useLeagueTable } from '../hooks/queries';
 
 const LeagueTable = () => {
 	const { gameweek: currentGw } = useCurrentGameweek();
-	const [table, setTable] = useState([]);
 	const [gwRange, setGwRange] = useState({ start: 1, end: 38 });
 	const [maxGw, setMaxGw] = useState(38);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
 
 	useEffect(() => {
 		if (currentGw) {
@@ -18,32 +17,11 @@ const LeagueTable = () => {
 		}
 	}, [currentGw]);
 
-	useEffect(() => {
-		const fetchTable = async () => {
-			setLoading(true);
-			try {
-				const response = await fetch(`/api/league-table?min_gw=${gwRange.start}&max_gw=${gwRange.end}`);
-				if (!response.ok) {
-					throw new Error('Failed to fetch league table');
-				}
-				const data = await response.json();
-				setTable(data);
-			} catch (err) {
-				setError(err.message);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		const timeoutId = setTimeout(() => {
-			fetchTable();
-		}, 500);
-
-		return () => clearTimeout(timeoutId);
-	}, [gwRange]);
+	const debouncedRange = useDebouncedValue(gwRange, 500);
+	const { data: table = [], isLoading: loading, error } = useLeagueTable(debouncedRange.start, debouncedRange.end);
 
 	if (loading) return <div className="text-ds-text-muted text-center p-4 font-mono">Loading table...</div>;
-	if (error) return <div className="text-ds-danger text-center p-4 font-mono">{error}</div>;
+	if (error) return <div className="text-ds-danger text-center p-4 font-mono">{error.message}</div>;
 	if (!table || table.length === 0) return null;
 
 	return (

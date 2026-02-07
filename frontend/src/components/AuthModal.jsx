@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Check, Key, ClipboardPaste } from 'lucide-react';
-import { getAuthUrl, exchangeCode } from '../api';
+import { getAuthUrl } from '../api';
+import { useExchangeCode } from '../hooks/queries';
 
 const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 	const [token, setToken] = useState(currentToken);
-	const [step, setStep] = useState('initial'); // initial, paste
+	const [step, setStep] = useState('initial');
 	const [code, setCode] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [success, setSuccess] = useState(false);
 	const [error, setError] = useState(null);
-	const [popupStatus, setPopupStatus] = useState(null); // null, 'waiting', 'closed'
+	const [popupStatus, setPopupStatus] = useState(null);
 	const codeInputRef = useRef(null);
 	const popupRef = useRef(null);
 	const pollRef = useRef(null);
+
+	const exchangeCodeMutation = useExchangeCode();
 
 	useEffect(() => {
 		if (isOpen) {
@@ -25,7 +28,6 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 		setToken(currentToken);
 	}, [currentToken, isOpen]);
 
-	// Clean up popup polling on unmount
 	useEffect(() => {
 		return () => {
 			if (pollRef.current) clearInterval(pollRef.current);
@@ -38,7 +40,6 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 			setError(null);
 			const { url } = await getAuthUrl();
 			if (url) {
-				// Open as a centered popup instead of a new tab
 				const w = 500,
 					h = 650;
 				const left = window.screenX + (window.outerWidth - w) / 2;
@@ -52,7 +53,6 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 				setStep('paste');
 				setPopupStatus('waiting');
 
-				// Poll for popup close — when user finishes login and lands on robots.txt
 				if (pollRef.current) clearInterval(pollRef.current);
 				pollRef.current = setInterval(() => {
 					if (!popup || popup.closed) {
@@ -60,7 +60,6 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 						pollRef.current = null;
 						popupRef.current = null;
 						setPopupStatus('closed');
-						// Auto-focus the code input so user can paste immediately
 						setTimeout(() => codeInputRef.current?.focus(), 100);
 					}
 				}, 500);
@@ -77,15 +76,12 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 			const text = await navigator.clipboard.readText();
 			if (text) {
 				setCode(text.trim());
-				// Auto-submit if it looks like a valid code or URL with code
 				const trimmed = text.trim();
 				if (trimmed.includes('code=') || (trimmed.length > 20 && !trimmed.includes(' '))) {
-					// Slight delay so user sees the paste before auto-submit
 					setTimeout(() => handleVerifyCode(trimmed), 300);
 				}
 			}
 		} catch {
-			// Clipboard permission denied — fall back to manual paste
 			codeInputRef.current?.focus();
 		}
 	};
@@ -94,13 +90,12 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 		try {
 			setLoading(true);
 			setError(null);
-			// Clean up code if it's a full URL
 			let cleanCode = (directCode || code).trim();
 			if (cleanCode.includes('code=')) {
 				cleanCode = cleanCode.split('code=')[1].split('&')[0];
 			}
 
-			const data = await exchangeCode(cleanCode);
+			const data = await exchangeCodeMutation.mutateAsync(cleanCode);
 			if (data.access_token) {
 				setSuccess(true);
 				setTimeout(() => {
@@ -334,7 +329,7 @@ const AuthModal = ({ isOpen, onClose, currentToken, onAuthenticated }) => {
 						{step === 'initial' && !!currentToken && (
 							<button
 								onClick={() => {
-									onAuthenticated(''); // Clear token
+									onAuthenticated('');
 								}}
 								className="text-ds-danger font-bold text-sm hover:underline px-2"
 							>

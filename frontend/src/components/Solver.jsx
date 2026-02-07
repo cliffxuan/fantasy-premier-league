@@ -3,6 +3,7 @@ import PlayerPopover from './PlayerPopover';
 import GameweekRangeSlider from './GameweekRangeSlider';
 import useCurrentGameweek from '../hooks/useCurrentGameweek';
 import { getPositionName } from './utils';
+import { useSolver } from '../hooks/queries';
 
 const Solver = () => {
 	const { gameweek: currentGw, status: gwStatus, loading: gwLoading } = useCurrentGameweek();
@@ -13,19 +14,16 @@ const Solver = () => {
 	const [excludeBench, setExcludeBench] = useState(false);
 	const [excludeUnavailable, setExcludeUnavailable] = useState(false);
 	const [useAI, setUseAI] = useState(false);
-	const [result, setResult] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
+
+	const { mutate, data: result, isPending: loading, error, reset } = useSolver();
 
 	useEffect(() => {
 		if (gwLoading) return;
 
 		let safeMax = 38;
 		if (gwStatus) {
-			// If GW has started (deadline passed), use it. otherwise use previous.
 			safeMax = gwStatus.started ? gwStatus.id : Math.max(1, gwStatus.id - 1);
 		} else if (currentGw) {
-			// Fallback if status object is missing (stale backend)
 			safeMax = currentGw;
 		}
 
@@ -33,27 +31,17 @@ const Solver = () => {
 		setMaxGw(safeMax);
 	}, [currentGw, gwStatus, gwLoading]);
 
-	const handleSolve = async (e) => {
+	const handleSolve = (e) => {
 		e.preventDefault();
-		setLoading(true);
-		setError(null);
-		setResult(null);
-
-		try {
-			const response = await fetch(
-				`/api/optimization/solve?budget=${budget}&min_gw=${minGw}&max_gw=${maxGw}&exclude_bench=${excludeBench}&exclude_unavailable=${excludeUnavailable}&use_ml=${useAI}`,
-			);
-			if (!response.ok) {
-				const err = await response.json();
-				throw new Error(err.detail || 'Solver failed');
-			}
-			const data = await response.json();
-			setResult(data);
-		} catch (err) {
-			setError(err.message);
-		} finally {
-			setLoading(false);
-		}
+		reset();
+		mutate({
+			budget,
+			minGw,
+			maxGw,
+			excludeBench,
+			excludeUnavailable,
+			useMl: useAI,
+		});
 	};
 
 	return (
@@ -155,7 +143,7 @@ const Solver = () => {
 
 			{error && (
 				<div className="bg-ds-danger/10 text-ds-danger p-4 rounded border border-ds-danger font-mono text-sm">
-					Error: {error}
+					Error: {error.message}
 				</div>
 			)}
 

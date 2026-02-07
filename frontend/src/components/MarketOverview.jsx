@@ -1,94 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { getFixtures, getPolymarketData } from '../api';
 import { ArrowUpRight, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { getTeamBadgeUrl, PROBABILITY_COLORS } from '../utils';
 import TeamPopover from './TeamPopover';
 import HistoryModal from './HistoryModal';
 import useCurrentGameweek from '../hooks/useCurrentGameweek';
+import { useFixtures, usePolymarketData, useH2hHistory } from '../hooks/queries';
+import { getFixtures } from '../api';
 
 const MarketOverview = () => {
 	const { gameweek: hookGw, loading: gwLoading } = useCurrentGameweek();
-	const [fixtures, setFixtures] = useState([]);
-	const [markets, setMarkets] = useState([]);
-	const [loading, setLoading] = useState(true);
 	const [gw, setGw] = useState(null);
-	const [, setCurrentGw] = useState(null);
-	const [sortBy, setSortBy] = useState('time'); // 'time' or 'odds'
-	const [h2hStatsFilter, setH2hStatsFilter] = useState('all'); // 'all' or 'venue'
+	const [sortBy, setSortBy] = useState('time');
+	const [h2hStatsFilter, setH2hStatsFilter] = useState('all');
 
-	const fetchData = async (targetGw) => {
-		setLoading(true);
-		try {
-			// Fetch Fixtures & Market Data in parallel
-			const [fixturesData, marketData] = await Promise.all([getFixtures(targetGw), getPolymarketData()]);
+	// Use TanStack Query for fixtures (with polling) and polymarket data
+	const { data: fixtures = [], isLoading: fixturesLoading } = useFixtures(gw, { poll: true });
+	const { data: markets = [] } = usePolymarketData();
 
-			setFixtures(fixturesData);
-			// Only set markets if we have them, otherwise keep existing or empty
-			if (marketData) setMarkets(marketData);
-		} catch (e) {
-			console.error('Failed to fetch data', e);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	// Initialize once the shared hook resolves the current gameweek
+	// Initialize GW — check if current GW is finished, if so bump to next
 	useEffect(() => {
 		if (gwLoading || !hookGw) return;
 
 		const init = async () => {
-			const nowGw = hookGw;
-
-			// Check if current gameweek is finished
-			let targetGw = nowGw;
+			let targetGw = hookGw;
 			try {
-				const currentFixtures = await getFixtures(nowGw);
+				const currentFixtures = await getFixtures(hookGw);
 				const allFinished =
 					currentFixtures.length > 0 && currentFixtures.every((f) => f.finished || f.finished_provisional);
 
-				if (allFinished && nowGw < 38) {
-					targetGw = nowGw + 1;
+				if (allFinished && hookGw < 38) {
+					targetGw = hookGw + 1;
 				}
 			} catch (err) {
 				console.warn('Failed to check fixture status', err);
 			}
 
 			setGw(targetGw);
-			setCurrentGw(nowGw); // Keep track of actual current GW
-
-			// Fetch Initial Data
-			await fetchData(targetGw);
 		};
 
 		init();
 	}, [hookGw, gwLoading]);
-
-	// Poll every 60s only for current view
-	useEffect(() => {
-		if (!gw) return;
-		const interval = setInterval(() => {
-			fetchData(gw);
-		}, 60000);
-		return () => clearInterval(interval);
-	}, [gw]);
-
-	// Effect to refetch when GW changes (manual navigation)
-	useEffect(() => {
-		if (gw) {
-			const refresh = async () => {
-				setLoading(true);
-				try {
-					const fixturesData = await getFixtures(gw);
-					setFixtures(fixturesData);
-				} catch (e) {
-					console.error('Failed to refresh fixtures', e);
-				} finally {
-					setLoading(false);
-				}
-			};
-			refresh();
-		}
-	}, [gw]);
 
 	const handlePrevGw = () => setGw((prev) => Math.max(1, prev - 1));
 	const handleNextGw = () => setGw((prev) => Math.min(38, prev + 1));
@@ -104,12 +55,10 @@ const MarketOverview = () => {
 		})
 		.sort((a, b) => {
 			if (sortBy === 'odds') {
-				// Sort by "certainty" (max probability of any outcome)
 				const maxProbA = a.market ? Math.max(...a.market.outcomes.slice(0, 3).map((o) => o.price)) : 0;
 				const maxProbB = b.market ? Math.max(...b.market.outcomes.slice(0, 3).map((o) => o.price)) : 0;
-				return maxProbB - maxProbA; // Descending
+				return maxProbB - maxProbA;
 			}
-			// Default: Time
 			return new Date(a.kickoff_time) - new Date(b.kickoff_time);
 		});
 
@@ -125,33 +74,19 @@ const MarketOverview = () => {
 
 	// History Modal State
 	const [showHistoryModal, setShowHistoryModal] = useState(false);
-	const [historyData, setHistoryData] = useState([]);
-	const [, setHistoryLoading] = useState(false);
 	const [selectedTeams, setSelectedTeams] = useState({ home: null, away: null });
 
-	// Lazy load HistoryModal? Or just import at top.
-	// I need to add the import statement at the top of the file as well.
-	// This tool call only replaces a block. I should probably use multi_replace or do it in two steps.
-	// Let's assume I'll add the import in a separate call or use multi_replace.
-	// I will use multi_replace to do both safely.
+	const {
+		data: historyData = [],
+		isLoading: historyLoading,
+		isFetching: historyFetching,
+	} = useH2hHistory(selectedTeams.home?.id, selectedTeams.away?.id, {
+		enabled: showHistoryModal && !!selectedTeams.home && !!selectedTeams.away,
+	});
 
-	const handleOpenHistory = async (teamH, teamA) => {
+	const handleOpenHistory = (teamH, teamA) => {
 		setSelectedTeams({ home: teamH, away: teamA });
 		setShowHistoryModal(true);
-		setHistoryLoading(true);
-		setHistoryData([]);
-
-		try {
-			const res = await fetch(`/api/history/h2h/${teamH.id}/${teamA.id}`);
-			if (res.ok) {
-				const data = await res.json();
-				setHistoryData(data);
-			}
-		} catch (e) {
-			console.error('Failed to fetch history', e);
-		} finally {
-			setHistoryLoading(false);
-		}
 	};
 
 	const MarketCard = ({ f }) => {
@@ -280,7 +215,6 @@ const MarketOverview = () => {
 									const prob = Math.round(outcome.price * 100);
 									const label = outcome.label === 'Draw' ? 'Draw' : idx === 0 ? f.team_h_short : f.team_a_short;
 
-									// Dynamic coloring based on probability
 									let styles = PROBABILITY_COLORS.LOW;
 									if (prob > 60) styles = PROBABILITY_COLORS.HIGH;
 									else if (prob > 40) styles = PROBABILITY_COLORS.MEDIUM;
@@ -311,7 +245,7 @@ const MarketOverview = () => {
 		);
 	};
 
-	if (loading && !fixtures.length)
+	if (fixturesLoading && !fixtures.length)
 		return (
 			<div className="text-center p-20">
 				<div className="w-8 h-8 border-4 border-ds-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>

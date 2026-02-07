@@ -1,33 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
-import { getPolymarketData } from '../api';
 import { getTeamBadgeUrl, PROBABILITY_COLORS } from '../utils';
+import { usePolymarketData } from '../hooks/queries';
 
 const PolymarketWidget = () => {
-	const [markets, setMarkets] = useState([]);
-	const [loading, setLoading] = useState(true);
+	const { data: markets = [], isLoading: loading } = usePolymarketData();
 	const [selectedGw, setSelectedGw] = useState(null);
 	const [sortBy, setSortBy] = useState('date');
 
-	useEffect(() => {
-		const fetchData = async () => {
-			try {
-				const data = await getPolymarketData();
-				setMarkets(data);
+	const availableGws = Array.from(new Set(markets.map((m) => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
+	const hasGameweekData = availableGws.length > 0;
 
-				// Set default GW to the earliest one found in the data
-				const gws = Array.from(new Set(data.map((m) => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
-				if (gws.length > 0) {
-					setSelectedGw(gws[0]);
-				}
-			} catch (e) {
-				console.error(e);
-			} finally {
-				setLoading(false);
-			}
-		};
-		fetchData();
-	}, []);
+	// Auto-select first GW when data arrives
+	const effectiveGw = selectedGw ?? (hasGameweekData ? availableGws[0] : null);
 
 	if (loading) {
 		return (
@@ -46,10 +31,7 @@ const PolymarketWidget = () => {
 		return null; // Don't show if no data
 	}
 
-	const availableGws = Array.from(new Set(markets.map((m) => m.gameweek).filter(Boolean))).sort((a, b) => a - b);
-	const hasGameweekData = availableGws.length > 0;
-
-	const displayedMarkets = hasGameweekData && selectedGw ? markets.filter((m) => m.gameweek === selectedGw) : markets;
+	const displayedMarkets = hasGameweekData && effectiveGw ? markets.filter((m) => m.gameweek === effectiveGw) : markets;
 
 	const sortedMarkets = [...displayedMarkets].sort((a, b) => {
 		if (sortBy === 'odds') {
@@ -61,14 +43,14 @@ const PolymarketWidget = () => {
 	});
 
 	const handlePrev = () => {
-		if (!selectedGw) return;
-		const idx = availableGws.indexOf(selectedGw);
+		if (!effectiveGw) return;
+		const idx = availableGws.indexOf(effectiveGw);
 		if (idx > 0) setSelectedGw(availableGws[idx - 1]);
 	};
 
 	const handleNext = () => {
-		if (!selectedGw) return;
-		const idx = availableGws.indexOf(selectedGw);
+		if (!effectiveGw) return;
+		const idx = availableGws.indexOf(effectiveGw);
 		if (idx < availableGws.length - 1) setSelectedGw(availableGws[idx + 1]);
 	};
 
@@ -92,15 +74,15 @@ const PolymarketWidget = () => {
 						<div className="flex items-center gap-3 bg-ds-bg/50 rounded-full px-3 py-1.5 border border-ds-border transition-colors hover:border-ds-primary/30">
 							<button
 								onClick={handlePrev}
-								disabled={availableGws.indexOf(selectedGw) <= 0}
+								disabled={availableGws.indexOf(effectiveGw) <= 0}
 								className="p-1 rounded-full hover:bg-ds-card hover:text-ds-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit disabled:cursor-not-allowed transition-colors"
 							>
 								<ChevronLeft size={18} />
 							</button>
-							<span className="text-sm font-bold text-center text-ds-text min-w-[100px]">Gameweek {selectedGw}</span>
+							<span className="text-sm font-bold text-center text-ds-text min-w-[100px]">Gameweek {effectiveGw}</span>
 							<button
 								onClick={handleNext}
-								disabled={availableGws.indexOf(selectedGw) >= availableGws.length - 1}
+								disabled={availableGws.indexOf(effectiveGw) >= availableGws.length - 1}
 								className="p-1 rounded-full hover:bg-ds-card hover:text-ds-primary disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-inherit disabled:cursor-not-allowed transition-colors"
 							>
 								<ChevronRight size={18} />
@@ -129,7 +111,6 @@ const PolymarketWidget = () => {
 								<div className="flex flex-col items-center md:items-start text-[10px] text-ds-text-muted font-mono w-20 shrink-0">
 									<span className="font-bold text-ds-text">{dateStr}</span>
 									<span>{timeStr}</span>
-									{/* GW Badge removed from here as it's now in header filter */}
 								</div>
 
 								{/* Center: Teams */}
@@ -188,10 +169,6 @@ const PolymarketWidget = () => {
 										} else if (prob >= 0.4) {
 											styles = PROBABILITY_COLORS.MEDIUM;
 										} else if (prob >= 0.25) {
-											// Keep LOW for now or define a specific "Low but relevant" if needed.
-											// The original code had a specific gray style for > 25%.
-											// Let's map it to LOW which is our gray default, or customized if needed.
-											// Re-using LOW for consistency with MarketOverview
 											styles = {
 												bg: 'bg-slate-500/20 hover:bg-slate-500/30',
 												text: 'text-slate-300',

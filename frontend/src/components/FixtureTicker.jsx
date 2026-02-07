@@ -1,31 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useFixtureAnalysis } from '../hooks/queries';
 
 const FixtureTicker = () => {
-	const [data, setData] = useState(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
+	const { data, isLoading: loading, error } = useFixtureAnalysis();
 	const [mode, setMode] = useState('attack'); // 'attack' or 'defense'
-
-	// Initial load
-	useEffect(() => {
-		const fetchData = async () => {
-			setLoading(true);
-			try {
-				const response = await fetch(`/api/optimization/fixtures`);
-				if (!response.ok) {
-					throw new Error('Failed to fetch fixture analysis');
-				}
-				const result = await response.json();
-				setData(result);
-			} catch (err) {
-				setError(err.message);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		fetchData();
-	}, []);
 
 	// Custom color map for 1-5 scale
 	const getFDRColor = (score) => {
@@ -132,7 +110,6 @@ const FixtureTicker = () => {
 									else if (mode === 'attack') difficulty = f.fdr_attack;
 									else difficulty = f.fdr_defend;
 
-									// Fallback for market if data missing (usually 3.0 from backend default, but good to handle)
 									if (difficulty === undefined) difficulty = 3.0;
 
 									return (

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { getClubSquad, getTeams } from '../api';
+import { getClubSquad } from '../api';
 import SquadDisplay from './SquadDisplay';
 import { ChevronDown, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import TeamPopover from './TeamPopover';
 import { getFdrTableClass } from './utils';
+import { useTeams } from '../hooks/queries';
 
 const ClubViewer = () => {
-	const [teams, setTeams] = useState([]);
+	const { data: teams = [] } = useTeams();
 	const [selectedClub, setSelectedClub] = useState(null);
 	const [gameweek, setGameweek] = useState(null);
 	const [squadData, setSquadData] = useState(null);
@@ -17,19 +18,15 @@ const ClubViewer = () => {
 	const [oppLoading, setOppLoading] = useState(false);
 	const [showOpponentFirst, setShowOpponentFirst] = useState(false);
 
+	// Auto-select first team once teams are loaded
 	useEffect(() => {
-		const fetchTeams = async () => {
-			const data = await getTeams();
-			setTeams(data);
-			if (data && data.length > 0) {
-				const firstTeam = data[0];
-				setSelectedClub(firstTeam.id);
-				handleFetch(firstTeam.id, null);
-			}
-		};
-		fetchTeams();
+		if (teams.length > 0 && !selectedClub) {
+			const firstTeam = teams[0];
+			setSelectedClub(firstTeam.id);
+			handleFetch(firstTeam.id, null);
+		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [teams]);
 
 	const handleFetch = async (clubId, gw) => {
 		if (!clubId) return;
@@ -41,12 +38,6 @@ const ClubViewer = () => {
 				setSquadData(data);
 				if (data.gameweek) {
 					setGameweek(data.gameweek);
-					// Only set currentGw if it's the first load (to allow navigation properly)
-					// If backend returns the requested GW, use that as current context for the display?
-					// Actually SquadDisplay needs 'currentGw' to know what is "Live" vs "Past".
-					// Pass current_event from bootstrap as currentGw roughly, but we don't have it here directly unless we fetch it.
-					// But our backend's 'gameweek' return is the requested one.
-					// Let's assume for now currentGw is the one initially loaded.
 					if (!currentGw) setCurrentGw(data.gameweek);
 				}
 			} else {
@@ -73,7 +64,6 @@ const ClubViewer = () => {
 				return;
 			}
 
-			// Don't fetch if loading main squad
 			if (loading) {
 				setOpponentData([]);
 				return;
@@ -87,11 +77,7 @@ const ClubViewer = () => {
 
 			setOppLoading(true);
 
-			// Use Promise.all for parallel fetching
 			const promises = currentFixtures.map(async (fix) => {
-				// fix.opponent_code is the team Code. Map to Team ID.
-				// Note: In some contexts opponent_code might be ID, but based on badge usage 't{code}.png', it's likely code.
-				// We check both just in case, preferring Code match.
 				const oppTeam = teams.find((t) => t.code === fix.opponent_code);
 				if (oppTeam) {
 					try {
@@ -158,15 +144,7 @@ const ClubViewer = () => {
 									month: 'short',
 									day: 'numeric',
 								});
-								const oppTeam =
-									teams.find((t) => t.code === fix.opponent_code) ||
-									{}; /* Note: backend returns opponent_code as team code, not team id.
-                                Actually backend returns `opponent_code` as `team.code`. My `teams` prop likely has `id` and `code`.
-                                Let's check `teams` state usage. `teams` comes from `getTeams()`. Usually has `id`, `code`, `name`.
-                            */
-								// Wait, `fixtures` has `opponent_code`. Is that `team.code` or `team.id`?
-								// In backend: `opponent_code: opp_team.get("code")` -> This is the FPL specific photo code (usually).
-								// `teams` list from `getTeams` has `code` which is that sane photo code.
+								const oppTeam = teams.find((t) => t.code === fix.opponent_code) || {};
 
 								return (
 									<tr key={idx} className="hover:bg-ds-primary/5 transition-colors group">
@@ -310,7 +288,6 @@ const ClubViewer = () => {
 											setSelectedClub(team.id);
 											handleFetch(team.id, gameweek);
 											document.getElementById('club-dropdown').classList.add('hidden');
-											// Reset search
 											const input = document.getElementById('club-search-input');
 											if (input) input.value = '';
 											document.querySelectorAll('.club-item').forEach((i) => i.classList.remove('hidden'));
@@ -375,8 +352,6 @@ const ClubViewer = () => {
 
 								const homeTeam = fix.is_home ? myTeam : oppTeam;
 								const awayTeam = fix.is_home ? oppTeam : myTeam;
-								// Determine if we won/lost/drew for colouring result if needed, though usually just generic Score colour is fine or coloured by result.
-								// fix.result is relative to 'myTeam'.
 
 								return (
 									<div

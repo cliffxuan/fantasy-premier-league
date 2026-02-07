@@ -1,32 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { RefreshCw, Flame, TrendingDown, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { getPositionName } from './utils';
+import { useFormAnalysis } from '../hooks/queries';
 
 const FormAnalysis = () => {
-	const [data, setData] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
-
-	const fetchAnalysis = async () => {
-		setLoading(true);
-		setError(null);
-		try {
-			const response = await fetch('/api/analysis/form');
-			if (!response.ok) {
-				throw new Error('Failed to fetch form analysis');
-			}
-			const result = await response.json();
-			setData(result);
-		} catch (err) {
-			setError(err.message);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	useEffect(() => {
-		fetchAnalysis();
-	}, []);
+	const { data = [], isLoading: loading, error, refetch } = useFormAnalysis();
 
 	const getSustainabilityColor = (score) => {
 		if (score >= 70) return 'bg-green-500';
@@ -61,7 +39,7 @@ const FormAnalysis = () => {
 					</h1>
 				</div>
 				<button
-					onClick={fetchAnalysis}
+					onClick={() => refetch()}
 					disabled={loading}
 					className="p-2 rounded-full hover:bg-ds-surface text-ds-primary/80 hover:text-ds-primary transition-all disabled:opacity-50"
 				>
@@ -87,7 +65,7 @@ const FormAnalysis = () => {
 
 			{error && (
 				<div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-6 text-center">
-					{error}
+					{error.message}
 				</div>
 			)}
 

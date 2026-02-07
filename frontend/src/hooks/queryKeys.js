@@ -1,0 +1,17 @@
+export const queryKeys = {
+	currentGameweek: ['currentGameweek'],
+	teams: ['teams'],
+	fixtures: (gw) => ['fixtures', gw],
+	polymarket: ['polymarket'],
+	dreamTeam: (gw) => ['dreamTeam', gw],
+	squad: (teamId, gw, authToken) => ['squad', teamId, gw, authToken],
+	clubSquad: (clubId, gw) => ['clubSquad', clubId, gw],
+	clubSummary: (clubId) => ['clubSummary', clubId],
+	playerSummary: (id, oppId) => ['playerSummary', id, oppId],
+	formAnalysis: ['formAnalysis'],
+	topManagers: (count) => ['topManagers', count],
+	leagueTable: (minGw, maxGw) => ['leagueTable', minGw, maxGw],
+	aggregatedPlayers: (minGw, maxGw, venue) => ['aggregatedPlayers', minGw, maxGw, venue],
+	h2hHistory: (homeId, awayId) => ['h2hHistory', homeId, awayId],
+	fixtureAnalysis: ['fixtureAnalysis'],
+};

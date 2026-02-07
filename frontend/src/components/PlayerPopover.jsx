@@ -1,39 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getPlayerSummary } from '../api';
 import { getPlayerImage, handlePlayerImageError } from '../utils';
 import { getPositionName, getFdrBadgeClass } from './utils';
 import { usePopover } from '../hooks/usePopover';
+import { usePlayerSummary } from '../hooks/queries';
 
 const PlayerPopover = ({ player, children }) => {
-	const [summary, setSummary] = useState(null);
-	const [loading, setLoading] = useState(false);
 	const [activeFixtureId, setActiveFixtureId] = useState(null);
 	const [historyOffset, setHistoryOffset] = useState(0);
+
+	const { isVisible, position, triggerProps, popoverProps } = usePopover();
+
+	const { data: summary, isLoading: loading } = usePlayerSummary(player.id, player.opponent_id, {
+		enabled: isVisible,
+	});
 
 	// Reset offset when player changes
 	useEffect(() => {
 		setHistoryOffset(0);
 	}, [player.id]);
-
-	const fetchSummary = useCallback(async () => {
-		if (!summary && !loading) {
-			setLoading(true);
-			try {
-				const data = await getPlayerSummary(player.id, player.opponent_id);
-				setSummary(data);
-			} catch (error) {
-				console.error('Failed to fetch player summary', error);
-			} finally {
-				setLoading(false);
-			}
-		}
-	}, [summary, loading, player.id, player.opponent_id]);
-
-	const { isVisible, position, triggerProps, popoverProps } = usePopover({
-		onShow: fetchSummary,
-	});
 
 	return (
 		<div className="relative" {...triggerProps}>

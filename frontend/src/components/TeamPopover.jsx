@@ -1,38 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getClubSummary } from '../api';
 import { getPositionName, getFdrCardClass } from './utils';
 import { usePopover } from '../hooks/usePopover';
+import { useClubSummary } from '../hooks/queries';
 
 const TeamPopover = ({ team, children, className = '' }) => {
-	const [summary, setSummary] = useState(null);
-	const [loading, setLoading] = useState(false);
 	const [activeFixtureId, setActiveFixtureId] = useState(null);
 	const [historyOffset, setHistoryOffset] = useState(0);
+
+	const { isVisible, position, triggerProps, popoverProps } = usePopover();
+
+	const { data: summary, isLoading: loading } = useClubSummary(team.id, {
+		enabled: isVisible,
+	});
 
 	// Reset offset when team changes
 	useEffect(() => {
 		setHistoryOffset(0);
 	}, [team.id]);
-
-	const fetchData = useCallback(async () => {
-		if (!summary && !loading) {
-			setLoading(true);
-			try {
-				const data = await getClubSummary(team.id);
-				setSummary(data);
-			} catch (error) {
-				console.error('Failed to fetch team summary', error);
-			} finally {
-				setLoading(false);
-			}
-		}
-	}, [summary, loading, team.id]);
-
-	const { isVisible, position, triggerProps, popoverProps } = usePopover({
-		onShow: fetchData,
-	});
 
 	return (
 		<div className={`relative inline-block ${className}`} {...triggerProps}>
@@ -75,7 +61,6 @@ const TeamPopover = ({ team, children, className = '' }) => {
 							</div>
 						) : summary ? (
 							<div className="space-y-4">
-								{/* Form - Reuse from prop if not in summary, but summary might not have form so stick to prop */}
 								{/* Recent Results */}
 								<div>
 									<div className="flex justify-between items-center mb-2">
@@ -164,7 +149,6 @@ const TeamPopover = ({ team, children, className = '' }) => {
 																<div className="flex justify-between">
 																	<span>GW:</span> <span className="font-mono text-ds-text">{fixture.event}</span>
 																</div>
-																{/* Add more stats if available in future backend updates */}
 															</div>
 														</div>
 													</div>

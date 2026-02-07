@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Copy, X, FileText, Code, Check, Key } from 'lucide-react';
-import { analyzeTeam, getSquad, getMe } from './api';
+import { getMe } from './api';
+import { useSquad, useAnalyzeTeam } from './hooks/queries';
 import SquadDisplay from './components/SquadDisplay';
 import TeamHeader from './components/TeamHeader';
 import FixtureTicker from './components/FixtureTicker';
@@ -37,18 +38,6 @@ function Dashboard() {
 	const [searchParams, setSearchParams] = useSearchParams();
 
 	const [teamId, setTeamId] = useState(paramTeamId || sessionStorage.getItem('fpl_team_id') || '');
-	const [result, setResult] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
-	const [squad, setSquad] = useState(null);
-	const [transfers, setTransfers] = useState([]);
-	const [chips, setChips] = useState([]);
-	const [history, setHistory] = useState([]);
-	const [entry, setEntry] = useState(null);
-	const [calculatedFreeTransfers, setCalculatedFreeTransfers] = useState(1);
-	const [transferDetails, setTransferDetails] = useState(null);
-	const [isTeamLoaded, setIsTeamLoaded] = useState(false);
-
 	const [showPromptModal, setShowPromptModal] = useState(false);
 	const [generatedPrompt, setGeneratedPrompt] = useState('');
 	const [copySuccess, setCopySuccess] = useState(false);
@@ -57,8 +46,6 @@ function Dashboard() {
 	const activeTab = searchParams.get('tab') || 'matches';
 	const gwParam = searchParams.get('gw');
 	const viewGw = gwParam ? parseInt(gwParam) : null;
-
-	const [squadLoading, setSquadLoading] = useState(false);
 
 	const [authToken, setAuthToken] = useState(sessionStorage.getItem('fpl_auth_token') || '');
 
@@ -84,7 +71,6 @@ function Dashboard() {
 		}
 	}, [authToken]);
 
-	// Persist Team ID similarly
 	useEffect(() => {
 		if (teamId) {
 			sessionStorage.setItem('fpl_team_id', teamId);
@@ -93,94 +79,61 @@ function Dashboard() {
 		}
 	}, [teamId]);
 
-	const [isPrivate, setIsPrivate] = useState(false);
-
-	// Fetch squad when URL param changes
+	// Sync teamId from URL param
 	useEffect(() => {
 		if (paramTeamId) {
 			setTeamId(paramTeamId);
-			// Pass authToken to fetchSquad.
-			// Note: authToken might not be updated in closure if this effect runs before authToken state update?
-			// Actually fetchSquad reads authToken from state if we define it inside Dashboard.
-			// But fetchSquad is defined below. It accesses `authToken` variable from scope.
-			fetchSquad(paramTeamId, gwParam);
 		} else {
-			// If no teamId in URL, reset data
-			if (!paramTeamId) {
-				setTeamId(sessionStorage.getItem('fpl_team_id') || '');
-				setSquad(null);
-				setChips([]);
-				setHistory([]);
-				setEntry(null);
-				setCalculatedFreeTransfers(1);
-				setIsTeamLoaded(false);
-				setResult(null);
-				setIsPrivate(false);
-			}
+			setTeamId(sessionStorage.getItem('fpl_team_id') || '');
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps -- fetchSquad is defined below and not memoized; adding it would cause infinite re-renders
-	}, [paramTeamId, gwParam, authToken]);
+	}, [paramTeamId]);
 
-	const fetchSquad = async (id, gw) => {
-		if (!isTeamLoaded) {
-			setLoading(true);
-		} else {
-			setSquadLoading(true);
-		}
-		setError(null);
-		if (!isTeamLoaded) {
-			setSquad(null);
-			setResult(null);
-			setIsPrivate(false);
-		}
+	// Use TanStack Query for squad data
+	const {
+		data: squadData,
+		isLoading: squadQueryLoading,
+		error: squadError,
+	} = useSquad(paramTeamId || null, viewGw, authToken);
 
-		try {
-			const squadData = await getSquad(id, gw, authToken);
-			if (squadData && (squadData.squad || squadData.picks)) {
-				// Modified check
-				setSquad(squadData.squad || squadData.picks); // Handle if backend returns picks as root or similar? No, backend returns structured format.
-				// Backend returns: { "squad": [...], "chips": ... }
-				// get_enriched_squad always returns this structure.
+	// Derive state from query data
+	const squad = squadData?.squad || squadData?.picks || null;
+	const transfers = squadData?.transfers || [];
+	const chips = squadData?.chips || [];
+	const history = squadData?.history || [];
+	const entry = squadData?.entry || null;
+	const calculatedFreeTransfers = squadData?.free_transfers !== undefined ? squadData.free_transfers : 1;
+	const transferDetails = squadData?.transfer_details || null;
+	const isPrivate = squadData?.is_private || false;
+	const isTeamLoaded = !!squad;
 
-				setTransfers(squadData.transfers || []);
-				setChips(squadData.chips || []);
-				setHistory(squadData.history || []);
-				setEntry(squadData.entry || null);
-				setCalculatedFreeTransfers(squadData.free_transfers !== undefined ? squadData.free_transfers : 1);
-				setTransferDetails(squadData.transfer_details || null);
-				setIsPrivate(squadData.is_private || false);
-
-				const resolvedGw = squadData.gameweek || squadData.entry?.current_event;
-
-				if (!gw && resolvedGw) {
-					const currentTab = searchParams.get('tab') || 'matches';
-					if (['squad', 'dream_team'].includes(currentTab)) {
-						setSearchParams(
-							(prev) => {
-								const newP = new URLSearchParams(prev);
-								newP.set('gw', resolvedGw);
-								return newP;
-							},
-							{ replace: true },
-						);
-					}
+	// Set GW in URL when squad loads for first time (if no gw param)
+	useEffect(() => {
+		if (squadData && !gwParam) {
+			const resolvedGw = squadData.gameweek || squadData.entry?.current_event;
+			if (resolvedGw) {
+				const currentTab = searchParams.get('tab') || 'matches';
+				if (['squad', 'dream_team'].includes(currentTab)) {
+					setSearchParams(
+						(prev) => {
+							const newP = new URLSearchParams(prev);
+							newP.set('gw', resolvedGw);
+							return newP;
+						},
+						{ replace: true },
+					);
 				}
-
-				setIsTeamLoaded(true);
-			} else {
-				setError('Failed to fetch team. Please verify the Team ID.');
 			}
-		} catch (err) {
-			setError(err.message || 'Failed to fetch team. Please try again.');
-		} finally {
-			setLoading(false);
-			setSquadLoading(false);
 		}
-	};
+	}, [squadData, gwParam, searchParams, setSearchParams]);
+
+	// Analysis mutation
+	const analyzeMutation = useAnalyzeTeam();
+	const loading = squadQueryLoading || analyzeMutation.isPending;
+	const error = !isTeamLoaded && squadError ? squadError.message : analyzeMutation.error?.message || null;
+	const result = analyzeMutation.data || null;
 
 	const handleGoClick = () => {
 		if (teamId) {
-			// When searching, switch to squad tab to show the result
 			navigate(`/${teamId}?tab=squad`);
 		}
 	};
@@ -205,53 +158,49 @@ function Dashboard() {
 		});
 	};
 
+	const getBank = () => {
+		if (transferDetails && transferDetails.bank !== undefined) {
+			return (transferDetails.bank / 10).toFixed(1);
+		} else if (entry) {
+			return (entry.last_deadline_bank / 10).toFixed(1);
+		}
+		return '0.5';
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		setLoading(true);
-		setError(null);
-		setResult(null);
-
-		try {
-			let bank = '0.5';
-			if (transferDetails && transferDetails.bank !== undefined) {
-				bank = (transferDetails.bank / 10).toFixed(1);
-			} else if (entry) {
-				bank = (entry.last_deadline_bank / 10).toFixed(1);
-			}
-			const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken);
-			setResult(data);
-		} catch (err) {
-			setError(err.message);
-		} finally {
-			setLoading(false);
-		}
+		analyzeMutation.reset();
+		analyzeMutation.mutate({
+			teamId,
+			bank: getBank(),
+			freeTransfers: calculatedFreeTransfers,
+			transfersRolled: false,
+			authToken,
+			returnPrompt: false,
+		});
 	};
 
 	const handleGeneratePrompt = async (e) => {
 		e.preventDefault();
-		setLoading(true);
-		setError(null);
-		setResult(null);
-
-		try {
-			let bank = '0.5';
-			if (transferDetails && transferDetails.bank !== undefined) {
-				bank = (transferDetails.bank / 10).toFixed(1);
-			} else if (entry) {
-				bank = (entry.last_deadline_bank / 10).toFixed(1);
-			}
-			const data = await analyzeTeam(teamId, bank, calculatedFreeTransfers, false, authToken, true);
-			if (data.generated_prompt) {
-				setGeneratedPrompt(data.generated_prompt);
-				setShowPromptModal(true);
-			} else {
-				setError('Failed to generate prompt.');
-			}
-		} catch (err) {
-			setError(err.message);
-		} finally {
-			setLoading(false);
-		}
+		analyzeMutation.reset();
+		analyzeMutation.mutate(
+			{
+				teamId,
+				bank: getBank(),
+				freeTransfers: calculatedFreeTransfers,
+				transfersRolled: false,
+				authToken,
+				returnPrompt: true,
+			},
+			{
+				onSuccess: (data) => {
+					if (data.generated_prompt) {
+						setGeneratedPrompt(data.generated_prompt);
+						setShowPromptModal(true);
+					}
+				},
+			},
+		);
 	};
 
 	return (
@@ -382,7 +331,7 @@ function Dashboard() {
 												transfers={transfers}
 												onGwChange={handleGwChange}
 												onTabSwitch={() => handleTabChange('dream_team')}
-												loading={squadLoading}
+												loading={squadQueryLoading}
 												currentGw={entry?.current_event}
 												history={history}
 											/>
@@ -606,19 +555,11 @@ function Dashboard() {
 				currentToken={authToken}
 				onAuthenticated={async (newToken) => {
 					setAuthToken(newToken);
-					// Try to fetch me to get team ID
 					if (newToken) {
 						try {
 							const me = await getMe(newToken);
 							if (me && me.player && me.player.entry) {
 								setTeamId(me.player.entry.toString());
-								// Optionally auto-fetch squad here if desired,
-								// but existing useEffect on teamId will trigger fetchSquad anyway?
-								// Wait, useEffect triggers on paramTeamId change OR if teamId changes?
-								// The useEffect [teamId] only saves to sessionStorage.
-								// The useEffect [paramTeamId, gwParam, authToken] handles fetching.
-
-								// If we are on home page (no paramTeamId), we should manually trigger fetch or navigate
 								if (!paramTeamId) {
 									navigate(`/${me.player.entry}?tab=squad`);
 								}

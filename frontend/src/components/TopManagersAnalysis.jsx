@@ -1,42 +1,21 @@
 import React, { useState } from 'react';
 import PlayerPopover from './PlayerPopover';
 import { getPositionName } from './utils';
+import { useTopManagers } from '../hooks/queries';
 
 const TopManagersAnalysis = () => {
-	const [data, setData] = useState(null);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
 	const [managerCount, setManagerCount] = useState(1000);
-	const [positionFilter, setPositionFilter] = useState('ALL'); // ALL, GKP, DEF, MID, FWD
+	const [positionFilter, setPositionFilter] = useState('ALL');
 
-	// Initial load and subsequent updates
-	// Define fetch logic
-	const fetchData = async () => {
-		setLoading(true); // Reset loading state on refetch
-		try {
-			const response = await fetch(`/api/analysis/top-managers?count=${managerCount}`);
-			if (!response.ok) {
-				throw new Error('Failed to fetch Top Managers analysis');
-			}
-			const result = await response.json();
-			setData(result);
-		} catch (err) {
-			setError(err.message);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	// Initial load only
-	// Initial load removed - triggered by button only
+	const { data, isLoading: loading, error, refetch } = useTopManagers(managerCount);
 
 	const handleCountChange = (e) => {
 		setManagerCount(Number(e.target.value));
 	};
 
 	const getRowStyle = (ownership) => {
-		if (ownership >= 80) return 'bg-ds-primary/10'; // Super Template
-		if (ownership >= 50) return 'bg-ds-primary/5'; // Template
+		if (ownership >= 80) return 'bg-ds-primary/10';
+		if (ownership >= 50) return 'bg-ds-primary/5';
 		return '';
 	};
 
@@ -95,7 +74,7 @@ const TopManagersAnalysis = () => {
 					</select>
 
 					<button
-						onClick={fetchData}
+						onClick={() => refetch()}
 						disabled={loading}
 						className="ml-2 bg-ds-primary text-white font-bold px-4 py-2 rounded-lg hover:bg-ds-primary-hover active:scale-95 transition-all text-sm disabled:opacity-50 disabled:scale-100"
 					>
@@ -120,7 +99,7 @@ const TopManagersAnalysis = () => {
 			{!loading && error && (
 				<div className="py-8 text-center border border-ds-danger/30 rounded-lg bg-ds-danger/5">
 					<p className="text-ds-danger font-mono mb-2">Error loading analysis</p>
-					<p className="text-sm text-ds-text-muted">{error}</p>
+					<p className="text-sm text-ds-text-muted">{error.message}</p>
 				</div>
 			)}
 
@@ -178,7 +157,6 @@ const TopManagersAnalysis = () => {
 															position: player.element_type,
 															total_points: player.total_points,
 															cost: player.cost,
-															// Approximations as we don't have user-specific purchase data
 															purchase_price: player.cost,
 															selling_price: player.cost,
 															news: player.news,

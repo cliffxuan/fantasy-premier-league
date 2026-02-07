@@ -1,36 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { getFixtures } from '../api';
+import React from 'react';
+import useCurrentGameweek from '../hooks/useCurrentGameweek';
+import { useFixtures } from '../hooks/queries';
 
 const LiveFixtures = () => {
-	const [fixtures, setFixtures] = useState([]);
-	const [loading, setLoading] = useState(true);
-	const [gw, setGw] = useState(null);
-
-	useEffect(() => {
-		const fetchEverything = async () => {
-			try {
-				// 1. Get current gameweek
-				const gwRes = await fetch('/api/gameweek/current');
-				const gwData = await gwRes.json();
-				const currentGw = gwData.gameweek;
-				setGw(currentGw);
-
-				// 2. Fetch fixtures for this GW
-				const fixturesData = await getFixtures(currentGw);
-				setFixtures(fixturesData);
-			} catch (e) {
-				console.error('Failed to fetch live fixtures', e);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		fetchEverything();
-
-		// Poll every 60s
-		const interval = setInterval(fetchEverything, 60000);
-		return () => clearInterval(interval);
-	}, []);
+	const { gameweek: gw } = useCurrentGameweek();
+	const { data: fixtures = [], isLoading: loading } = useFixtures(gw, { poll: true });
 
 	if (loading) return <div className="text-center p-4 text-ds-text-muted animate-pulse">Loading Live Scores...</div>;
 
