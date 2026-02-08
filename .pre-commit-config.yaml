@@ -46,3 +46,15 @@ repos:
         language: system
         files: ^mobile/lib/.*\.dart$
         pass_filenames: false
+      - id: playwright-e2e
+        name: playwright e2e
+        entry: bash -c 'cd frontend && npm run test:e2e'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+      - id: flutter-integration-test
+        name: flutter integration test
+        entry: bash -c 'cd mobile && flutter test integration_test'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
