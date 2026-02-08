@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/squad_player.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/gameweek_navigator.dart';
+import '../../../core/widgets/gameweek_swipe_detector.dart'; // Import the new swipe detector
 import '../../../core/widgets/loading_indicator.dart';
 import '../../explore/providers/club_viewer_providers.dart';
 import '../providers/squad_providers.dart';
@@ -68,84 +69,89 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           return RefreshIndicator(
             color: AppColors.primary,
             onRefresh: () async => ref.invalidate(squadProvider),
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: 24),
-              children: [
-                // Gameweek navigator
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: GameweekNavigator(
-                    currentGw: data.gameweek,
-                    onChanged: (gw) =>
-                        ref.read(selectedGameweekProvider.notifier).set(gw),
+            child: GameweekSwipeDetector(
+              currentGw: data.gameweek,
+              onChanged: (gw) =>
+                  ref.read(selectedGameweekProvider.notifier).set(gw),
+              child: ListView(
+                padding: const EdgeInsets.only(bottom: 24),
+                children: [
+                  // Gameweek navigator
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: GameweekNavigator(
+                      currentGw: data.gameweek,
+                      onChanged: (gw) =>
+                          ref.read(selectedGameweekProvider.notifier).set(gw),
+                    ),
                   ),
-                ),
 
-                // Team header
-                TeamHeader(data: data),
+                  // Team header
+                  TeamHeader(data: data),
 
-                // Chips
-                if (data.chips != null && data.chips!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ChipRow(chips: data.chips!),
-                ],
+                  // Chips
+                  if (data.chips != null && data.chips!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ChipRow(chips: data.chips!),
+                  ],
 
-                // Squad view
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _showPitchView
-                      ? SquadPitchView(
-                          squad: data.squad,
-                          onPlayerTap: (player) => _showPlayerSheet(player),
-                          teamShortNames: teamShortNames,
-                        )
-                      : SquadListView(
-                          squad: data.squad,
-                          onPlayerTap: (player) => _showPlayerSheet(player),
-                        ),
-                ),
-
-                // Points history
-                if (data.history != null && data.history!.isNotEmpty) ...[
+                  // Squad view
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: PointsHistoryChart(history: data.history!),
+                    child: _showPitchView
+                        ? SquadPitchView(
+                            squad: data.squad,
+                            onPlayerTap: (player) => _showPlayerSheet(player),
+                            teamShortNames: teamShortNames,
+                          )
+                        : SquadListView(
+                            squad: data.squad,
+                            onPlayerTap: (player) => _showPlayerSheet(player),
+                          ),
                   ),
-                ],
 
-                // AI Analysis
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: analysisState.when(
-                    loading: () => const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: LoadingIndicator(message: 'Analyzing...'),
-                      ),
+                  // Points history
+                  if (data.history != null && data.history!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: PointsHistoryChart(history: data.history!),
                     ),
-                    error: (e, _) => Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: ErrorView(
-                          message: e.toString(),
-                          onRetry: () => _runAnalysis(teamId, data),
+                  ],
+
+                  // AI Analysis
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: analysisState.when(
+                      loading: () => const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: LoadingIndicator(message: 'Analyzing...'),
                         ),
                       ),
+                      error: (e, _) => Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: ErrorView(
+                            message: e.toString(),
+                            onRetry: () => _runAnalysis(teamId, data),
+                          ),
+                        ),
+                      ),
+                      data: (analysis) {
+                        if (analysis != null) {
+                          return AnalysisResultCard(analysis: analysis);
+                        }
+                        return _AnalyzeButton(
+                          onPressed: () => _runAnalysis(teamId, data),
+                        );
+                      },
                     ),
-                    data: (analysis) {
-                      if (analysis != null) {
-                        return AnalysisResultCard(analysis: analysis);
-                      }
-                      return _AnalyzeButton(
-                        onPressed: () => _runAnalysis(teamId, data),
-                      );
-                    },
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },

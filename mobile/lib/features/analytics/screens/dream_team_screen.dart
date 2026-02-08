@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/gameweek_navigator.dart';
+import '../../../core/widgets/gameweek_swipe_detector.dart'; // Import swipe detector
 import '../../../core/widgets/loading_indicator.dart';
 import '../../home/providers/squad_providers.dart';
 import '../providers/dream_team_providers.dart';
@@ -32,56 +33,60 @@ class _DreamTeamScreenState extends ConsumerState<DreamTeamScreen> {
           final gw = _selectedGw ?? gwStatus.gameweek;
           final dreamAsync = ref.watch(dreamTeamProvider(gw));
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: GameweekNavigator(
-                  currentGw: gw,
-                  onChanged: (v) => setState(() => _selectedGw = v),
-                ),
-              ),
-              Expanded(
-                child: dreamAsync.when(
-                  loading: () => const LoadingIndicator(),
-                  error: (e, _) => ErrorView(
-                    message: e.toString(),
-                    onRetry: () =>
-                        ref.invalidate(dreamTeamProvider(gw)),
+          return GameweekSwipeDetector(
+            currentGw: gw,
+            onChanged: (v) => setState(() => _selectedGw = v),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: GameweekNavigator(
+                    currentGw: gw,
+                    onChanged: (v) => setState(() => _selectedGw = v),
                   ),
-                  data: (data) {
-                    return ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        // Total points header
-                        Center(
-                          child: Text(
-                            '${data.totalPoints} points',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.accent,
-                            ),
-                          ),
-                        ),
-                        if (data.topPlayer != null)
+                ),
+                Expanded(
+                  child: dreamAsync.when(
+                    loading: () => const LoadingIndicator(),
+                    error: (e, _) => ErrorView(
+                      message: e.toString(),
+                      onRetry: () =>
+                          ref.invalidate(dreamTeamProvider(gw)),
+                    ),
+                    data: (data) {
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          // Total points header
                           Center(
                             child: Text(
-                              'Star: ${data.topPlayer!.name} (${data.topPlayer!.points} pts)',
+                              '${data.totalPoints} points',
                               style: const TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 13,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.accent,
                               ),
                             ),
                           ),
-                        const SizedBox(height: 16),
-                        DreamTeamPitch(data: data),
-                      ],
-                    );
-                  },
+                          if (data.topPlayer != null)
+                            Center(
+                              child: Text(
+                                'Star: ${data.topPlayer!.name} (${data.topPlayer!.points} pts)',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          DreamTeamPitch(data: data),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/gameweek_navigator.dart';
+import '../../../core/widgets/gameweek_swipe_detector.dart'; // Import the new swipe detector
 import '../../../core/widgets/loading_indicator.dart';
 import '../../../data/models/fixture.dart';
 import '../../../data/models/polymarket_market.dart';
@@ -38,38 +39,42 @@ class _MatchesScreenState extends ConsumerState<MatchesScreen> {
         data: (gwStatus) {
           final currentGw = _selectedGw ?? gwStatus.gameweek;
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: GameweekNavigator(
-                  currentGw: currentGw,
-                  onChanged: (gw) => setState(() => _selectedGw = gw),
+          return GameweekSwipeDetector(
+            currentGw: currentGw,
+            onChanged: (gw) => setState(() => _selectedGw = gw),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: GameweekNavigator(
+                    currentGw: currentGw,
+                    onChanged: (gw) => setState(() => _selectedGw = gw),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    _SortChip(
-                      label: 'By Time',
-                      selected: !_sortByOdds,
-                      onTap: () => setState(() => _sortByOdds = false),
-                    ),
-                    const SizedBox(width: 8),
-                    _SortChip(
-                      label: 'By Odds',
-                      selected: _sortByOdds,
-                      onTap: () => setState(() => _sortByOdds = true),
-                    ),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      _SortChip(
+                        label: 'By Time',
+                        selected: !_sortByOdds,
+                        onTap: () => setState(() => _sortByOdds = false),
+                      ),
+                      const SizedBox(width: 8),
+                      _SortChip(
+                        label: 'By Odds',
+                        selected: _sortByOdds,
+                        onTap: () => setState(() => _sortByOdds = true),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Expanded(
-                child: _FixturesList(gw: currentGw, sortByOdds: _sortByOdds),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Expanded(
+                  child: _FixturesList(gw: currentGw, sortByOdds: _sortByOdds),
+                ),
+              ],
+            ),
           );
         },
       ),
