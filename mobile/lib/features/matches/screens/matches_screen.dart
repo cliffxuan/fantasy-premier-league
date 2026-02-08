@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/error_view.dart';
 import '../../../core/widgets/gameweek_navigator.dart';
-import '../../../core/widgets/gameweek_swipe_detector.dart'; // Import the new swipe detector
 import '../../../core/widgets/loading_indicator.dart';
 import '../../../data/models/fixture.dart';
 import '../../../data/models/polymarket_market.dart';
@@ -21,63 +20,123 @@ class MatchesScreen extends ConsumerStatefulWidget {
 }
 
 class _MatchesScreenState extends ConsumerState<MatchesScreen> {
-  int? _selectedGw;
+  PageController? _pageController;
   bool _sortByOdds = false;
+
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final gwAsync = ref.watch(currentGameweekProvider);
+    final globalGw = ref.watch(selectedGameweekProvider);
+
+    // Initialize controller using global selection or current GW
+    if (globalGw != null) {
+      _initControllerIfNeeded(globalGw);
+    } else if (gwAsync.hasValue) {
+      _initControllerIfNeeded(gwAsync.value!.gameweek);
+    }
+
+    if (_pageController == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Matches')),
+        body: const Center(child: LoadingIndicator()),
+      );
+    }
+
+    // Sync controller with global state changes
+    ref.listen(selectedGameweekProvider, (prev, next) {
+      if (next != null &&
+          _pageController != null &&
+          _pageController!.hasClients) {
+        final currentPage = _pageController!.page?.round() ?? 0;
+        final targetPage = next - 1;
+        if (currentPage != targetPage) {
+          _pageController!.animateToPage(
+            targetPage,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Matches')),
-      body: gwAsync.when(
-        loading: () => const LoadingIndicator(),
-        error: (e, _) => ErrorView(
-          message: e.toString(),
-          onRetry: () => ref.invalidate(currentGameweekProvider),
-        ),
-        data: (gwStatus) {
-          final currentGw = _selectedGw ?? gwStatus.gameweek;
-
-          return GameweekSwipeDetector(
-            currentGw: currentGw,
-            onChanged: (gw) => setState(() => _selectedGw = gw),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: GameweekNavigator(
-                    currentGw: currentGw,
-                    onChanged: (gw) => setState(() => _selectedGw = gw),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    children: [
-                      _SortChip(
-                        label: 'By Time',
-                        selected: !_sortByOdds,
-                        onTap: () => setState(() => _sortByOdds = false),
-                      ),
-                      const SizedBox(width: 8),
-                      _SortChip(
-                        label: 'By Odds',
-                        selected: _sortByOdds,
-                        onTap: () => setState(() => _sortByOdds = true),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Expanded(
-                  child: _FixturesList(gw: currentGw, sortByOdds: _sortByOdds),
-                ),
-              ],
-            ),
+      body: PageView.builder(
+        controller: _pageController,
+        onPageChanged: (index) {
+          final gw = index + 1;
+          Future.microtask(() {
+             ref.read(selectedGameweekProvider.notifier).set(gw);
+          });
+        },
+        itemBuilder: (context, index) {
+          final gw = index + 1;
+          return _MatchesPage(
+            gw: gw,
+            sortByOdds: _sortByOdds,
+            onSortChanged: (val) => setState(() => _sortByOdds = val),
           );
         },
       ),
+    );
+  }
+
+  void _initControllerIfNeeded(int gw) {
+    _pageController ??= PageController(initialPage: gw - 1, viewportFraction: 0.95);
+  }
+}
+
+class _MatchesPage extends ConsumerWidget {
+  final int gw;
+  final bool sortByOdds;
+  final ValueChanged<bool> onSortChanged;
+
+  const _MatchesPage({
+    required this.gw,
+    required this.sortByOdds,
+    required this.onSortChanged,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: GameweekNavigator(
+            currentGw: gw,
+            onChanged: (val) => ref.read(selectedGameweekProvider.notifier).set(val),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              _SortChip(
+                label: 'By Time',
+                selected: !sortByOdds,
+                onTap: () => onSortChanged(false),
+              ),
+              const SizedBox(width: 8),
+              _SortChip(
+                label: 'By Odds',
+                selected: sortByOdds,
+                onTap: () => onSortChanged(true),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Expanded(
+          child: _FixturesList(gw: gw, sortByOdds: sortByOdds),
+        ),
+      ],
     );
   }
 }

@@ -143,10 +143,24 @@ Future<SquadResponse> squad(Ref ref) async {
   if (teamId == null) throw Exception('No team ID set');
 
   final selectedGw = ref.watch(selectedGameweekProvider);
+
+  // If no GW selected, fetch current GW from repo (or pass null if repo handles it)
+  // But to reuse logic, let's just delegate.
+  // Ideally we should know the current GW.
+  // For now let's keep the old behavior but refactored:
+
+  return ref.watch(squadForGameweekProvider(selectedGw).future);
+}
+
+@riverpod
+Future<SquadResponse> squadForGameweek(Ref ref, int? gw) async {
+  final teamId = ref.watch(savedTeamIdProvider);
+  if (teamId == null) throw Exception('No team ID set');
+
   final authToken = ref.watch(savedAuthTokenProvider);
   final repo = ref.watch(squadRepositoryProvider);
 
-  return repo.getSquad(teamId, gw: selectedGw, authToken: authToken);
+  return repo.getSquad(teamId, gw: gw, authToken: authToken);
 }
 
 @riverpod
